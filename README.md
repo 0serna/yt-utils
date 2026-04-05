@@ -18,7 +18,7 @@ When you click the extension action on a supported `youtube.com/watch` page, the
 1. Open `chrome://extensions`.
 2. Enable `Developer mode`.
 3. Click `Load unpacked`.
-4. Select this repository folder.
+4. Select the `extension/` folder inside this repository.
 
 ## Manual verification checklist
 
@@ -38,10 +38,11 @@ These selectors were validated against a live YouTube watch page during implemen
 - Share URL field: readonly input `#share-url`.
 - Copy button: accessible button with `aria-label="Copy"`.
 
-If YouTube changes these controls, update the selectors in `background.js`.
+If YouTube changes these controls, update the selectors in `extension/background.js`.
 
 ## Verification notes
 
 - The live YouTube DOM flow was exercised during implementation against `https://www.youtube.com/watch?v=dQw4w9WgXcQ`.
 - The verified result was a generated redirect URL in the form `https://youtu.be/...&t=210` after seeking near the end and enabling `Start at`.
 - Loading the unpacked extension through `chrome://extensions` still needs one local click-through because the browser automation session cannot complete the native directory picker.
+- The unpacked path to choose is `extension/`, which now contains the extension manifest and service worker.
