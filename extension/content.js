@@ -1,0 +1,323 @@
+const INLINE_TRIGGER_MESSAGE = "mark-as-seen:inline-trigger";
+const BUTTON_HOST_ID = "mark-as-seen-inline-host";
+const BUTTON_ID = "mark-as-seen-inline-button";
+const WATCH_PATHNAME = "/watch";
+const STATE_RESET_DELAY_MS = 2500;
+let currentState = "idle";
+let stateResetTimer = null;
+let ensureButtonQueued = false;
+let knownUrl = window.location.href;
+let observer = null;
+
+initialize();
+
+function initialize() {
+  queueEnsureButton();
+  observePage();
+
+  window.addEventListener("yt-navigate-finish", handlePageChange, true);
+  window.addEventListener("popstate", handlePageChange, true);
+  window.setInterval(() => {
+    if (window.location.href !== knownUrl) {
+      handlePageChange();
+    }
+  }, 500);
+}
+
+function handlePageChange() {
+  knownUrl = window.location.href;
+
+  if (currentState !== "running") {
+    setState("idle");
+  }
+
+  queueEnsureButton();
+}
+
+function observePage() {
+  observer = new MutationObserver((mutations) => {
+    const hasRelevantMutation = mutations.some((mutation) => {
+      if (isInsideInlineButton(mutation.target)) {
+        return false;
+      }
+
+      return [...mutation.addedNodes, ...mutation.removedNodes].some((node) => {
+        if (!(node instanceof Element)) {
+          return false;
+        }
+
+        if (node.id === BUTTON_HOST_ID || node.querySelector?.(`#${BUTTON_HOST_ID}`)) {
+          return false;
+        }
+
+        return node.matches?.("ytd-watch-metadata, #actions-inner, #top-level-buttons-computed, segmented-like-dislike-button-view-model, ytd-menu-renderer")
+          || node.querySelector?.("ytd-watch-metadata, #actions-inner, #top-level-buttons-computed, segmented-like-dislike-button-view-model, ytd-menu-renderer");
+      });
+    });
+
+    if (!hasRelevantMutation) {
+      return;
+    }
+
+    queueEnsureButton();
+  });
+
+  observer.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
+}
+
+function queueEnsureButton() {
+  if (ensureButtonQueued) {
+    return;
+  }
+
+  ensureButtonQueued = true;
+
+  window.requestAnimationFrame(() => {
+    ensureButtonQueued = false;
+    ensureInlineButton();
+  });
+}
+
+function ensureInlineButton() {
+  if (!isSupportedDesktopWatchPage()) {
+    removeInlineButton();
+    return;
+  }
+
+  const actionsContainer = findActionsContainer();
+
+  if (!actionsContainer) {
+    return;
+  }
+
+  let host = document.getElementById(BUTTON_HOST_ID);
+
+  if (!host) {
+    host = createInlineButtonHost();
+  }
+
+  const insertionTarget = findInsertionTarget(actionsContainer);
+
+  if (insertionTarget?.previousSibling !== host) {
+    if (insertionTarget) {
+      insertionTarget.insertAdjacentElement("beforebegin", host);
+    } else if (host.parentElement !== actionsContainer) {
+      actionsContainer.prepend(host);
+    }
+  }
+
+  syncButtonState();
+}
+
+function isSupportedDesktopWatchPage() {
+  return window.location.hostname === "www.youtube.com"
+    && window.location.pathname === WATCH_PATHNAME
+    && new URLSearchParams(window.location.search).has("v");
+}
+
+function findActionsContainer() {
+  const selectors = [
+    "ytd-watch-metadata #top-level-buttons-computed",
+    "#actions-inner ytd-menu-renderer #top-level-buttons-computed",
+    "#actions-inner #top-level-buttons-computed",
+  ];
+
+  for (const selector of selectors) {
+    const element = document.querySelector(selector);
+
+    if (element) {
+      return element;
+    }
+  }
+
+  return null;
+}
+
+function findInsertionTarget(actionsContainer) {
+  const candidates = [...actionsContainer.children].filter((child) => child.id !== BUTTON_HOST_ID);
+
+  return candidates.find((child) => {
+    const label = getElementLabel(child);
+    return /like this video/i.test(label) || child.tagName === "SEGMENTED-LIKE-DISLIKE-BUTTON-VIEW-MODEL";
+  }) || candidates[0] || null;
+}
+
+function createInlineButtonHost() {
+  const host = document.createElement("div");
+  host.id = BUTTON_HOST_ID;
+  host.style.display = "inline-flex";
+  host.style.alignItems = "center";
+  host.style.marginInlineEnd = "8px";
+  host.style.flex = "0 0 auto";
+  host.style.pointerEvents = "auto";
+
+  const button = document.createElement("button");
+  button.id = BUTTON_ID;
+  button.type = "button";
+  button.onclick = onInlineButtonClick;
+  button.addEventListener("click", onInlineButtonClick);
+
+  host.append(button);
+  return host;
+}
+
+function removeInlineButton() {
+  const host = document.getElementById(BUTTON_HOST_ID);
+
+  if (host) {
+    host.remove();
+  }
+}
+
+function syncButtonState() {
+  const button = document.getElementById(BUTTON_ID);
+
+  if (!button) {
+    return;
+  }
+
+  const palette = getStatePalette(currentState);
+  button.disabled = currentState === "running";
+  button.dataset.state = currentState;
+  button.setAttribute("aria-label", palette.label);
+  button.title = palette.label;
+  button.style.width = "36px";
+  button.style.height = "36px";
+  button.style.border = "none";
+  button.style.borderRadius = "999px";
+  button.style.display = "inline-flex";
+  button.style.alignItems = "center";
+  button.style.justifyContent = "center";
+  button.style.pointerEvents = "auto";
+  button.style.position = "relative";
+  button.style.zIndex = "1";
+  button.style.cursor = currentState === "running" ? "default" : "pointer";
+  button.style.padding = "0";
+  button.style.background = palette.background;
+  button.style.color = palette.color;
+  button.style.opacity = palette.opacity;
+  button.style.transition = "background 120ms ease, color 120ms ease, opacity 120ms ease, transform 120ms ease";
+  button.innerHTML = getButtonIconMarkup(currentState);
+}
+
+function getStatePalette(state) {
+  switch (state) {
+    case "running":
+      return {
+        label: "Marking as seen...",
+        background: "rgba(255, 255, 255, 0.2)",
+        color: "#ffffff",
+        opacity: "0.75",
+      };
+    case "success":
+      return {
+        label: "Marked as seen.",
+        background: "#2e7d32",
+        color: "#ffffff",
+        opacity: "1",
+      };
+    case "error":
+      return {
+        label: "Mark as seen failed.",
+        background: "#b71c1c",
+        color: "#ffffff",
+        opacity: "1",
+      };
+    default:
+      return {
+        label: "Mark as seen",
+        background: "rgba(255, 255, 255, 0.1)",
+        color: "var(--yt-spec-text-primary, #f1f1f1)",
+        opacity: "1",
+      };
+  }
+}
+
+function getButtonIconMarkup(state) {
+  if (state === "running") {
+    return [
+      '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">',
+      '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2" opacity="0.35"></circle>',
+      '<path d="M12 4a8 8 0 0 1 8 8" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"></path>',
+      '</svg>',
+    ].join("");
+  }
+
+  return [
+    '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">',
+    '<path d="M9.2 16.6 4.9 12.3l1.4-1.4 2.9 2.9 8.5-8.5 1.4 1.4z" fill="currentColor"></path>',
+    '</svg>',
+  ].join("");
+}
+
+async function onInlineButtonClick(event) {
+  event.preventDefault();
+  event.stopPropagation();
+
+  if (currentState === "running") {
+    return;
+  }
+
+  clearResetTimer();
+  setState("running");
+
+  try {
+    const response = await sendInlineTriggerRequest();
+
+    if (!response?.ok) {
+      throw new Error(response?.message || "The automation failed.");
+    }
+
+    setState("success");
+  } catch (error) {
+    console.error("[mark-as-seen-inline]", error);
+    setState("error");
+    stateResetTimer = window.setTimeout(() => {
+      stateResetTimer = null;
+      setState("idle");
+    }, STATE_RESET_DELAY_MS);
+  }
+}
+
+function sendInlineTriggerRequest() {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage({ type: INLINE_TRIGGER_MESSAGE }, (response) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+        return;
+      }
+
+      resolve(response);
+    });
+  });
+}
+
+function setState(nextState) {
+  currentState = nextState;
+  syncButtonState();
+}
+
+function clearResetTimer() {
+  if (stateResetTimer !== null) {
+    window.clearTimeout(stateResetTimer);
+    stateResetTimer = null;
+  }
+}
+
+function getElementLabel(element) {
+  const values = [
+    element.getAttribute?.("aria-label"),
+    element.getAttribute?.("title"),
+    element.innerText,
+    element.textContent,
+  ];
+
+  return values.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+}
+
+function isInsideInlineButton(node) {
+  return node instanceof Element && Boolean(node.closest(`#${BUTTON_HOST_ID}`));
+}

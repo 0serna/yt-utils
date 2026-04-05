@@ -1,4 +1,5 @@
 const WATCH_PAGE_HOSTS = new Set(["www.youtube.com", "youtube.com", "m.youtube.com"]);
+const INLINE_TRIGGER_MESSAGE = "mark-as-seen:inline-trigger";
 
 chrome.action.onClicked.addListener(async (tab) => {
   const tabId = tab.id;
@@ -9,8 +10,60 @@ chrome.action.onClicked.addListener(async (tab) => {
 
   await clearActionStatus(tabId);
 
+  const result = await runMarkAsSeenForTab(tabId, tab.url, {
+    redirectTab: true,
+  });
+
+  if (result.ok) {
+    self.setTimeout(() => {
+      clearActionStatus(tabId).catch(() => {});
+    }, 3000);
+  }
+});
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type !== INLINE_TRIGGER_MESSAGE) {
+    return undefined;
+  }
+
+  const tabId = sender.tab?.id;
+
+  if (!tabId) {
+    sendResponse({
+      ok: false,
+      code: "TAB_NOT_FOUND",
+      message: "The current tab could not be identified.",
+      details: null,
+    });
+    return undefined;
+  }
+
+  clearActionStatus(tabId)
+    .catch(() => {})
+    .then(async () => {
+      const tab = await chrome.tabs.get(tabId);
+      return runMarkAsSeenForTab(tabId, tab.url, { redirectTab: true });
+    })
+    .then((result) => sendResponse(result))
+    .catch((error) => {
+      const messageText = error?.message || "The automation failed.";
+
+      console.error("[mark-as-seen]", error);
+
+      sendResponse({
+        ok: false,
+        code: error?.code || "AUTOMATION_FAILED",
+        message: messageText,
+        details: error?.details || null,
+      });
+    });
+
+  return true;
+});
+
+async function runMarkAsSeenForTab(tabId, rawUrl, options = {}) {
   try {
-    if (!isSupportedWatchPage(tab.url)) {
+    if (!isSupportedWatchPage(rawUrl)) {
       throw createExtensionError(
         "UNSUPPORTED_PAGE",
         "Open a standard YouTube watch page before using the extension.",
@@ -32,16 +85,22 @@ chrome.action.onClicked.addListener(async (tab) => {
       );
     }
 
-    await chrome.tabs.update(tabId, { url: result.redirectUrl });
+    if (options.redirectTab) {
+      await chrome.tabs.update(tabId, { url: result.redirectUrl });
+    }
+
     await setActionStatus(tabId, {
       text: "OK",
       color: "#2e7d32",
       title: "Video marked as seen.",
     });
 
-    self.setTimeout(() => {
-      clearActionStatus(tabId).catch(() => {});
-    }, 3000);
+    return {
+      ok: true,
+      redirectUrl: result.redirectUrl,
+      message: "Video marked as seen.",
+      details: null,
+    };
   } catch (error) {
     const message = error?.message || "The automation failed.";
 
@@ -52,8 +111,15 @@ chrome.action.onClicked.addListener(async (tab) => {
       color: "#b71c1c",
       title: message,
     });
+
+    return {
+      ok: false,
+      code: error?.code || "AUTOMATION_FAILED",
+      message,
+      details: error?.details || null,
+    };
   }
-});
+}
 
 function isSupportedWatchPage(rawUrl) {
   if (!rawUrl) {
