@@ -1,0 +1,170 @@
+const LABELS = {
+  share: [/\bshare\b/i, /\bcompartir\b/i],
+  copy: [/\bcopy\b/i, /\bcopy link\b/i, /\bcopiar\b/i, /\bcopiar enlace\b/i],
+  startAt: [/\bstart at\b/i, /\bempezar en\b/i],
+} as const;
+
+export { LABELS };
+
+export function waitFor<T>(
+  getValue: () => T | null | undefined | false,
+  options?: {
+    timeout?: number;
+    interval?: number;
+    errorCode?: string;
+    errorMessage?: string;
+  },
+): Promise<NonNullable<T>> {
+  const timeout = options?.timeout ?? 5000;
+  const interval = options?.interval ?? 100;
+
+  return new Promise((resolve, reject) => {
+    const startedAt = Date.now();
+
+    const check = () => {
+      const value = getValue();
+
+      if (value) {
+        resolve(value as NonNullable<T>);
+        return;
+      }
+
+      if (Date.now() - startedAt > timeout) {
+        reject(
+          createAutomationError(
+            options?.errorCode || "WAIT_FAILED",
+            options?.errorMessage || "Timed out waiting for the next step.",
+          ),
+        );
+        return;
+      }
+
+      window.setTimeout(check, interval);
+    };
+
+    check();
+  });
+}
+
+export function findButton(
+  root: ParentNode,
+  matchers: readonly RegExp[],
+): HTMLElement | null {
+  const elements = root.querySelectorAll<HTMLElement>(
+    "button, [role='button'], tp-yt-paper-checkbox[role='checkbox']",
+  );
+
+  return [...elements].find(
+    (element) => isVisible(element) && matchesAnyLabel(element, matchers),
+  ) ?? null;
+}
+
+export function findShareDialog(): HTMLElement | null {
+  const dialogs = document.querySelectorAll<HTMLElement>(
+    "tp-yt-paper-dialog, [role='dialog']",
+  );
+
+  return (
+    [...dialogs].find((dialog) => {
+      if (!isVisible(dialog)) {
+        return false;
+      }
+
+      return Boolean(findShareUrlInput(dialog)) && Boolean(findButton(dialog, LABELS.copy));
+    }) ?? null
+  );
+}
+
+export function findStartAtCheckbox(
+  dialog: ParentNode,
+  matchers: readonly RegExp[],
+): HTMLElement | null {
+  const selectors = [
+    "#start-at-checkbox",
+    "tp-yt-paper-checkbox[role='checkbox']",
+    "input[type='checkbox']",
+    "[role='checkbox']",
+  ];
+
+  for (const selector of selectors) {
+    const candidates = dialog.querySelectorAll<HTMLElement>(selector);
+
+    for (const candidate of candidates) {
+      if (!isVisible(candidate)) {
+        continue;
+      }
+
+      if (
+        candidate.id === "start-at-checkbox" ||
+        matchesAnyLabel(candidate, matchers)
+      ) {
+        return candidate;
+      }
+    }
+  }
+
+  return null;
+}
+
+export function findShareUrlInput(dialog: ParentNode): HTMLInputElement | null {
+  const selectors = ["#share-url", "input[readonly]", "input[type='text']"];
+
+  for (const selector of selectors) {
+    const candidates = dialog.querySelectorAll<HTMLInputElement>(selector);
+
+    for (const candidate of candidates) {
+      if (!isVisible(candidate)) {
+        continue;
+      }
+
+      if (candidate.value && candidate.value.includes("youtu")) {
+        return candidate;
+      }
+    }
+  }
+
+  return null;
+}
+
+export function isVisible(element: Element): boolean {
+  const style = window.getComputedStyle(element);
+  const rect = element.getBoundingClientRect();
+
+  return (
+    style.display !== "none" &&
+    style.visibility !== "hidden" &&
+    rect.width > 0 &&
+    rect.height > 0
+  );
+}
+
+export function getElementLabel(element: Element): string {
+  const values = [
+    element.getAttribute("aria-label"),
+    element.getAttribute("title"),
+    element instanceof HTMLElement ? element.innerText : "",
+    element instanceof HTMLElement ? element.textContent : "",
+  ];
+
+  return values.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+}
+
+export function clickElement(element: HTMLElement): void {
+  element.scrollIntoView({ block: "center", inline: "center" });
+  element.dispatchEvent(new MouseEvent("mouseover", { bubbles: true, cancelable: true }));
+  element.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0 }));
+  element.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true, button: 0 }));
+  element.click();
+}
+
+function matchesAnyLabel(element: Element, matchers: readonly RegExp[]): boolean {
+  const label = getElementLabel(element);
+  return matchers.some((matcher) => matcher.test(label));
+}
+
+function createAutomationError(code: string, message: string, details?: unknown): Error & { code: string; details: unknown } {
+  const error = new Error(message) as Error & { code: string; details: unknown };
+  error.code = code;
+  error.details = details;
+  return error;
+}

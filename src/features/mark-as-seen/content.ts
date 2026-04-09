@@ -1,87 +1,36 @@
-const INLINE_TRIGGER_MESSAGE = "yt-utils:inline-trigger";
+import type { Feature, FeatureContext } from "@shared/types";
+import { MESSAGE_INLINE_TRIGGER, sendMessage } from "@shared/messaging";
+
 const BUTTON_HOST_ID = "yt-utils-inline-host";
 const BUTTON_ID = "yt-utils-inline-button";
-const WATCH_PATHNAME = "/watch";
 const STATE_RESET_DELAY_MS = 2500;
-let currentState = "idle";
-let stateResetTimer = null;
+
+type ButtonState = "idle" | "running" | "success" | "error";
+
+const markAsSeenFeature: Feature = {
+  name: "mark-as-seen",
+  isWatchPage: true,
+
+  activate(context: FeatureContext): void {
+    ensureInlineButton();
+    observePage();
+  },
+
+  deactivate(): void {
+    removeInlineButton();
+    stopObserving();
+  },
+};
+
+export default markAsSeenFeature;
+
+let currentState: ButtonState = "idle";
+let stateResetTimer: ReturnType<typeof setTimeout> | null = null;
 let ensureButtonQueued = false;
 let knownUrl = window.location.href;
-let observer = null;
+let observer: MutationObserver | null = null;
 
-initialize();
-
-function initialize() {
-  queueEnsureButton();
-  observePage();
-
-  window.addEventListener("yt-navigate-finish", handlePageChange, true);
-  window.addEventListener("popstate", handlePageChange, true);
-  window.setInterval(() => {
-    if (window.location.href !== knownUrl) {
-      handlePageChange();
-    }
-  }, 500);
-}
-
-function handlePageChange() {
-  knownUrl = window.location.href;
-
-  if (currentState !== "running") {
-    setState("idle");
-  }
-
-  queueEnsureButton();
-}
-
-function observePage() {
-  observer = new MutationObserver((mutations) => {
-    const hasRelevantMutation = mutations.some((mutation) => {
-      if (isInsideInlineButton(mutation.target)) {
-        return false;
-      }
-
-      return [...mutation.addedNodes, ...mutation.removedNodes].some((node) => {
-        if (!(node instanceof Element)) {
-          return false;
-        }
-
-        if (node.id === BUTTON_HOST_ID || node.querySelector?.(`#${BUTTON_HOST_ID}`)) {
-          return false;
-        }
-
-        return node.matches?.("ytd-watch-metadata, #actions-inner, #top-level-buttons-computed, segmented-like-dislike-button-view-model, ytd-menu-renderer")
-          || node.querySelector?.("ytd-watch-metadata, #actions-inner, #top-level-buttons-computed, segmented-like-dislike-button-view-model, ytd-menu-renderer");
-      });
-    });
-
-    if (!hasRelevantMutation) {
-      return;
-    }
-
-    queueEnsureButton();
-  });
-
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-  });
-}
-
-function queueEnsureButton() {
-  if (ensureButtonQueued) {
-    return;
-  }
-
-  ensureButtonQueued = true;
-
-  window.requestAnimationFrame(() => {
-    ensureButtonQueued = false;
-    ensureInlineButton();
-  });
-}
-
-function ensureInlineButton() {
+function ensureInlineButton(): void {
   if (!isSupportedDesktopWatchPage()) {
     removeInlineButton();
     return;
@@ -112,13 +61,87 @@ function ensureInlineButton() {
   syncButtonState();
 }
 
-function isSupportedDesktopWatchPage() {
-  return window.location.hostname === "www.youtube.com"
-    && window.location.pathname === WATCH_PATHNAME
-    && new URLSearchParams(window.location.search).has("v");
+function removeInlineButton(): void {
+  const host = document.getElementById(BUTTON_HOST_ID);
+
+  if (host) {
+    host.remove();
+  }
 }
 
-function findActionsContainer() {
+function observePage(): void {
+  if (observer) {
+    return;
+  }
+
+  observer = new MutationObserver((mutations) => {
+    const hasRelevantMutation = mutations.some((mutation) => {
+      if (isInsideInlineButton(mutation.target)) {
+        return false;
+      }
+
+      return [...mutation.addedNodes, ...mutation.removedNodes].some((node) => {
+        if (!(node instanceof Element)) {
+          return false;
+        }
+
+        if (node.id === BUTTON_HOST_ID || node.querySelector?.(`#${BUTTON_HOST_ID}`)) {
+          return false;
+        }
+
+        return (
+          node.matches?.(
+            "ytd-watch-metadata, #actions-inner, #top-level-buttons-computed, segmented-like-dislike-button-view-model, ytd-menu-renderer",
+          ) ||
+          node.querySelector?.(
+            "ytd-watch-metadata, #actions-inner, #top-level-buttons-computed, segmented-like-dislike-button-view-model, ytd-menu-renderer",
+          )
+        );
+      });
+    });
+
+    if (!hasRelevantMutation) {
+      return;
+    }
+
+    queueEnsureButton();
+  });
+
+  observer.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
+}
+
+function stopObserving(): void {
+  if (observer) {
+    observer.disconnect();
+    observer = null;
+  }
+}
+
+function queueEnsureButton(): void {
+  if (ensureButtonQueued) {
+    return;
+  }
+
+  ensureButtonQueued = true;
+
+  window.requestAnimationFrame(() => {
+    ensureButtonQueued = false;
+    ensureInlineButton();
+  });
+}
+
+function isSupportedDesktopWatchPage(): boolean {
+  return (
+    window.location.hostname === "www.youtube.com" &&
+    window.location.pathname === "/watch" &&
+    new URLSearchParams(window.location.search).has("v")
+  );
+}
+
+function findActionsContainer(): HTMLElement | null {
   const selectors = [
     "ytd-watch-metadata #top-level-buttons-computed",
     "#actions-inner ytd-menu-renderer #top-level-buttons-computed",
@@ -126,7 +149,7 @@ function findActionsContainer() {
   ];
 
   for (const selector of selectors) {
-    const element = document.querySelector(selector);
+    const element = document.querySelector<HTMLElement>(selector);
 
     if (element) {
       return element;
@@ -136,16 +159,20 @@ function findActionsContainer() {
   return null;
 }
 
-function findInsertionTarget(actionsContainer) {
-  const candidates = [...actionsContainer.children].filter((child) => child.id !== BUTTON_HOST_ID);
+function findInsertionTarget(actionsContainer: HTMLElement): HTMLElement | null {
+  const candidates = [...actionsContainer.children].filter(
+    (child) => child.id !== BUTTON_HOST_ID,
+  ) as HTMLElement[];
 
-  return candidates.find((child) => {
-    const label = getElementLabel(child);
-    return /like this video/i.test(label) || child.tagName === "SEGMENTED-LIKE-DISLIKE-BUTTON-VIEW-MODEL";
-  }) || candidates[0] || null;
+  return (
+    candidates.find((child) => {
+      const label = getElementLabel(child);
+      return /like this video/i.test(label) || child.tagName === "SEGMENTED-LIKE-DISLIKE-BUTTON-VIEW-MODEL";
+    }) || candidates[0] || null
+  );
 }
 
-function createInlineButtonHost() {
+function createInlineButtonHost(): HTMLElement {
   const host = document.createElement("div");
   host.id = BUTTON_HOST_ID;
   host.style.display = "inline-flex";
@@ -158,21 +185,12 @@ function createInlineButtonHost() {
   button.id = BUTTON_ID;
   button.type = "button";
   button.onclick = onInlineButtonClick;
-  button.addEventListener("click", onInlineButtonClick);
 
   host.append(button);
   return host;
 }
 
-function removeInlineButton() {
-  const host = document.getElementById(BUTTON_HOST_ID);
-
-  if (host) {
-    host.remove();
-  }
-}
-
-function syncButtonState() {
+function syncButtonState(): void {
   const button = document.getElementById(BUTTON_ID);
 
   if (!button) {
@@ -180,7 +198,7 @@ function syncButtonState() {
   }
 
   const palette = getStatePalette(currentState);
-  button.disabled = currentState === "running";
+  (button as HTMLButtonElement).disabled = currentState === "running";
   button.dataset.state = currentState;
   button.setAttribute("aria-label", palette.label);
   button.title = palette.label;
@@ -203,7 +221,12 @@ function syncButtonState() {
   button.innerHTML = getButtonIconMarkup(currentState);
 }
 
-function getStatePalette(state) {
+function getStatePalette(state: ButtonState): {
+  label: string;
+  background: string;
+  color: string;
+  opacity: string;
+} {
   switch (state) {
     case "running":
       return {
@@ -236,24 +259,24 @@ function getStatePalette(state) {
   }
 }
 
-function getButtonIconMarkup(state) {
+function getButtonIconMarkup(state: ButtonState): string {
   if (state === "running") {
     return [
       '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">',
       '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2" opacity="0.35"></circle>',
       '<path d="M12 4a8 8 0 0 1 8 8" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"></path>',
-      '</svg>',
+      "</svg>",
     ].join("");
   }
 
   return [
     '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">',
     '<path d="M9.2 16.6 4.9 12.3l1.4-1.4 2.9 2.9 8.5-8.5 1.4 1.4z" fill="currentColor"></path>',
-    '</svg>',
+    "</svg>",
   ].join("");
 }
 
-async function onInlineButtonClick(event) {
+async function onInlineButtonClick(event: Event): Promise<void> {
   event.preventDefault();
   event.stopPropagation();
 
@@ -262,62 +285,51 @@ async function onInlineButtonClick(event) {
   }
 
   clearResetTimer();
-  setState("running");
+  currentState = "running";
+  syncButtonState();
 
   try {
-    const response = await sendInlineTriggerRequest();
+    const response = await sendMessage({ type: MESSAGE_INLINE_TRIGGER }) as {
+      ok?: boolean;
+      message?: string;
+    } | null;
 
     if (!response?.ok) {
       throw new Error(response?.message || "The automation failed.");
     }
 
-    setState("success");
+    currentState = "success";
+    syncButtonState();
   } catch (error) {
     console.error("[YTUtils:inline]", error);
-    setState("error");
+    currentState = "error";
+    syncButtonState();
     stateResetTimer = window.setTimeout(() => {
       stateResetTimer = null;
-      setState("idle");
+      currentState = "idle";
+      syncButtonState();
     }, STATE_RESET_DELAY_MS);
   }
 }
 
-function sendInlineTriggerRequest() {
-  return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage({ type: INLINE_TRIGGER_MESSAGE }, (response) => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message));
-        return;
-      }
-
-      resolve(response);
-    });
-  });
-}
-
-function setState(nextState) {
-  currentState = nextState;
-  syncButtonState();
-}
-
-function clearResetTimer() {
+function clearResetTimer(): void {
   if (stateResetTimer !== null) {
     window.clearTimeout(stateResetTimer);
     stateResetTimer = null;
   }
 }
 
-function getElementLabel(element) {
+function getElementLabel(element: Element): string {
   const values = [
     element.getAttribute?.("aria-label"),
     element.getAttribute?.("title"),
-    element.innerText,
-    element.textContent,
+    element instanceof HTMLElement ? element.innerText : "",
+    element instanceof HTMLElement ? element.textContent : "",
   ];
 
   return values.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
 }
 
-function isInsideInlineButton(node) {
+function isInsideInlineButton(node: Node): boolean {
   return node instanceof Element && Boolean(node.closest(`#${BUTTON_HOST_ID}`));
 }
