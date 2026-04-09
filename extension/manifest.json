@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Mark As Seen",
+  "name": "YT Utils",
   "version": "0.1.0",
-  "description": "Marks the current YouTube video as seen by automating the share-link redirect flow.",
+  "description": "A set of YouTube utilities.",
   "permissions": ["activeTab", "scripting", "tabs"],
   "host_permissions": ["https://www.youtube.com/*", "https://m.youtube.com/*"],
   "background": {
@@ -16,6 +16,6 @@
     }
   ],
   "action": {
-    "default_title": "Mark current YouTube video as seen"
+    "default_title": "YT Utils"
   }
 }

@@ -1,6 +1,6 @@
-const INLINE_TRIGGER_MESSAGE = "mark-as-seen:inline-trigger";
-const BUTTON_HOST_ID = "mark-as-seen-inline-host";
-const BUTTON_ID = "mark-as-seen-inline-button";
+const INLINE_TRIGGER_MESSAGE = "yt-utils:inline-trigger";
+const BUTTON_HOST_ID = "yt-utils-inline-host";
+const BUTTON_ID = "yt-utils-inline-button";
 const WATCH_PATHNAME = "/watch";
 const STATE_RESET_DELAY_MS = 2500;
 let currentState = "idle";
@@ -273,7 +273,7 @@ async function onInlineButtonClick(event) {
 
     setState("success");
   } catch (error) {
-    console.error("[mark-as-seen-inline]", error);
+    console.error("[YTUtils:inline]", error);
     setState("error");
     stateResetTimer = window.setTimeout(() => {
       stateResetTimer = null;

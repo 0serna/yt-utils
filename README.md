@@ -1,6 +1,6 @@
-# Mark As Seen
+# YT Utils
 
-Chrome extension that marks the current YouTube video as seen by automating the watch-page share flow.
+A set of YouTube utilities delivered as a Chrome extension. The first utility, **Mark as Seen**, automates marking a YouTube video as watched by completing the share-link redirect flow.
 
 ## How it works
 
@@ -24,7 +24,7 @@ When you click the extension action on a supported `youtube.com/watch` page, the
 
 1. Open a standard YouTube watch URL such as `https://www.youtube.com/watch?v=dQw4w9WgXcQ`.
 2. Let the player metadata load.
-3. Click the `Mark As Seen` extension action.
+3. Click the `Mark As Seen` action on the YT Utils extension.
 4. Confirm the tab redirects to a `youtu.be/...` URL that includes a start-time query parameter.
 5. Confirm the video appears as watched in YouTube history or progress UI.
 

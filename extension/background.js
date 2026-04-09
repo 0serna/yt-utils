@@ -1,5 +1,5 @@
 const WATCH_PAGE_HOSTS = new Set(["www.youtube.com", "youtube.com", "m.youtube.com"]);
-const INLINE_TRIGGER_MESSAGE = "mark-as-seen:inline-trigger";
+const INLINE_TRIGGER_MESSAGE = "yt-utils:inline-trigger";
 
 chrome.action.onClicked.addListener(async (tab) => {
   const tabId = tab.id;
@@ -48,7 +48,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     .catch((error) => {
       const messageText = error?.message || "The automation failed.";
 
-      console.error("[mark-as-seen]", error);
+      console.error("[YTUtils]", error);
 
       sendResponse({
         ok: false,
@@ -104,7 +104,7 @@ async function runMarkAsSeenForTab(tabId, rawUrl, options = {}) {
   } catch (error) {
     const message = error?.message || "The automation failed.";
 
-    console.error("[mark-as-seen]", error);
+    console.error("[YTUtils]", error);
 
     await setActionStatus(tabId, {
       text: "ERR",
@@ -149,7 +149,7 @@ async function setActionStatus(tabId, { text, color, title }) {
 
 async function clearActionStatus(tabId) {
   await chrome.action.setBadgeText({ tabId, text: "" });
-  await chrome.action.setTitle({ tabId, title: "Mark current YouTube video as seen" });
+  await chrome.action.setTitle({ tabId, title: "YT Utils" });
 }
 
 async function runYoutubeMarkAsSeenAutomation() {

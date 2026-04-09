@@ -18,9 +18,9 @@ Moving the extension files into the dedicated directory SHALL preserve the exist
 - **WHEN** the extension is loaded from the dedicated directory and the user clicks the action on a supported YouTube watch page
 - **THEN** the extension starts the same mark-as-seen automation flow as before the repository layout change
 
-### Requirement: Local setup documentation references the dedicated directory
-Contributor-facing setup documentation SHALL identify the dedicated extension directory as the path to use for unpacked loading.
+### Requirement: Local setup documentation references the dedicated directory and project name
+Contributor-facing setup documentation SHALL identify the dedicated extension directory as the path to use for unpacked loading and SHALL refer to the project by its current name "YT Utils".
 
-#### Scenario: Documentation matches repository layout
+#### Scenario: Documentation matches repository layout and naming
 - **WHEN** a contributor follows the local loading instructions in the repository documentation
-- **THEN** the documented path points to the dedicated extension directory that contains the manifest file
+- **THEN** the documented path points to the dedicated extension directory that contains the manifest file and the documentation refers to the project as "YT Utils"
