@@ -13,7 +13,7 @@ export class FeatureRegistry {
 
   register(feature: Feature): void {
     this.features.push(feature);
-    this.syncFeatures();
+    this.forceSync();
   }
 
   private listenForNavigation(): void {
@@ -23,6 +23,12 @@ export class FeatureRegistry {
     setInterval(() => {
       this.syncFeatures();
     }, 500);
+  }
+
+  private forceSync(): void {
+    this.lastUrl = "";
+    this.lastIsWatchPage = null;
+    this.syncFeatures();
   }
 
   private syncFeatures(): void {
@@ -37,12 +43,7 @@ export class FeatureRegistry {
     }
 
     this.lastUrl = url;
-    const watchPageChanged = isWatchPage !== this.lastIsWatchPage;
     this.lastIsWatchPage = isWatchPage;
-
-    const context: FeatureContext = {
-      sendMessage,
-    };
 
     for (const feature of this.activeFeatures) {
       feature.deactivate();
@@ -53,6 +54,10 @@ export class FeatureRegistry {
     if (!isWatchPage) {
       return;
     }
+
+    const context: FeatureContext = {
+      sendMessage,
+    };
 
     for (const feature of this.features) {
       if (feature.isWatchPage) {

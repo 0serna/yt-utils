@@ -126,6 +126,24 @@ export function findShareUrlInput(dialog: ParentNode): HTMLInputElement | null {
   return null;
 }
 
+export function findWatchPageActionsContainer(): HTMLElement | null {
+  const selectors = [
+    "ytd-watch-metadata #top-level-buttons-computed",
+    "#actions-inner ytd-menu-renderer #top-level-buttons-computed",
+    "#actions-inner #top-level-buttons-computed",
+  ];
+
+  for (const selector of selectors) {
+    const element = document.querySelector<HTMLElement>(selector);
+
+    if (element) {
+      return element;
+    }
+  }
+
+  return null;
+}
+
 export function isVisible(element: Element): boolean {
   const style = window.getComputedStyle(element);
   const rect = element.getBoundingClientRect();

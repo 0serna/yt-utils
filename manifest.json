@@ -3,7 +3,7 @@
   "name": "YT Utils",
   "version": "0.1.0",
   "description": "A set of YouTube utilities.",
-  "permissions": ["activeTab", "scripting", "tabs"],
+  "permissions": ["activeTab", "scripting", "storage", "tabs"],
   "host_permissions": ["https://www.youtube.com/*", "https://m.youtube.com/*"],
   "background": {
     "service_worker": "src/background.ts",
