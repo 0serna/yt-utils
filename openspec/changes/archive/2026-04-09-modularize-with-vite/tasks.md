@@ -34,7 +34,7 @@
 ## 6. Documentation
 
 - [x] 6.1 Update `README.md` to document the build step (`npm install && npm run build`) as part of local setup
-- [x] 6.2 Update `README.md` to document `npm run dev` for development with HMR
+- [x] 6.2 Update `README.md` to document `npm run watch` for build watching
 - [x] 6.3 Update `README.md` to document `npm run typecheck` for type checking
 
 ## 7. Verification

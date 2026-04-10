@@ -11,9 +11,9 @@ The project SHALL use Vite with `@crxjs/vite-plugin` to compile the `src/` direc
 - **WHEN** a contributor runs `npm run build`
 - **THEN** Vite compiles all TypeScript source files and outputs a working Chrome extension into `extension/`, ready to be loaded by Chrome
 
-#### Scenario: Development build with HMR
-- **WHEN** a contributor runs `npm run dev`
-- **THEN** Vite starts a development server with hot module replacement for the Chrome extension, and changes to source files are reflected in the running extension without a full reload
+#### Scenario: Watch build
+- **WHEN** a contributor runs `npm run watch`
+- **THEN** Vite rebuilds the Chrome extension on file changes so the updated output is ready to reload
 
 ### Requirement: TypeScript compilation with strict mode
 The project SHALL use TypeScript with `strict: true` in `tsconfig.json`. All source files in `src/` SHALL pass type checking without errors.

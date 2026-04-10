@@ -1,27 +1,35 @@
 # YT Utils
 
-Chrome extension that marks YouTube videos as watched by seeking to the end, copying a share URL with timestamp, and redirecting.
+YT Utils is a Chrome extension for YouTube. It currently focuses on watch-page helpers.
+
+## Features
+
+- Marks videos as watched.
+- Provides playback speed utilities.
+
+## Requirements
+
+- Node.js 18+
+- Google Chrome or another Chromium-based browser with MV3 support
 
 ## Setup
 
 ```sh
-npm install && npm run build
+npm install
+npm run build
 ```
 
-Then load `extension/` as an unpacked extension in `chrome://extensions`.
+Then load the generated extension from the build output in `chrome://extensions` with Developer mode enabled.
 
-## Scripts
+## Development
 
-- `npm run build` — production build
-- `npm run dev` — build + watch
-- `npm run typecheck` — type check
+- `npm run build` - production build
+- `npm run watch` - build in watch mode
+- `npm run typecheck` - type check only
 
-## Selector assumptions
+## Project Structure
 
-If YouTube changes these controls, update `src/shared/youtube-dom.ts`:
-
-- Share button: `aria-label="Share"`
-- Share dialog: `tp-yt-paper-dialog` with share URL input + copy button
-- Start-at checkbox: `#start-at-checkbox`
-- Share URL: `#share-url`
-- Copy button: `aria-label="Copy"`
+- `src/background.ts` - extension background entrypoint
+- `src/content.ts` - main content-script entrypoint
+- `src/features/` - feature-specific logic
+- `src/shared/` - shared YouTube helpers and messaging utilities

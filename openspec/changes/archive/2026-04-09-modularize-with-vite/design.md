@@ -111,7 +111,7 @@ interface Feature {
 ## Risks / Trade-offs
 
 - **[CRXJS compatibility with MV3]** → CRXJS has had issues with Manifest V3 changes in the past. Mitigation: pin the version, test after every update, and have a fallback to plain `vite-plugin-static-copy` + manual manifest management.
-- **[Build step required for local development]** → Contributors can no longer edit `extension/` files and reload. Mitigation: `npm run dev` provides HMR; `npm run build` produces the loadable extension. Document this clearly in README.
+- **[Build step required for local development]** → Contributors can no longer edit `extension/` files and reload. Mitigation: `npm run watch` rebuilds on changes; `npm run build` produces the loadable extension. Document this clearly in README.
 - **[Source maps in production extension]** → Vite generates source maps by default. Mitigation: disable source maps in production build config to keep the extension small.
 - **[FeatureRegistry complexity for two features]** → A registry is over-engineered for just mark-as-seen. Mitigation: the registry is lightweight (~50 lines) and avoids a bigger refactor later. The cost is justified by the upcoming speed-control feature.
 - **[Build output doesn't match hand-written files byte-for-byte]** → Bundled code is functionally identical but has different formatting/modules. Mitigation: verify behavior through manual testing checklist, not diff comparison.
