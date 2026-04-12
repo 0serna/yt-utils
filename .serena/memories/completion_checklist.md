@@ -1,1 +1,0 @@
-When finishing a code task, at minimum run `npm run typecheck` and usually `npm run build` to verify the extension still bundles into `extension/`. For UI/watch-page changes, also verify behavior manually on a standard desktop `www.youtube.com/watch` page because YouTube DOM assumptions are selector-driven.

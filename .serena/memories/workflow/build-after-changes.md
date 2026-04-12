@@ -1,1 +1,0 @@
-Always run `npm run build` at the end of code changes before reporting completion. The build result should be treated as required final verification alongside typecheck/tests when relevant.
