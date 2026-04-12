@@ -1,7 +1,7 @@
 # audio-language-subtitle-policy Specification
 
 ## Purpose
-TBD - created by syncing change add-audio-language-subtitle-policy. Update Purpose after archive.
+Define subtitle policy for YouTube watch pages based on the active player audio language and live player state.
 
 ## Requirements
 ### Requirement: Watch-page subtitle policy SHALL use the active audio language

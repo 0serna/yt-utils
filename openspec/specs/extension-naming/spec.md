@@ -1,7 +1,7 @@
 # extension-naming Specification
 
 ## Purpose
-TBD - created by syncing change rename-to-yt-utils. Update Purpose after archive.
+Define the `yt-utils` naming conventions used across messages, DOM IDs, and logs.
 
 ## Requirements
 

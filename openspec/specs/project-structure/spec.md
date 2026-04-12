@@ -1,7 +1,7 @@
 # project-structure Specification
 
 ## Purpose
-TBD - created by syncing change modularize-with-vite. Update Purpose after archive.
+Define the feature-based `src/` project structure and shared code layout used by the extension.
 
 ## Requirements
 ### Requirement: Source files live under src/ with feature-based layout

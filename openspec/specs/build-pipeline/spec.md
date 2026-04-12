@@ -1,7 +1,7 @@
 # build-pipeline Specification
 
 ## Purpose
-TBD - created by syncing change modularize-with-vite. Update Purpose after archive.
+Define the Vite build pipeline that produces a loadable Chrome extension from the source tree.
 
 ## Requirements
 ### Requirement: Vite build produces a loadable Chrome extension

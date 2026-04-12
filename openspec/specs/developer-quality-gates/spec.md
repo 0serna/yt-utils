@@ -1,7 +1,7 @@
 # developer-quality-gates Specification
 
 ## Purpose
-TBD - created by archiving change add-biome-husky-hooks. Update Purpose after archive.
+Define repository quality gates that enforce formatting, linting, type checking, and pre-commit hook behavior.
 ## Requirements
 ### Requirement: Biome enforces formatting and linting
 The project SHALL use Biome to format and lint repository files relevant to the application and development workflow.
@@ -31,4 +31,3 @@ The project SHALL make the Husky hook setup available from the repository so con
 #### Scenario: Fresh clone can enable hooks
 - **WHEN** a contributor installs project dependencies in a fresh clone
 - **THEN** the repository provides the hook setup needed to activate the pre-commit checks locally
-

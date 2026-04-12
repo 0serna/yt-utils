@@ -1,7 +1,7 @@
 # youtube-watch-marking-extension Specification
 
 ## Purpose
-TBD - created by archiving change add-youtube-mark-as-seen-extension. Update Purpose after archive.
+Provide a single-click Chrome extension for supported YouTube watch pages that automates the share-link flow to mark the current video as seen.
 ## Requirements
 ### Requirement: Action runs only on supported YouTube watch pages
 The extension SHALL start the mark-as-seen automation only when the user activates either the extension action or the inline desktop watch-page button while the current tab is a supported standard YouTube watch page URL. The implementation SHALL live in `src/features/mark-as-seen/background.ts` for the service worker handler and `src/features/mark-as-seen/content.ts` for the inline trigger logic.
@@ -71,7 +71,9 @@ After enabling `Start at`, the extension SHALL obtain the share URL that reflect
 - **THEN** the extension does not redirect the tab and reports that the share URL could not be obtained
 
 ### Requirement: Extension shows an inline desktop watch-page playback speed control
-The extension SHALL render a single inline playback-speed control on supported desktop `www.youtube.com/watch` pages and place it within the watch-page action row near the existing inline action area. The control SHALL display a decrement button, the current speed as visible text using an `x` suffix, and an increment button. The control SHALL use `0.05` increments, default to `1.00x`, clamp values to the inclusive range `0.50x` through `2.00x`, and disable the decrement or increment button when the current value is already at the corresponding bound.
+The extension SHALL render a single inline playback-speed control on supported desktop `www.youtube.com/watch` pages near the existing inline action area.
+The control SHALL display decrement and increment buttons plus the current speed as visible text with an `x` suffix.
+The control SHALL use `0.05` increments, default to `1.00x`, clamp values to `0.50x` through `2.00x`, and disable the button at the matching bound.
 
 #### Scenario: Supported desktop watch page renders the playback speed control
 - **WHEN** the user opens a supported desktop YouTube watch page and the action row finishes rendering
@@ -90,7 +92,10 @@ The extension SHALL render a single inline playback-speed control on supported d
 - **THEN** the extension does not render the inline playback-speed control
 
 ### Requirement: Extension applies and persists a global playback speed preference
-The extension SHALL apply playback-speed changes immediately to the current watch page by setting the active `HTMLVideoElement.playbackRate` directly. Whenever the user changes the inline playback-speed control, the extension SHALL persist that selected value locally as the new global default. Supported watch pages initialized after that change, including future tabs and future video navigations, SHALL load and apply the saved default automatically. Already-open tabs that were initialized before the save SHALL NOT be updated automatically by a later change made elsewhere.
+The extension SHALL apply playback-speed changes immediately to the current watch page by setting the active `HTMLVideoElement.playbackRate` directly.
+When the user changes the inline playback-speed control, the extension SHALL persist that selected value locally as the new global default.
+Supported watch pages opened after that change, including future tabs and video navigations, SHALL load and apply the saved default automatically.
+Already-open tabs that were initialized before the save SHALL NOT be updated automatically by a later change made elsewhere.
 
 #### Scenario: User changes playback speed on the current video
 - **WHEN** the user activates the increment or decrement button on a supported desktop watch page

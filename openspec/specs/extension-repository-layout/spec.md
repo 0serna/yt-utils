@@ -1,7 +1,7 @@
 # extension-repository-layout Specification
 
 ## Purpose
-TBD - created by syncing change group-extension-files-under-directory.
+Define the repository layout that keeps the unpacked Chrome extension in a dedicated loadable directory.
 
 ## Requirements
 ### Requirement: Extension files live in a dedicated loadable directory

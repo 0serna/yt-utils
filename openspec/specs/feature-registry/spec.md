@@ -1,7 +1,7 @@
 # feature-registry Specification
 
 ## Purpose
-TBD - created by syncing change modularize-with-vite. Update Purpose after archive.
+Define the feature lifecycle registry that activates and deactivates features during YouTube navigation.
 
 ## Requirements
 ### Requirement: Feature interface defines lifecycle
