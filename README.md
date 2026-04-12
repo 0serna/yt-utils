@@ -23,6 +23,9 @@ Then load the generated extension from the build output in `chrome://extensions`
 
 ## Development
 
+- `npm run check` - run Biome checks
+- `npm run format` - format files with Biome
+- `npm run lint` - run Biome lint rules
 - `npm run build` - production build
 - `npm run watch` - build in watch mode
 - `npm run typecheck` - type check only
