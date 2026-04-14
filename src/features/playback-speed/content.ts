@@ -11,8 +11,8 @@ import {
 	isSpanishLanguage,
 	readPlayerSnapshot,
 } from "@shared/youtube-player";
-import type { Feature, FeatureContext } from "@shared/types";
 import { findWatchPageActionsContainer } from "@shared/youtube-dom";
+import type { Feature, FeatureContext } from "@shared/types";
 
 const CONTROL_HOST_ID = "yt-utils-speed-host";
 const SPEED_DECREMENT_ID = "yt-utils-speed-decrement";
