@@ -29,6 +29,12 @@ export type AudioTrack = {
 		isDefault?: boolean;
 		isAutoDubbed?: boolean;
 	};
+	yG?: {
+		id?: string;
+		name?: string;
+		isDefault?: boolean;
+		isAutoDubbed?: boolean;
+	};
 	captionTracks?: CaptionTrack[];
 };
 
@@ -92,7 +98,9 @@ export function inferAudioLanguage(
 	audioTrack: AudioTrack | null,
 	captionTracks: CaptionTrack[],
 ): string | null {
-	const direct = normalizeLanguageCode(audioTrack?.hs?.id || audioTrack?.id);
+	const direct = normalizeLanguageCode(
+		audioTrack?.yG?.id || audioTrack?.hs?.id || audioTrack?.id,
+	);
 	if (direct && direct !== "und") {
 		return direct;
 	}
@@ -102,7 +110,8 @@ export function inferAudioLanguage(
 		return captionLanguage;
 	}
 
-	const audioName = audioTrack?.hs?.name?.trim() || null;
+	const audioName =
+		audioTrack?.yG?.name?.trim() || audioTrack?.hs?.name?.trim() || null;
 	if (audioName) {
 		if (/spanish/i.test(audioName)) {
 			return "es";

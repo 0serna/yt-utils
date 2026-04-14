@@ -94,15 +94,19 @@ The control SHALL use `0.05` increments, clamp values to `0.50x` through `2.00x`
 ### Requirement: Extension applies and persists a global playback speed preference
 The extension SHALL apply playback-speed changes immediately to the current watch page by setting the active `HTMLVideoElement.playbackRate` directly.
 Each supported watch page SHALL initialize playback speed independently for the current video instead of loading a saved global default.
-The initial speed SHALL be `1.00x`, and the extension SHALL change it to `0.90x` only when the current video's inferred audio language is English.
+The initial speed SHALL be `1.00x`, the extension SHALL change it to `0.90x` only when the current video's inferred audio language is English, and it SHALL change it to `1.10x` when the inferred audio language is Spanish.
 Manual changes made with the inline playback-speed control SHALL apply only to the current video and SHALL NOT become the default for future videos, future tabs, or later watch-page navigations.
 
 #### Scenario: English audio video loads
 - **WHEN** a supported watch page becomes active for a video whose inferred audio language is English and the user has not changed the playback speed yet
 - **THEN** the extension applies `0.90x` to that video's player and reflects `0.90x` in the inline control
 
-#### Scenario: Non-English video loads
-- **WHEN** a supported watch page becomes active for a video whose inferred audio language is not English and the user has not changed the playback speed yet
+#### Scenario: Spanish audio video loads
+- **WHEN** a supported watch page becomes active for a video whose inferred audio language is Spanish and the user has not changed the playback speed yet
+- **THEN** the extension applies `1.10x` to that video's player and reflects `1.10x` in the inline control
+
+#### Scenario: Other language video loads
+- **WHEN** a supported watch page becomes active for a video whose inferred audio language is neither English nor Spanish and the user has not changed the playback speed yet
 - **THEN** the extension applies `1.00x` to that video's player and reflects `1.00x` in the inline control
 
 #### Scenario: Audio language cannot be inferred

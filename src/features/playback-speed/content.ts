@@ -6,7 +6,11 @@ import {
 	PLAYBACK_SPEED_MIN,
 	PLAYBACK_SPEED_STEP,
 } from "@shared/playback-speed";
-import { isEnglishLanguage, readPlayerSnapshot } from "@shared/youtube-player";
+import {
+	isEnglishLanguage,
+	isSpanishLanguage,
+	readPlayerSnapshot,
+} from "@shared/youtube-player";
 import type { Feature, FeatureContext } from "@shared/types";
 import { findWatchPageActionsContainer } from "@shared/youtube-dom";
 
@@ -342,9 +346,11 @@ async function syncSpeedForCurrentVideo(token: number): Promise<void> {
 		return;
 	}
 
-	const nextSpeed = isEnglishLanguage(snapshot.audioLanguage)
-		? normalizePlaybackSpeed(0.9)
-		: PLAYBACK_SPEED_DEFAULT;
+	const nextSpeed = isSpanishLanguage(snapshot.audioLanguage)
+		? normalizePlaybackSpeed(1.1)
+		: isEnglishLanguage(snapshot.audioLanguage)
+			? normalizePlaybackSpeed(0.9)
+			: PLAYBACK_SPEED_DEFAULT;
 
 	if (localSpeed === nextSpeed) {
 		return;
