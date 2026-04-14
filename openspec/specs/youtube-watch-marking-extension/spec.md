@@ -73,7 +73,7 @@ After enabling `Start at`, the extension SHALL obtain the share URL that reflect
 ### Requirement: Extension shows an inline desktop watch-page playback speed control
 The extension SHALL render a single inline playback-speed control on supported desktop `www.youtube.com/watch` pages near the existing inline action area.
 The control SHALL display decrement and increment buttons plus the current speed as visible text with an `x` suffix.
-The control SHALL use `0.05` increments, default to `1.00x`, clamp values to `0.50x` through `2.00x`, and disable the button at the matching bound.
+The control SHALL use `0.05` increments, clamp values to `0.50x` through `2.00x`, disable the button at the matching bound, and reflect the current video's initialized playback speed.
 
 #### Scenario: Supported desktop watch page renders the playback speed control
 - **WHEN** the user opens a supported desktop YouTube watch page and the action row finishes rendering
@@ -93,18 +93,26 @@ The control SHALL use `0.05` increments, default to `1.00x`, clamp values to `0.
 
 ### Requirement: Extension applies and persists a global playback speed preference
 The extension SHALL apply playback-speed changes immediately to the current watch page by setting the active `HTMLVideoElement.playbackRate` directly.
-When the user changes the inline playback-speed control, the extension SHALL persist that selected value locally as the new global default.
-Supported watch pages opened after that change, including future tabs and video navigations, SHALL load and apply the saved default automatically.
-Already-open tabs that were initialized before the save SHALL NOT be updated automatically by a later change made elsewhere.
+Each supported watch page SHALL initialize playback speed independently for the current video instead of loading a saved global default.
+The initial speed SHALL be `1.00x`, and the extension SHALL change it to `0.90x` only when the current video's inferred audio language is English.
+Manual changes made with the inline playback-speed control SHALL apply only to the current video and SHALL NOT become the default for future videos, future tabs, or later watch-page navigations.
+
+#### Scenario: English audio video loads
+- **WHEN** a supported watch page becomes active for a video whose inferred audio language is English and the user has not changed the playback speed yet
+- **THEN** the extension applies `0.90x` to that video's player and reflects `0.90x` in the inline control
+
+#### Scenario: Non-English video loads
+- **WHEN** a supported watch page becomes active for a video whose inferred audio language is not English and the user has not changed the playback speed yet
+- **THEN** the extension applies `1.00x` to that video's player and reflects `1.00x` in the inline control
+
+#### Scenario: Audio language cannot be inferred
+- **WHEN** a supported watch page becomes active for a video whose audio language cannot be inferred and the user has not changed the playback speed yet
+- **THEN** the extension keeps playback speed at `1.00x` and reflects `1.00x` in the inline control
 
 #### Scenario: User changes playback speed on the current video
 - **WHEN** the user activates the increment or decrement button on a supported desktop watch page
-- **THEN** the extension updates the current page's playback speed immediately and saves that value as the new global default
+- **THEN** the extension updates the current page's playback speed immediately and keeps that manual value only for the current video
 
-#### Scenario: Future watch page inherits saved speed
-- **WHEN** a supported watch page is opened or navigated to after a playback speed value has been saved
-- **THEN** the extension applies the saved playback speed automatically to that page's video and shows the same value in the inline control
-
-#### Scenario: Existing tab does not live-sync another tab's change
-- **WHEN** one supported watch-page tab has already initialized with one playback speed and another tab later saves a different playback speed value
-- **THEN** the already-initialized tab keeps its current playback speed until the user changes it locally or navigates to a newly initialized supported watch page
+#### Scenario: Future watch page re-evaluates its own language default
+- **WHEN** a supported watch page is opened or navigated to after the user previously changed playback speed on another video
+- **THEN** the extension ignores the prior video's manual speed and initializes the new video's speed from its own language-based default

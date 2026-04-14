@@ -1,13 +1,12 @@
 import {
 	formatPlaybackSpeed,
-	getSavedPlaybackSpeed,
 	normalizePlaybackSpeed,
 	PLAYBACK_SPEED_DEFAULT,
 	PLAYBACK_SPEED_MAX,
 	PLAYBACK_SPEED_MIN,
 	PLAYBACK_SPEED_STEP,
-	savePlaybackSpeed,
 } from "@shared/playback-speed";
+import { isEnglishLanguage, readPlayerSnapshot } from "@shared/youtube-player";
 import type { Feature, FeatureContext } from "@shared/types";
 import { findWatchPageActionsContainer } from "@shared/youtube-dom";
 
@@ -21,30 +20,29 @@ let localSpeed: number = PLAYBACK_SPEED_DEFAULT;
 let observer: MutationObserver | null = null;
 let ensureQueued = false;
 let userInteracted: boolean = false;
+let pollTimer: number | null = null;
+let sessionToken = 0;
+let syncQueued = false;
 
 const playbackSpeedFeature: Feature = {
 	name: "playback-speed",
 	isWatchPage: true,
 
 	activate(_context: FeatureContext): void {
+		sessionToken += 1;
 		localSpeed = PLAYBACK_SPEED_DEFAULT;
 		userInteracted = false;
 		ensureSpeedControl();
 		applySpeedToVideo();
 		observePage();
-
-		getSavedPlaybackSpeed().then((speed) => {
-			if (userInteracted) {
-				return;
-			}
-			localSpeed = speed;
-			syncControlState();
-			applySpeedToVideo();
-		});
+		startPolling();
+		void queueSync(sessionToken);
 	},
 
 	deactivate(): void {
+		sessionToken += 1;
 		removeSpeedControl();
+		stopPolling();
 		stopObserving();
 	},
 };
@@ -211,6 +209,23 @@ function syncControlState(): void {
 	}
 }
 
+function startPolling(): void {
+	if (pollTimer !== null) {
+		return;
+	}
+
+	pollTimer = window.setInterval(() => {
+		void queueSync(sessionToken);
+	}, 500);
+}
+
+function stopPolling(): void {
+	if (pollTimer !== null) {
+		window.clearInterval(pollTimer);
+		pollTimer = null;
+	}
+}
+
 function applySpeedToVideo(): void {
 	const video = document.querySelector<HTMLVideoElement>("video");
 	if (video) {
@@ -225,7 +240,6 @@ function onDecrement(event: Event): void {
 	localSpeed = normalizePlaybackSpeed(localSpeed - PLAYBACK_SPEED_STEP);
 	syncControlState();
 	applySpeedToVideo();
-	savePlaybackSpeed(localSpeed);
 }
 
 function onIncrement(event: Event): void {
@@ -235,7 +249,6 @@ function onIncrement(event: Event): void {
 	localSpeed = normalizePlaybackSpeed(localSpeed + PLAYBACK_SPEED_STEP);
 	syncControlState();
 	applySpeedToVideo();
-	savePlaybackSpeed(localSpeed);
 }
 
 function observePage(): void {
@@ -304,6 +317,42 @@ function queueEnsureSpeedControl(): void {
 		ensureSpeedControl();
 		applySpeedToVideo();
 	});
+}
+
+async function queueSync(token: number): Promise<void> {
+	if (syncQueued) {
+		return;
+	}
+
+	syncQueued = true;
+	try {
+		await syncSpeedForCurrentVideo(token);
+	} finally {
+		syncQueued = false;
+	}
+}
+
+async function syncSpeedForCurrentVideo(token: number): Promise<void> {
+	if (token !== sessionToken || userInteracted) {
+		return;
+	}
+
+	const snapshot = await readPlayerSnapshot();
+	if (token !== sessionToken || userInteracted || !snapshot) {
+		return;
+	}
+
+	const nextSpeed = isEnglishLanguage(snapshot.audioLanguage)
+		? normalizePlaybackSpeed(0.9)
+		: PLAYBACK_SPEED_DEFAULT;
+
+	if (localSpeed === nextSpeed) {
+		return;
+	}
+
+	localSpeed = nextSpeed;
+	syncControlState();
+	applySpeedToVideo();
 }
 
 function isInsideSpeedControl(node: Node): boolean {

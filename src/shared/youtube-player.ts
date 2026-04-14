@@ -80,6 +80,14 @@ export async function readPlayerSnapshot(): Promise<PlayerSnapshot | null> {
 	return snapshot as PlayerSnapshot;
 }
 
+export function isSpanishLanguage(value: string | null | undefined): boolean {
+	return normalizeLanguageCode(value)?.startsWith("es") ?? false;
+}
+
+export function isEnglishLanguage(value: string | null | undefined): boolean {
+	return normalizeLanguageCode(value)?.startsWith("en") ?? false;
+}
+
 export function inferAudioLanguage(
 	audioTrack: AudioTrack | null,
 	captionTracks: CaptionTrack[],
@@ -112,15 +120,18 @@ export function determineSubtitleSelection(
 	snapshot: PlayerSnapshot,
 ): SubtitleSelection | null {
 	if (!snapshot.audioLanguage) {
-		return null;
+		return { mode: "off" };
 	}
 
-	if (isSpanishLanguage(snapshot.audioLanguage)) {
+	if (
+		isSpanishLanguage(snapshot.audioLanguage) ||
+		isEnglishLanguage(snapshot.audioLanguage)
+	) {
 		return { mode: "off" };
 	}
 
 	if (snapshot.captionTracks.length === 0) {
-		return null;
+		return { mode: "off" };
 	}
 
 	const directEnglishTrack = findDirectEnglishTrack(snapshot.captionTracks);
@@ -312,14 +323,6 @@ function getAudioTrackSignature(track: AudioTrack | null): string {
 	const autoDubbed = track.hs?.isAutoDubbed ? "auto" : "original";
 
 	return `audio:${id}:${name}:${autoDubbed}`;
-}
-
-function isSpanishLanguage(value: string): boolean {
-	return normalizeLanguageCode(value)?.startsWith("es") ?? false;
-}
-
-function isEnglishLanguage(value: string | undefined): boolean {
-	return normalizeLanguageCode(value)?.startsWith("en") ?? false;
 }
 
 function normalizeLanguageCode(
