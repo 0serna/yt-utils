@@ -349,7 +349,7 @@ async function syncSpeedForCurrentVideo(token: number): Promise<void> {
 	const nextSpeed = isSpanishLanguage(snapshot.audioLanguage)
 		? normalizePlaybackSpeed(1.1)
 		: isEnglishLanguage(snapshot.audioLanguage)
-			? normalizePlaybackSpeed(0.9)
+			? normalizePlaybackSpeed(0.95)
 			: PLAYBACK_SPEED_DEFAULT;
 
 	if (localSpeed === nextSpeed) {

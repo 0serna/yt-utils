@@ -98,6 +98,13 @@ export function inferAudioLanguage(
 	audioTrack: AudioTrack | null,
 	captionTracks: CaptionTrack[],
 ): string | null {
+	const audioTrackCaptionLanguage = normalizeLanguageCode(
+		audioTrack?.captionTracks?.[0]?.languageCode,
+	);
+	if (audioTrackCaptionLanguage && audioTrackCaptionLanguage !== "und") {
+		return audioTrackCaptionLanguage;
+	}
+
 	const direct = normalizeLanguageCode(
 		audioTrack?.yG?.id || audioTrack?.hs?.id || audioTrack?.id,
 	);
