@@ -11,16 +11,12 @@ The project SHALL use Vite with `@crxjs/vite-plugin` to compile the `src/` direc
 - **WHEN** a contributor runs `npm run build`
 - **THEN** Vite compiles all TypeScript source files and outputs a working Chrome extension into `extension/`, ready to be loaded by Chrome
 
-#### Scenario: Watch build
-- **WHEN** a contributor runs `npm run watch`
-- **THEN** Vite rebuilds the Chrome extension on file changes so the updated output is ready to reload
+### Requirement: Validation passes with Biome and TypeScript
+The project SHALL use TypeScript with `strict: true` in `tsconfig.json`. All source files in `src/` SHALL pass the repository validation command without errors.
 
-### Requirement: TypeScript compilation with strict mode
-The project SHALL use TypeScript with `strict: true` in `tsconfig.json`. All source files in `src/` SHALL pass type checking without errors.
-
-#### Scenario: Type checking passes
-- **WHEN** a contributor runs `npm run typecheck`
-- **THEN** the TypeScript compiler reports no type errors across all source files in `src/`
+#### Scenario: Validation passes
+- **WHEN** a contributor runs `npm run check`
+- **THEN** Biome reports no issues and the TypeScript compiler reports no type errors across all source files in `src/`
 
 ### Requirement: Manifest remains source-controlled
 The `extension/manifest.json` file SHALL be a source-controlled file read by CRXJS, not a generated artifact. It SHALL reference source entry points that CRXJS resolves at build time.

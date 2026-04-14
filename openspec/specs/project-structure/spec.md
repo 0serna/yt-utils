@@ -22,8 +22,8 @@ The `src/background.ts` barrel file SHALL import all feature background handlers
 - **WHEN** the background service worker starts
 - **THEN** all feature background handlers are imported and their message listeners are registered
 
-### Requirement: Build command and npm scripts are documented
-The `package.json` SHALL define `build`, `dev`, and `typecheck` scripts. The README SHALL document the build step as part of the local setup instructions.
+### Requirement: Build and validation scripts are documented
+The `package.json` SHALL define `build` and `check` scripts. The README SHALL document the build step as part of the local setup instructions and the validation command for contributors.
 
 #### Scenario: Contributor sets up the project
 - **WHEN** a contributor clones the repository and follows the README setup instructions

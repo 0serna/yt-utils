@@ -7,11 +7,6 @@ YT Utils is a Chrome extension for YouTube. It currently focuses on watch-page h
 - Marks videos as watched.
 - Provides playback speed utilities.
 
-## Requirements
-
-- Node.js 18+
-- Google Chrome or another Chromium-based browser with MV3 support
-
 ## Setup
 
 ```sh
@@ -23,12 +18,8 @@ Then load the generated extension from the build output in `chrome://extensions`
 
 ## Development
 
-- `npm run check` - run Biome checks
-- `npm run format` - format files with Biome
-- `npm run lint` - run Biome lint rules
+- `npm run check` - run Biome checks and TypeScript type checking
 - `npm run build` - production build
-- `npm run watch` - build in watch mode
-- `npm run typecheck` - type check only
 
 ## Project Structure
 

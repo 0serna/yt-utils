@@ -1,5 +1,5 @@
-import markAsSeenFeature from "./features/mark-as-seen/content";
 import audioLanguageSubtitlePolicyFeature from "./features/audio-language-subtitle-policy/content";
+import markAsSeenFeature from "./features/mark-as-seen/content";
 import playbackSpeedFeature from "./features/playback-speed/content";
 import { FeatureRegistry } from "./shared/feature-registry";
 

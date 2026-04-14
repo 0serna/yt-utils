@@ -6,13 +6,13 @@ import {
 	PLAYBACK_SPEED_MIN,
 	PLAYBACK_SPEED_STEP,
 } from "@shared/playback-speed";
+import type { Feature, FeatureContext } from "@shared/types";
+import { findWatchPageActionsContainer } from "@shared/youtube-dom";
 import {
 	isEnglishLanguage,
 	isSpanishLanguage,
 	readPlayerSnapshot,
 } from "@shared/youtube-player";
-import type { Feature, FeatureContext } from "@shared/types";
-import { findWatchPageActionsContainer } from "@shared/youtube-dom";
 
 const CONTROL_HOST_ID = "yt-utils-speed-host";
 const SPEED_DECREMENT_ID = "yt-utils-speed-decrement";
