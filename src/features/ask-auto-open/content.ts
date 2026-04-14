@@ -7,9 +7,12 @@ import {
 } from "@shared/youtube-dom";
 
 const PANEL_TARGET_ID = "PAyouchat";
+const ASK_SCROLL_CONTAINER_SELECTOR =
+	'ytd-engagement-panel-section-list-renderer[target-id="PAyouchat"] yt-section-list-renderer';
 const POLL_INTERVAL_MS = 500;
 const SYNC_TIMEOUT_MS = 5000;
 const ASK_LABELS = [/\bask\b/i, /\bpreguntar\b/i];
+const ASK_SCROLL_OVERSCROLL_BEHAVIOR = "contain";
 
 let observer: MutationObserver | null = null;
 let pollTimer: number | null = null;
@@ -31,6 +34,7 @@ const askAutoOpenFeature: Feature = {
 		expandedVideoId = null;
 		observePage();
 		startPolling();
+		syncAskScrollContainment();
 		void queueSync(sessionToken);
 	},
 
@@ -214,6 +218,8 @@ async function syncAskPanel(token: number): Promise<void> {
 		return;
 	}
 
+	syncAskScrollContainment();
+
 	if (isAskPanelExpanded(panel)) {
 		expandedVideoId = videoId;
 		completedVideoId = videoId;
@@ -258,11 +264,31 @@ async function syncAskPanel(token: number): Promise<void> {
 		if (!isAskPanelExpanded(openedPanel)) {
 			completedVideoId = null;
 		}
+
+		syncAskScrollContainment();
 	} catch {
 		failedVideoId = videoId;
 		// Intentionally silent: the feature should not interfere when YouTube
 		// changes the UI or the panel does not respond.
 	}
+}
+
+function syncAskScrollContainment(): void {
+	const scrollContainer = findAskScrollContainer();
+
+	if (!scrollContainer) {
+		return;
+	}
+
+	if (
+		scrollContainer.style.overscrollBehaviorY !== ASK_SCROLL_OVERSCROLL_BEHAVIOR
+	) {
+		scrollContainer.style.overscrollBehaviorY = ASK_SCROLL_OVERSCROLL_BEHAVIOR;
+	}
+}
+
+function findAskScrollContainer(): HTMLElement | null {
+	return document.querySelector<HTMLElement>(ASK_SCROLL_CONTAINER_SELECTOR);
 }
 
 function isInsideAskSurface(node: Node): boolean {
