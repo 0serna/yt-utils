@@ -4,7 +4,7 @@
 		"includes": [
 			"src/**/*.ts",
 			"*.json",
-			"extension/manifest.json",
+			"!!**/extension/manifest.json",
 			"openspec/**/*.json",
 			"vite.config.ts"
 		],

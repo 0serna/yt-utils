@@ -1,3 +1,4 @@
+import askAutoOpenFeature from "./features/ask-auto-open/content";
 import audioLanguageSubtitlePolicyFeature from "./features/audio-language-subtitle-policy/content";
 import markAsSeenFeature from "./features/mark-as-seen/content";
 import playbackSpeedFeature from "./features/playback-speed/content";
@@ -7,3 +8,4 @@ const registry = new FeatureRegistry();
 registry.register(markAsSeenFeature);
 registry.register(audioLanguageSubtitlePolicyFeature);
 registry.register(playbackSpeedFeature);
+registry.register(askAutoOpenFeature);
