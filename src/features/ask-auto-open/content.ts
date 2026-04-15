@@ -5,12 +5,14 @@ import {
 	isVisible,
 	waitFor,
 } from "@shared/youtube-dom";
+import { readPlayerSnapshot } from "@shared/youtube-player";
 
 const PANEL_TARGET_ID = "PAyouchat";
 const ASK_SCROLL_CONTAINER_SELECTOR =
 	'ytd-engagement-panel-section-list-renderer[target-id="PAyouchat"] yt-section-list-renderer';
 const POLL_INTERVAL_MS = 500;
 const SYNC_TIMEOUT_MS = 5000;
+const PANEL_SETTLE_DELAY_MS = 1500;
 const ASK_LABELS = [/\bask\b/i, /\bpreguntar\b/i];
 const ASK_SCROLL_OVERSCROLL_BEHAVIOR = "contain";
 
@@ -20,8 +22,8 @@ let ensureQueued = false;
 let syncInProgress = false;
 let sessionToken = 0;
 let completedVideoId: string | null = null;
-let failedVideoId: string | null = null;
 let expandedVideoId: string | null = null;
+let activatedAt = 0;
 
 const askAutoOpenFeature: Feature = {
 	name: "youtube-ask-auto-open",
@@ -29,8 +31,8 @@ const askAutoOpenFeature: Feature = {
 
 	activate(_context: FeatureContext): void {
 		sessionToken += 1;
+		activatedAt = Date.now();
 		completedVideoId = null;
-		failedVideoId = null;
 		expandedVideoId = null;
 		observePage();
 		startPolling();
@@ -40,8 +42,8 @@ const askAutoOpenFeature: Feature = {
 
 	deactivate(): void {
 		sessionToken += 1;
+		activatedAt = 0;
 		completedVideoId = null;
-		failedVideoId = null;
 		expandedVideoId = null;
 		stopPolling();
 		stopObserving();
@@ -197,19 +199,24 @@ async function syncAskPanel(token: number): Promise<void> {
 		return;
 	}
 
-	if (completedVideoId && completedVideoId !== videoId) {
-		completedVideoId = null;
+	const snapshot = await readPlayerSnapshot();
+	if (
+		token !== sessionToken ||
+		!snapshot?.videoId ||
+		snapshot.videoId !== videoId
+	) {
+		return;
 	}
 
-	if (failedVideoId && failedVideoId !== videoId) {
-		failedVideoId = null;
+	if (completedVideoId && completedVideoId !== videoId) {
+		completedVideoId = null;
 	}
 
 	if (expandedVideoId && expandedVideoId !== videoId) {
 		expandedVideoId = null;
 	}
 
-	if (completedVideoId === videoId || failedVideoId === videoId) {
+	if (completedVideoId === videoId) {
 		return;
 	}
 
@@ -221,6 +228,13 @@ async function syncAskPanel(token: number): Promise<void> {
 	syncAskScrollContainment();
 
 	if (isAskPanelExpanded(panel)) {
+		if (
+			expandedVideoId !== videoId &&
+			Date.now() - activatedAt < PANEL_SETTLE_DELAY_MS
+		) {
+			return;
+		}
+
 		expandedVideoId = videoId;
 		completedVideoId = videoId;
 		return;
@@ -267,9 +281,9 @@ async function syncAskPanel(token: number): Promise<void> {
 
 		syncAskScrollContainment();
 	} catch {
-		failedVideoId = videoId;
 		// Intentionally silent: the feature should not interfere when YouTube
-		// changes the UI or the panel does not respond.
+		// changes the UI or the panel does not respond. Keep retrying while the
+		// current video's Ask panel remains closed.
 	}
 }
 
