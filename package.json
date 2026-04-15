@@ -7,7 +7,7 @@
 	"scripts": {
 		"prepare": "husky",
 		"build": "vite build",
-		"check": "biome check . && tsc --noEmit"
+		"check": "biome check --write . && tsc --noEmit"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.11",

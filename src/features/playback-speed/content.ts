@@ -1,3 +1,5 @@
+import { getBootstrapIconMarkup } from "@shared/bootstrap-icons";
+import { applyExtensionButtonStyles } from "@shared/extension-button";
 import {
 	formatPlaybackSpeed,
 	normalizePlaybackSpeed,
@@ -139,7 +141,7 @@ function createSpeedControlHost(): HTMLElement {
 	decrementBtn.type = "button";
 	decrementBtn.setAttribute("aria-label", "Decrease playback speed");
 	decrementBtn.title = "Decrease playback speed";
-	decrementBtn.textContent = "−";
+	decrementBtn.innerHTML = getBootstrapIconMarkup("dash");
 	styleSpeedButton(decrementBtn);
 	decrementBtn.onclick = onDecrement;
 
@@ -161,7 +163,7 @@ function createSpeedControlHost(): HTMLElement {
 	incrementBtn.type = "button";
 	incrementBtn.setAttribute("aria-label", "Increase playback speed");
 	incrementBtn.title = "Increase playback speed";
-	incrementBtn.textContent = "+";
+	incrementBtn.innerHTML = getBootstrapIconMarkup("plus");
 	styleSpeedButton(incrementBtn);
 	incrementBtn.onclick = onIncrement;
 
@@ -170,21 +172,7 @@ function createSpeedControlHost(): HTMLElement {
 }
 
 function styleSpeedButton(button: HTMLButtonElement): void {
-	button.style.width = "36px";
-	button.style.height = "36px";
-	button.style.border = "none";
-	button.style.borderRadius = "999px";
-	button.style.display = "inline-flex";
-	button.style.alignItems = "center";
-	button.style.justifyContent = "center";
-	button.style.padding = "0";
-	button.style.cursor = "pointer";
-	button.style.background = "rgba(255, 255, 255, 0.1)";
-	button.style.color = "var(--yt-spec-text-primary, #f1f1f1)";
-	button.style.fontSize = "16px";
-	button.style.fontWeight = "600";
-	button.style.lineHeight = "1";
-	button.style.transition = "background 120ms ease, opacity 120ms ease";
+	applyExtensionButtonStyles(button);
 }
 
 function syncControlState(): void {

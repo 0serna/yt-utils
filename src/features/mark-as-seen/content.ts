@@ -1,3 +1,5 @@
+import { getBootstrapIconMarkup } from "@shared/bootstrap-icons";
+import { applyExtensionButtonStyles } from "@shared/extension-button";
 import { MESSAGE_INLINE_TRIGGER, sendMessage } from "@shared/messaging";
 import type { Feature, FeatureContext } from "@shared/types";
 
@@ -212,30 +214,23 @@ function syncButtonState(): void {
 	button.dataset.state = currentState;
 	button.setAttribute("aria-label", palette.label);
 	button.title = palette.label;
-	button.style.width = "36px";
-	button.style.height = "36px";
-	button.style.border = "none";
-	button.style.borderRadius = "999px";
-	button.style.display = "inline-flex";
-	button.style.alignItems = "center";
-	button.style.justifyContent = "center";
-	button.style.pointerEvents = "auto";
-	button.style.position = "relative";
-	button.style.zIndex = "1";
-	button.style.cursor = currentState === "running" ? "default" : "pointer";
-	button.style.padding = "0";
-	button.style.background = palette.background;
-	button.style.color = palette.color;
-	button.style.opacity = palette.opacity;
-	button.style.transition =
-		"background 120ms ease, color 120ms ease, opacity 120ms ease, transform 120ms ease";
+	applyExtensionButtonStyles(button as HTMLButtonElement, {
+		background: palette.background,
+		hoverBackground: palette.hoverBackground,
+		activeBackground: palette.activeBackground,
+		opacity: palette.opacity,
+		cursor: currentState === "running" ? "default" : "pointer",
+		position: "relative",
+		zIndex: "1",
+	});
 	button.innerHTML = getButtonIconMarkup(currentState);
 }
 
 function getStatePalette(state: ButtonState): {
 	label: string;
 	background: string;
-	color: string;
+	hoverBackground: string;
+	activeBackground: string;
 	opacity: string;
 } {
 	switch (state) {
@@ -243,28 +238,32 @@ function getStatePalette(state: ButtonState): {
 			return {
 				label: "Marking as seen...",
 				background: "rgba(255, 255, 255, 0.2)",
-				color: "#ffffff",
+				hoverBackground: "rgba(255, 255, 255, 0.2)",
+				activeBackground: "rgba(255, 255, 255, 0.2)",
 				opacity: "0.75",
 			};
 		case "success":
 			return {
 				label: "Marked as seen.",
 				background: "#2e7d32",
-				color: "#ffffff",
+				hoverBackground: "#2e7d32",
+				activeBackground: "#2e7d32",
 				opacity: "1",
 			};
 		case "error":
 			return {
 				label: "Mark as seen failed.",
 				background: "#b71c1c",
-				color: "#ffffff",
+				hoverBackground: "#b71c1c",
+				activeBackground: "#b71c1c",
 				opacity: "1",
 			};
 		default:
 			return {
 				label: "Mark as seen",
 				background: "rgba(255, 255, 255, 0.1)",
-				color: "var(--yt-spec-text-primary, #f1f1f1)",
+				hoverBackground: "rgba(255, 255, 255, 0.2)",
+				activeBackground: "rgba(255, 255, 255, 0.2)",
 				opacity: "1",
 			};
 	}
@@ -280,11 +279,7 @@ function getButtonIconMarkup(state: ButtonState): string {
 		].join("");
 	}
 
-	return [
-		'<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">',
-		'<path d="M9.2 16.6 4.9 12.3l1.4-1.4 2.9 2.9 8.5-8.5 1.4 1.4z" fill="currentColor"></path>',
-		"</svg>",
-	].join("");
+	return [getBootstrapIconMarkup("check")].join("");
 }
 
 async function onInlineButtonClick(event: Event): Promise<void> {
