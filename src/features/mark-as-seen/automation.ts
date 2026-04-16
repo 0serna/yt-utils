@@ -245,7 +245,12 @@ function runYoutubeMarkAsSeenAutomation(): Promise<AutomationResult> {
 
 	async function execute(): Promise<AutomationResult> {
 		try {
-			if (!window.location.pathname.startsWith("/watch")) {
+			const isSupportedPage =
+				WATCH_PAGE_HOSTS.has(window.location.hostname) &&
+				window.location.pathname === "/watch" &&
+				new URLSearchParams(window.location.search).has("v");
+
+			if (!isSupportedPage) {
 				throw createAutomationError(
 					"UNSUPPORTED_PAGE",
 					"This page is not a standard YouTube watch page.",
