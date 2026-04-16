@@ -1,11 +1,12 @@
 # YT Utils
 
-YT Utils is a Chrome extension for YouTube. It currently focuses on watch-page helpers.
+YT Utils is a Chrome extension for YouTube and general webpage text lookup.
 
 ## Features
 
 - Marks videos as watched.
 - Provides playback speed utilities.
+- Shows an inline Google search action for selected text on ordinary webpages.
 
 ## Setup
 
@@ -24,6 +25,9 @@ Then load the generated extension from the build output in `chrome://extensions`
 ## Project Structure
 
 - `src/background.ts` - extension background entrypoint
-- `src/content.ts` - main content-script entrypoint
+- `src/content.ts` - YouTube content-script entrypoint
+- `src/global-selection.ts` - global selection content-script entrypoint
 - `src/features/` - feature-specific logic
 - `src/shared/` - shared YouTube helpers and messaging utilities
+
+The global selection feature runs on ordinary webpages, so the extension requests broader page access than the YouTube-only helpers did previously.

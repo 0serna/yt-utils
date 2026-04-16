@@ -1,4 +1,7 @@
-## MODIFIED Requirements
+## Purpose
+Automatically open the YouTube Ask panel on supported watch pages when the current video's panel is closed.
+
+## Requirements
 
 ### Requirement: Auto-open Ask panel on supported watch pages
 The system MUST automatically open the YouTube `Ask` panel for the current supported watch-page video when that video's Ask UI is available and the current video's panel is closed.
