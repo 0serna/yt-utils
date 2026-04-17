@@ -38,14 +38,7 @@ export type AudioTrack = {
 	captionTracks?: CaptionTrack[];
 };
 
-export type SubtitleSelection =
-	| { mode: "off" }
-	| { mode: "direct"; track: CaptionTrack }
-	| {
-			mode: "translated";
-			track: CaptionTrack;
-			translationLanguage: TranslationLanguage;
-	  };
+export type SubtitleSelection = { mode: "off" };
 
 export type PlayerSnapshot = {
 	videoId: string | null;
@@ -133,42 +126,8 @@ export function inferAudioLanguage(
 }
 
 export function determineSubtitleSelection(
-	snapshot: PlayerSnapshot,
-): SubtitleSelection | null {
-	if (!snapshot.audioLanguage) {
-		return { mode: "off" };
-	}
-
-	if (
-		isSpanishLanguage(snapshot.audioLanguage) ||
-		isEnglishLanguage(snapshot.audioLanguage)
-	) {
-		return { mode: "off" };
-	}
-
-	if (snapshot.captionTracks.length === 0) {
-		return { mode: "off" };
-	}
-
-	const directEnglishTrack = findDirectEnglishTrack(snapshot.captionTracks);
-	if (directEnglishTrack) {
-		return { mode: "direct", track: directEnglishTrack };
-	}
-
-	const translationLanguage = findEnglishTranslationLanguage(
-		snapshot.translationLanguages,
-	);
-	const translatableSourceTrack = findTranslatableSourceTrack(
-		snapshot.captionTracks,
-	);
-	if (translationLanguage && translatableSourceTrack) {
-		return {
-			mode: "translated",
-			track: translatableSourceTrack,
-			translationLanguage,
-		};
-	}
-
+	_snapshot: PlayerSnapshot,
+): SubtitleSelection {
 	return { mode: "off" };
 }
 
@@ -184,25 +143,7 @@ export function matchesSubtitleSelection(
 	snapshot: PlayerSnapshot,
 	selection: SubtitleSelection,
 ): boolean {
-	switch (selection.mode) {
-		case "off":
-			return snapshot.subtitlesOn === false;
-		case "direct":
-			return (
-				snapshot.subtitlesOn &&
-				isEnglishLanguage(snapshot.currentCaptionTrack?.languageCode) &&
-				!snapshot.currentCaptionTrack?.translationLanguage
-			);
-		case "translated":
-			return (
-				snapshot.subtitlesOn &&
-				normalizeLanguageCode(
-					snapshot.currentCaptionTrack?.translationLanguage?.languageCode,
-				) === "en"
-			);
-	}
-
-	return false;
+	return selection.mode === "off" && snapshot.subtitlesOn === false;
 }
 
 export async function applySubtitleSelection(
@@ -283,36 +224,6 @@ async function sendBridgeRequest(
 		};
 		window.postMessage(request, window.location.origin);
 	});
-}
-
-function findDirectEnglishTrack(tracks: CaptionTrack[]): CaptionTrack | null {
-	return (
-		tracks.find(
-			(track) =>
-				isEnglishLanguage(track.languageCode) && !track.translationLanguage,
-		) || null
-	);
-}
-
-function findTranslatableSourceTrack(
-	tracks: CaptionTrack[],
-): CaptionTrack | null {
-	return (
-		tracks.find((track) =>
-			Boolean(track.isTranslatable || track.isTranslateable),
-		) ||
-		tracks[0] ||
-		null
-	);
-}
-
-function findEnglishTranslationLanguage(
-	languages: TranslationLanguage[],
-): TranslationLanguage | null {
-	return (
-		languages.find((language) => isEnglishLanguage(language.languageCode)) ||
-		null
-	);
 }
 
 function getCaptionTrackSignature(track: CaptionTrack | null): string {

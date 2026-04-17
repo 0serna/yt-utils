@@ -61,14 +61,7 @@ type YoutubePlayer = HTMLElement & {
 	setOption?: (namespace: string, key: string, value: unknown) => void;
 };
 
-type SubtitleSelection =
-	| { mode: "off" }
-	| { mode: "direct"; track: CaptionTrack }
-	| {
-			mode: "translated";
-			track: CaptionTrack;
-			translationLanguage: TranslationLanguage;
-	  };
+type SubtitleSelection = { mode: "off" };
 
 type PlayerSnapshot = {
 	videoId: string | null;
@@ -166,27 +159,10 @@ function applySubtitleSelection(selection: SubtitleSelection | null): boolean {
 		return false;
 	}
 
-	if (selection.mode === "off") {
-		if (player.isSubtitlesOn?.()) {
-			player.toggleSubtitles?.();
-		}
-		return true;
+	if (player.isSubtitlesOn?.()) {
+		player.toggleSubtitles?.();
 	}
 
-	if (!player.isSubtitlesOn?.()) {
-		player.toggleSubtitlesOn?.();
-	}
-
-	const payload =
-		selection.mode === "translated"
-			? {
-					...selection.track,
-					translationLanguage: selection.translationLanguage,
-				}
-			: selection.track;
-
-	player.setOption?.("captions", "track", payload);
-	player.setOption?.("captions", "reload", true);
 	return true;
 }
 

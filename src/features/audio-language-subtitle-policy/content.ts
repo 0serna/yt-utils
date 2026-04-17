@@ -91,9 +91,6 @@ async function syncPolicy(token: number): Promise<void> {
 	}
 
 	const desiredSelection = determineSubtitleSelection(snapshot);
-	if (!desiredSelection) {
-		return;
-	}
 
 	if (!appliedSignature) {
 		if (matchesSubtitleSelection(snapshot, desiredSelection)) {
