@@ -3,6 +3,7 @@ import audioLanguageSubtitlePolicyFeature from "./features/audio-language-subtit
 import engagementPanelScrollContainmentFeature from "./features/engagement-panel-scroll-containment/content";
 import markAsSeenFeature from "./features/mark-as-seen/content";
 import playbackSpeedFeature from "./features/playback-speed/content";
+import subscriptionsGridDensityFeature from "./features/subscriptions-grid-density/content";
 import subscriptionsHideFeature from "./features/subscriptions-hide/content";
 import subscriptionsSeenOverlayFeature from "./features/subscriptions-seen-overlay/content";
 import subscriptionsShortsRemovalFeature from "./features/subscriptions-shorts-removal/content";
@@ -17,3 +18,4 @@ registry.register(askAutoOpenFeature);
 registry.register(subscriptionsHideFeature);
 registry.register(subscriptionsSeenOverlayFeature);
 registry.register(subscriptionsShortsRemovalFeature);
+registry.register(subscriptionsGridDensityFeature);
