@@ -196,6 +196,24 @@ export function findSubscriptionsHideMenuItem(
 	return findMenuItem(root, LABELS.hide);
 }
 
+export function findShortsShelf(): HTMLElement | null {
+	return document.querySelector<HTMLElement>(
+		"ytd-rich-shelf-renderer[is-shorts]",
+	);
+}
+
+export function removeShortsSection(): void {
+	const shelf = findShortsShelf();
+	if (!shelf) {
+		return;
+	}
+
+	const section = shelf.closest<HTMLElement>("ytd-rich-section-renderer");
+	if (section) {
+		section.remove();
+	}
+}
+
 export function isVisible(element: Element): boolean {
 	const style = window.getComputedStyle(element);
 	const rect = element.getBoundingClientRect();
