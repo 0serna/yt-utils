@@ -295,6 +295,10 @@ function runYoutubeMarkAsSeenAutomation(
 				},
 			);
 
+			video.play();
+
+			await delay(2000);
+
 			video.pause();
 
 			await waitFor(() => video.paused, {
