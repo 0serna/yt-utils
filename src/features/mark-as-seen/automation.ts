@@ -51,7 +51,10 @@ async function clearActionStatus(tabId: number): Promise<void> {
 	await chrome.action.setTitle({ tabId, title: "YT Utils" });
 }
 
-function runYoutubeMarkAsSeenAutomation(): Promise<AutomationResult> {
+function runYoutubeMarkAsSeenAutomation(
+	watchPageHosts: readonly string[],
+): Promise<AutomationResult> {
+	const supportedWatchPageHosts = new Set(watchPageHosts);
 	const LABELS = {
 		share: [/\bshare\b/i, /\bcompartir\b/i],
 		copy: [/\bcopy\b/i, /\bcopy link\b/i, /\bcopiar\b/i, /\bcopiar enlace\b/i],
@@ -246,7 +249,7 @@ function runYoutubeMarkAsSeenAutomation(): Promise<AutomationResult> {
 	async function execute(): Promise<AutomationResult> {
 		try {
 			const isSupportedPage =
-				WATCH_PAGE_HOSTS.has(window.location.hostname) &&
+				supportedWatchPageHosts.has(window.location.hostname) &&
 				window.location.pathname === "/watch" &&
 				new URLSearchParams(window.location.search).has("v");
 
@@ -414,6 +417,7 @@ export async function runMarkAsSeenForTab(
 		const [execution] = await chrome.scripting.executeScript({
 			target: { tabId },
 			func: runYoutubeMarkAsSeenAutomation,
+			args: [[...WATCH_PAGE_HOSTS]],
 		});
 
 		const result = execution?.result as AutomationResult | undefined;
