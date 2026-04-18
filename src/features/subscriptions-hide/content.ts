@@ -279,8 +279,12 @@ function getCardKey(card: HTMLElement): string {
 }
 
 function getCardByKey(cardKey: string): HTMLElement | null {
+	const attr = CARD_KEY_ATTRIBUTE.replace(
+		/[A-Z]/g,
+		(match) => `-${match.toLowerCase()}`,
+	);
 	return document.querySelector<HTMLElement>(
-		`ytd-rich-item-renderer[data-${toDatasetAttributeName(CARD_KEY_ATTRIBUTE)}="${cardKey}"]`,
+		`ytd-rich-item-renderer[data-${attr}="${cardKey}"]`,
 	);
 }
 
@@ -297,8 +301,4 @@ function isInsideHideButton(node: Node): boolean {
 		node instanceof Element &&
 		Boolean(node.closest(`[id^="${BUTTON_HOST_ID_PREFIX}"]`))
 	);
-}
-
-function toDatasetAttributeName(value: string): string {
-	return value.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
 }

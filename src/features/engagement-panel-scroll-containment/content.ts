@@ -1,5 +1,5 @@
 import type { Feature, FeatureContext } from "@shared/types";
-import { isVisible } from "@shared/youtube-dom";
+import { isDesktopWatchPage, isVisible } from "@shared/youtube-dom";
 
 const POLL_INTERVAL_MS = 500;
 const PANEL_SELECTOR = "ytd-engagement-panel-section-list-renderer";
@@ -34,11 +34,7 @@ const engagementPanelScrollContainmentFeature: Feature = {
 export default engagementPanelScrollContainmentFeature;
 
 function isSupportedWatchPage(): boolean {
-	return (
-		window.location.hostname === "www.youtube.com" &&
-		window.location.pathname === "/watch" &&
-		new URLSearchParams(window.location.search).has("v")
-	);
+	return isDesktopWatchPage();
 }
 
 function startPolling(): void {

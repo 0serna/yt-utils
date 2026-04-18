@@ -1,5 +1,8 @@
 import type { Feature, FeatureContext } from "@shared/types";
-import { isDesktopSubscriptionsFeedPage } from "@shared/youtube-dom";
+import {
+	findSubscriptionsFeedCards,
+	isDesktopSubscriptionsFeedPage,
+} from "@shared/youtube-dom";
 
 const OVERLAY_CLASS = "yt-utils-seen-overlay";
 
@@ -55,10 +58,6 @@ function ensureOverlay(card: HTMLElement): void {
 	}
 
 	injectOverlay(thumbnail);
-}
-
-function findSubscriptionsFeedCards(): HTMLElement[] {
-	return [...document.querySelectorAll<HTMLElement>("ytd-rich-item-renderer")];
 }
 
 function findThumbnailViewModel(card: HTMLElement): HTMLElement | null {

@@ -12,6 +12,8 @@ import type { Feature, FeatureContext } from "@shared/types";
 import {
 	findWatchPageActionsContainer,
 	getElementLabel,
+	isDesktopWatchPage,
+	RELEVANT_MUTATION_SELECTORS,
 } from "@shared/youtube-dom";
 import {
 	isEnglishLanguage,
@@ -59,11 +61,7 @@ const playbackSpeedFeature: Feature = {
 export default playbackSpeedFeature;
 
 function isSupportedDesktopWatchPage(): boolean {
-	return (
-		window.location.hostname === "www.youtube.com" &&
-		window.location.pathname === "/watch" &&
-		new URLSearchParams(window.location.search).has("v")
-	);
+	return isDesktopWatchPage();
 }
 
 function ensureSpeedControl(): void {
@@ -145,7 +143,7 @@ function createSpeedControlHost(): HTMLElement {
 	decrementBtn.setAttribute("aria-label", "Decrease playback speed");
 	decrementBtn.title = "Decrease playback speed";
 	decrementBtn.innerHTML = getBootstrapIconMarkup("dash");
-	styleSpeedButton(decrementBtn);
+	applyExtensionButtonStyles(decrementBtn);
 	decrementBtn.onclick = onDecrement;
 
 	const valueDisplay = document.createElement("span");
@@ -167,15 +165,11 @@ function createSpeedControlHost(): HTMLElement {
 	incrementBtn.setAttribute("aria-label", "Increase playback speed");
 	incrementBtn.title = "Increase playback speed";
 	incrementBtn.innerHTML = getBootstrapIconMarkup("plus");
-	styleSpeedButton(incrementBtn);
+	applyExtensionButtonStyles(incrementBtn);
 	incrementBtn.onclick = onIncrement;
 
 	host.append(decrementBtn, valueDisplay, incrementBtn);
 	return host;
-}
-
-function styleSpeedButton(button: HTMLButtonElement): void {
-	applyExtensionButtonStyles(button);
 }
 
 function syncControlState(): void {
@@ -270,12 +264,8 @@ function observePage(): void {
 				}
 
 				return (
-					node.matches?.(
-						"ytd-watch-metadata, #actions-inner, #top-level-buttons-computed, segmented-like-dislike-button-view-model, ytd-menu-renderer",
-					) ||
-					node.querySelector?.(
-						"ytd-watch-metadata, #actions-inner, #top-level-buttons-computed, segmented-like-dislike-button-view-model, ytd-menu-renderer",
-					)
+					node.matches?.(RELEVANT_MUTATION_SELECTORS) ||
+					node.querySelector?.(RELEVANT_MUTATION_SELECTORS)
 				);
 			});
 		});

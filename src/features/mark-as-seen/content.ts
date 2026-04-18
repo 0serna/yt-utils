@@ -5,6 +5,8 @@ import type { Feature, FeatureContext } from "@shared/types";
 import {
 	findWatchPageActionsContainer,
 	getElementLabel,
+	isDesktopWatchPage,
+	RELEVANT_MUTATION_SELECTORS,
 } from "@shared/youtube-dom";
 
 const BUTTON_HOST_ID = "yt-utils-inline-host";
@@ -33,7 +35,6 @@ export default markAsSeenFeature;
 let currentState: ButtonState = "idle";
 let stateResetTimer: number | null = null;
 let ensureButtonQueued = false;
-const _knownUrl = window.location.href;
 let observer: MutationObserver | null = null;
 
 function ensureInlineButton(): void {
@@ -99,12 +100,8 @@ function observePage(): void {
 				}
 
 				return (
-					node.matches?.(
-						"ytd-watch-metadata, #actions-inner, #top-level-buttons-computed, segmented-like-dislike-button-view-model, ytd-menu-renderer",
-					) ||
-					node.querySelector?.(
-						"ytd-watch-metadata, #actions-inner, #top-level-buttons-computed, segmented-like-dislike-button-view-model, ytd-menu-renderer",
-					)
+					node.matches?.(RELEVANT_MUTATION_SELECTORS) ||
+					node.querySelector?.(RELEVANT_MUTATION_SELECTORS)
 				);
 			});
 		});
@@ -143,11 +140,7 @@ function queueEnsureButton(): void {
 }
 
 function isSupportedDesktopWatchPage(): boolean {
-	return (
-		window.location.hostname === "www.youtube.com" &&
-		window.location.pathname === "/watch" &&
-		new URLSearchParams(window.location.search).has("v")
-	);
+	return isDesktopWatchPage();
 }
 
 function findInsertionTarget(
@@ -257,15 +250,15 @@ function getStatePalette(state: ButtonState): {
 
 function getButtonIconMarkup(state: ButtonState): string {
 	if (state === "running") {
-		return [
-			'<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">',
-			'<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2" opacity="0.35"></circle>',
-			'<path d="M12 4a8 8 0 0 1 8 8" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"></path>',
-			"</svg>",
-		].join("");
+		return (
+			'<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">' +
+			'<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2" opacity="0.35"></circle>' +
+			'<path d="M12 4a8 8 0 0 1 8 8" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"></path>' +
+			"</svg>"
+		);
 	}
 
-	return [getBootstrapIconMarkup("check")].join("");
+	return getBootstrapIconMarkup("check");
 }
 
 async function onInlineButtonClick(event: Event): Promise<void> {

@@ -164,11 +164,22 @@ export function findWatchPageActionsContainer(): HTMLElement | null {
 	return null;
 }
 
+export const RELEVANT_MUTATION_SELECTORS =
+	"ytd-watch-metadata, #actions-inner, #top-level-buttons-computed, segmented-like-dislike-button-view-model, ytd-menu-renderer";
+
 export function isDesktopSubscriptionsFeedPage(
 	url: URL = new URL(window.location.href),
 ): boolean {
 	return (
 		url.hostname === "www.youtube.com" && url.pathname === "/feed/subscriptions"
+	);
+}
+
+export function isDesktopWatchPage(): boolean {
+	return (
+		window.location.hostname === "www.youtube.com" &&
+		window.location.pathname === "/watch" &&
+		new URLSearchParams(window.location.search).has("v")
 	);
 }
 

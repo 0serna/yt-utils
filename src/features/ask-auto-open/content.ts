@@ -2,6 +2,7 @@ import type { Feature, FeatureContext } from "@shared/types";
 import {
 	clickElement,
 	findButton,
+	isDesktopWatchPage,
 	isVisible,
 	waitFor,
 } from "@shared/youtube-dom";
@@ -53,11 +54,7 @@ const askAutoOpenFeature: Feature = {
 export default askAutoOpenFeature;
 
 function isSupportedDesktopWatchPage(): boolean {
-	return (
-		window.location.hostname === "www.youtube.com" &&
-		window.location.pathname === "/watch" &&
-		new URLSearchParams(window.location.search).has("v")
-	);
+	return isDesktopWatchPage();
 }
 
 function getCurrentVideoId(): string | null {

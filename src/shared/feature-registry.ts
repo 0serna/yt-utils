@@ -1,5 +1,5 @@
 import { sendMessage } from "./messaging";
-import type { Feature, FeatureContext } from "./types";
+import type { Feature } from "./types";
 
 export class FeatureRegistry {
 	private features: Feature[] = [];
@@ -45,13 +45,9 @@ export class FeatureRegistry {
 
 		this.activeFeatures.clear();
 
-		const context: FeatureContext = {
-			sendMessage,
-		};
-
 		for (const feature of this.features) {
 			if (shouldActivateFeature(feature, parsedUrl)) {
-				feature.activate(context);
+				feature.activate({ sendMessage });
 				this.activeFeatures.add(feature);
 			}
 		}
