@@ -4,6 +4,7 @@ import engagementPanelScrollContainmentFeature from "./features/engagement-panel
 import markAsSeenFeature from "./features/mark-as-seen/content";
 import playbackSpeedFeature from "./features/playback-speed/content";
 import subscriptionsHideFeature from "./features/subscriptions-hide/content";
+import subscriptionsSeenOverlayFeature from "./features/subscriptions-seen-overlay/content";
 import { FeatureRegistry } from "./shared/feature-registry";
 
 const registry = new FeatureRegistry();
@@ -13,3 +14,4 @@ registry.register(playbackSpeedFeature);
 registry.register(engagementPanelScrollContainmentFeature);
 registry.register(askAutoOpenFeature);
 registry.register(subscriptionsHideFeature);
+registry.register(subscriptionsSeenOverlayFeature);
