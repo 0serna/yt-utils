@@ -9,7 +9,10 @@ import {
 	PLAYBACK_SPEED_STEP,
 } from "@shared/playback-speed";
 import type { Feature, FeatureContext } from "@shared/types";
-import { findWatchPageActionsContainer } from "@shared/youtube-dom";
+import {
+	findWatchPageActionsContainer,
+	getElementLabel,
+} from "@shared/youtube-dom";
 import {
 	isEnglishLanguage,
 	isSpanishLanguage,
@@ -353,15 +356,4 @@ function isInsideSpeedControl(node: Node): boolean {
 	return (
 		node instanceof Element && Boolean(node.closest(`#${CONTROL_HOST_ID}`))
 	);
-}
-
-function getElementLabel(element: Element): string {
-	const values = [
-		element.getAttribute?.("aria-label"),
-		element.getAttribute?.("title"),
-		element instanceof HTMLElement ? element.innerText : "",
-		element instanceof HTMLElement ? element.textContent : "",
-	];
-
-	return values.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
 }

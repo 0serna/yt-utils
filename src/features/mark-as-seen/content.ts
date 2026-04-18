@@ -2,6 +2,10 @@ import { getBootstrapIconMarkup } from "@shared/bootstrap-icons";
 import { applyExtensionButtonStyles } from "@shared/extension-button";
 import { MESSAGE_INLINE_TRIGGER, sendMessage } from "@shared/messaging";
 import type { Feature, FeatureContext } from "@shared/types";
+import {
+	findWatchPageActionsContainer,
+	getElementLabel,
+} from "@shared/youtube-dom";
 
 const BUTTON_HOST_ID = "yt-utils-inline-host";
 const BUTTON_ID = "yt-utils-inline-button";
@@ -38,7 +42,7 @@ function ensureInlineButton(): void {
 		return;
 	}
 
-	const actionsContainer = findActionsContainer();
+	const actionsContainer = findWatchPageActionsContainer();
 
 	if (!actionsContainer) {
 		return;
@@ -144,24 +148,6 @@ function isSupportedDesktopWatchPage(): boolean {
 		window.location.pathname === "/watch" &&
 		new URLSearchParams(window.location.search).has("v")
 	);
-}
-
-function findActionsContainer(): HTMLElement | null {
-	const selectors = [
-		"ytd-watch-metadata #top-level-buttons-computed",
-		"#actions-inner ytd-menu-renderer #top-level-buttons-computed",
-		"#actions-inner #top-level-buttons-computed",
-	];
-
-	for (const selector of selectors) {
-		const element = document.querySelector<HTMLElement>(selector);
-
-		if (element) {
-			return element;
-		}
-	}
-
-	return null;
 }
 
 function findInsertionTarget(
@@ -323,17 +309,6 @@ function clearResetTimer(): void {
 		window.clearTimeout(stateResetTimer);
 		stateResetTimer = null;
 	}
-}
-
-function getElementLabel(element: Element): string {
-	const values = [
-		element.getAttribute?.("aria-label"),
-		element.getAttribute?.("title"),
-		element instanceof HTMLElement ? element.innerText : "",
-		element instanceof HTMLElement ? element.textContent : "",
-	];
-
-	return values.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
 }
 
 function isInsideInlineButton(node: Node): boolean {
