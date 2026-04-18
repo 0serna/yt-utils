@@ -2,6 +2,8 @@ const LABELS = {
 	share: [/\bshare\b/i, /\bcompartir\b/i],
 	copy: [/\bcopy\b/i, /\bcopy link\b/i, /\bcopiar\b/i, /\bcopiar enlace\b/i],
 	startAt: [/\bstart at\b/i, /\bempezar en\b/i],
+	hide: [/\bhide\b/i, /\bocultar\b/i],
+	moreActions: [/\bmore actions\b/i, /\bm[aá]s acciones\b/i],
 } as const;
 
 export { LABELS };
@@ -53,6 +55,19 @@ export function findButton(
 	const elements = root.querySelectorAll<HTMLElement>(
 		"button, [role='button'], tp-yt-paper-checkbox[role='checkbox']",
 	);
+
+	return (
+		[...elements].find(
+			(element) => isVisible(element) && matchesAnyLabel(element, matchers),
+		) ?? null
+	);
+}
+
+export function findMenuItem(
+	root: ParentNode,
+	matchers: readonly RegExp[],
+): HTMLElement | null {
+	const elements = root.querySelectorAll<HTMLElement>("[role='menuitem']");
 
 	return (
 		[...elements].find(
@@ -147,6 +162,38 @@ export function findWatchPageActionsContainer(): HTMLElement | null {
 	}
 
 	return null;
+}
+
+export function isDesktopSubscriptionsFeedPage(
+	url: URL = new URL(window.location.href),
+): boolean {
+	return (
+		url.hostname === "www.youtube.com" && url.pathname === "/feed/subscriptions"
+	);
+}
+
+export function findSubscriptionsFeedCards(): HTMLElement[] {
+	return [...document.querySelectorAll<HTMLElement>("ytd-rich-item-renderer")];
+}
+
+export function findSubscriptionsCardOverlayActionsHost(
+	card: ParentNode,
+): HTMLElement | null {
+	return card.querySelector<HTMLElement>(
+		"yt-thumbnail-hover-overlay-toggle-actions-view-model",
+	);
+}
+
+export function findSubscriptionsCardMenuButton(
+	card: ParentNode,
+): HTMLElement | null {
+	return findButton(card, LABELS.moreActions);
+}
+
+export function findSubscriptionsHideMenuItem(
+	root: ParentNode = document,
+): HTMLElement | null {
+	return findMenuItem(root, LABELS.hide);
 }
 
 export function isVisible(element: Element): boolean {

@@ -1,6 +1,7 @@
 export interface Feature {
 	name: string;
 	isWatchPage?: boolean;
+	matchesPage?: (url: URL) => boolean;
 	activate(context: FeatureContext): void;
 	deactivate(): void;
 }

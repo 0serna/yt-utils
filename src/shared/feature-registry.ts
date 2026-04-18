@@ -31,10 +31,7 @@ export class FeatureRegistry {
 
 	private syncFeatures(): void {
 		const url = window.location.href;
-		const isWatchPage =
-			window.location.hostname === "www.youtube.com" &&
-			window.location.pathname === "/watch" &&
-			new URLSearchParams(window.location.search).has("v");
+		const parsedUrl = new URL(url);
 
 		if (url === this.lastUrl) {
 			return;
@@ -48,19 +45,31 @@ export class FeatureRegistry {
 
 		this.activeFeatures.clear();
 
-		if (!isWatchPage) {
-			return;
-		}
-
 		const context: FeatureContext = {
 			sendMessage,
 		};
 
 		for (const feature of this.features) {
-			if (feature.isWatchPage) {
+			if (shouldActivateFeature(feature, parsedUrl)) {
 				feature.activate(context);
 				this.activeFeatures.add(feature);
 			}
 		}
 	}
+}
+
+function shouldActivateFeature(feature: Feature, url: URL): boolean {
+	if (feature.matchesPage) {
+		return feature.matchesPage(url);
+	}
+
+	if (feature.isWatchPage) {
+		return (
+			url.hostname === "www.youtube.com" &&
+			url.pathname === "/watch" &&
+			url.searchParams.has("v")
+		);
+	}
+
+	return false;
 }
