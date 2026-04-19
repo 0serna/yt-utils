@@ -175,6 +175,15 @@ export function isDesktopSubscriptionsFeedPage(
 	);
 }
 
+export function isDesktopFeedPage(
+	url: URL = new URL(window.location.href),
+): boolean {
+	return (
+		url.hostname === "www.youtube.com" &&
+		(url.pathname === "/feed/subscriptions" || url.pathname === "/")
+	);
+}
+
 export function isDesktopWatchPage(): boolean {
 	return (
 		window.location.hostname === "www.youtube.com" &&
@@ -213,6 +222,14 @@ export function findShortsShelf(): HTMLElement | null {
 	);
 }
 
+export function findShortsShelves(): HTMLElement[] {
+	return [
+		...document.querySelectorAll<HTMLElement>(
+			"ytd-rich-shelf-renderer[is-shorts]",
+		),
+	];
+}
+
 export function removeShortsSection(): void {
 	const shelf = findShortsShelf();
 	if (!shelf) {
@@ -222,6 +239,15 @@ export function removeShortsSection(): void {
 	const section = shelf.closest<HTMLElement>("ytd-rich-section-renderer");
 	if (section) {
 		section.remove();
+	}
+}
+
+export function removeAllShortsSections(): void {
+	for (const shelf of findShortsShelves()) {
+		const section = shelf.closest<HTMLElement>("ytd-rich-section-renderer");
+		if (section) {
+			section.remove();
+		}
 	}
 }
 

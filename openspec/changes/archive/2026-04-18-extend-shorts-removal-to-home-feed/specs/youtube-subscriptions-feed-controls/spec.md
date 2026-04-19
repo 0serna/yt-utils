@@ -1,11 +1,6 @@
-# youtube-subscriptions-feed-controls Specification
+## MODIFIED Requirements
 
-## Purpose
-Inline controls that augment supported subscriptions-feed video cards while delegating actions to YouTube's native UI.
-
-## Requirements
-
-### Requirement: Extension removes the Shorts shelf from supported desktop feeds
+### Requirement: Extension removes the Shorts shelf from the subscriptions feed
 The extension SHALL detect and remove Shorts shelf sections from supported desktop YouTube feed pages, specifically `www.youtube.com/feed/subscriptions` and `www.youtube.com/`. Each Shorts shelf is identified by the `ytd-rich-shelf-renderer` element with the `is-shorts` attribute.
 
 #### Scenario: Shorts shelf is removed on subscriptions page load

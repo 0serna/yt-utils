@@ -1,8 +1,8 @@
 import type { Feature, FeatureContext } from "@shared/types";
 import {
 	findShortsShelf,
-	isDesktopSubscriptionsFeedPage,
-	removeShortsSection,
+	isDesktopFeedPage,
+	removeAllShortsSections,
 } from "@shared/youtube-dom";
 
 let observer: MutationObserver | null = null;
@@ -11,11 +11,11 @@ let ensureQueued = false;
 const subscriptionsShortsRemovalFeature: Feature = {
 	name: "subscriptions-shorts-removal",
 	matchesPage(url: URL): boolean {
-		return isDesktopSubscriptionsFeedPage(url);
+		return isDesktopFeedPage(url);
 	},
 
 	activate(_context: FeatureContext): void {
-		removeShortsSection();
+		removeAllShortsSections();
 		observePage();
 	},
 
@@ -36,7 +36,7 @@ function observePage(): void {
 			ensureQueued = true;
 			window.requestAnimationFrame(() => {
 				ensureQueued = false;
-				removeShortsSection();
+				removeAllShortsSections();
 			});
 		}
 	});
