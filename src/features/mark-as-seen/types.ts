@@ -1,8 +1,5 @@
 export type AutomationResult =
-	| {
-			ok: true;
-			redirectUrl: string;
-	  }
+	| { ok: true }
 	| {
 			ok: false;
 			code: string;
@@ -16,12 +13,6 @@ export type AutomationErrorCode =
 	| "VIDEO_NOT_READY"
 	| "SEEK_FAILED"
 	| "PAUSE_FAILED"
-	| "SHARE_BUTTON_NOT_FOUND"
-	| "SHARE_DIALOG_NOT_FOUND"
-	| "START_AT_NOT_FOUND"
-	| "SHARE_URL_NOT_FOUND"
-	| "SHARE_URL_NOT_READY"
-	| "COPY_BUTTON_NOT_FOUND"
 	| "AUTOMATION_FAILED";
 
 export type HandlerErrorCode =

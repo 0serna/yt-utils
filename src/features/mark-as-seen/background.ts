@@ -10,9 +10,7 @@ chrome.action.onClicked.addListener(async (tab) => {
 
 	await clearActionStatus(tabId);
 
-	const result = await runMarkAsSeenForTab(tabId, tab.url, {
-		redirectTab: true,
-	});
+	const result = await runMarkAsSeenForTab(tabId, tab.url);
 
 	if (result.ok) {
 		self.setTimeout(() => {
@@ -40,9 +38,7 @@ export function registerMarkAsSeenHandler(): void {
 			try {
 				await clearActionStatus(tabId).catch(() => {});
 				const tab = await chrome.tabs.get(tabId);
-				const result = await runMarkAsSeenForTab(tabId, tab.url, {
-					redirectTab: true,
-				});
+				const result = await runMarkAsSeenForTab(tabId, tab.url);
 
 				return {
 					ok: result.ok,
