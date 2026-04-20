@@ -1,8 +1,7 @@
-# subscriptions-seen-overlay Specification
+# subscriptions-seen-overlay Specification (Delta)
 
-## Purpose
-TBD - created by archiving change subscriptions-seen-overlay. Update Purpose after archive.
-## Requirements
+## MODIFIED Requirements
+
 ### Requirement: Overlay appears on seen video thumbnails
 The extension SHALL apply CSS `opacity: 0.4` to the `yt-lockup-view-model` element for any video in the subscriptions feed that has been watched to 80% or more, dimming the entire card including thumbnail, title, channel name, and metadata.
 
@@ -25,13 +24,6 @@ The extension SHALL apply opacity dimming to eligible video `yt-lockup-view-mode
 - **WHEN** the user opens `www.youtube.com/feed/subscriptions`
 - **THEN** the dimming is applied to all eligible video `yt-lockup-view-model` elements in the initial viewport before any user scrolling occurs
 
-### Requirement: Overlay does not affect Shorts
-The extension SHALL NOT add an overlay to Shorts videos in the subscriptions feed, even if the Short has been watched.
-
-#### Scenario: Shorts in subscriptions feed are not affected
-- **WHEN** the user opens `www.youtube.com/feed/subscriptions` and a Shorts card appears in the feed
-- **THEN** the extension does not add an overlay to that Shorts thumbnail regardless of watch status
-
 ### Requirement: Overlay is purely cosmetic
 The card dimming SHALL NOT affect video functionality. Users can still click, watch, and interact with dimmed video cards normally.
 
@@ -45,4 +37,3 @@ The extension SHALL apply opacity dimming to eligible video cards that appear dy
 #### Scenario: Newly loaded cards show overlay if eligible
 - **WHEN** the user scrolls or YouTube loads more content and new video cards appear in the subscriptions feed
 - **THEN** the extension applies dimming to any newly visible cards that meet the 80% watch threshold
-

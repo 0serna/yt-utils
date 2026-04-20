@@ -5,9 +5,10 @@
 - `npm run build` - build extension (outputs to `extension/`)
 - `npm run check` - biome lint/format + tsc + openspec validate
 
-## Validation
+## Workflow
 
-When you need to validate the extension, you can run `npm run build` and ask the user to reload the extension (question tool) and then do the validation.
+- Use `playwriter` to explore and analyze web pages.
+- When you need to validate the extension, you can run `npm run build` and ask the user (`question` tool) to reload the extension.
 
 ## Architecture
 

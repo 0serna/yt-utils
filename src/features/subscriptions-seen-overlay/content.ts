@@ -4,8 +4,6 @@ import {
 	isDesktopSubscriptionsFeedPage,
 } from "@shared/youtube-dom";
 
-const OVERLAY_CLASS = "yt-utils-seen-overlay";
-
 let observer: MutationObserver | null = null;
 let ensureQueued = false;
 
@@ -16,40 +14,40 @@ const subscriptionsSeenOverlayFeature: Feature = {
 	},
 
 	activate(_context: FeatureContext): void {
-		ensureOverlays();
+		ensureDimming();
 		observePage();
 	},
 
 	deactivate(): void {
-		removeAllOverlays();
+		removeAllDimming();
 		stopObserving();
 	},
 };
 
 export default subscriptionsSeenOverlayFeature;
 
-function ensureOverlays(): void {
+function ensureDimming(): void {
 	if (!isDesktopSubscriptionsFeedPage()) {
 		return;
 	}
 
 	const cards = findSubscriptionsFeedCards();
 	for (const card of cards) {
-		ensureOverlay(card);
+		ensureDimmingForCard(card);
 	}
 }
 
-function ensureOverlay(card: HTMLElement): void {
+function ensureDimmingForCard(card: HTMLElement): void {
 	if (isShortsCard(card)) {
 		return;
 	}
 
-	const thumbnail = findThumbnailViewModel(card);
-	if (!thumbnail) {
+	const cardLockup = card.querySelector<HTMLElement>("yt-lockup-view-model");
+	if (!cardLockup) {
 		return;
 	}
 
-	if (thumbnail.querySelector(`.${OVERLAY_CLASS}`)) {
+	if (cardLockup.style.opacity !== "") {
 		return;
 	}
 
@@ -57,11 +55,7 @@ function ensureOverlay(card: HTMLElement): void {
 		return;
 	}
 
-	injectOverlay(thumbnail);
-}
-
-function findThumbnailViewModel(card: HTMLElement): HTMLElement | null {
-	return card.querySelector<HTMLElement>("yt-thumbnail-view-model");
+	applyDimming(cardLockup);
 }
 
 function isShortsCard(card: HTMLElement): boolean {
@@ -77,53 +71,32 @@ function isSeenVideo(card: HTMLElement): boolean {
 		".ytThumbnailOverlayProgressBarHostWatchedProgressBarSegment",
 	);
 
-	for (const segment of segments) {
+	return Array.from(segments).some((segment) => {
 		const style = segment.getAttribute("style");
 		if (!style) {
-			continue;
+			return false;
 		}
 
 		const match = style.match(/(?:^|;)\s*width:\s*(\d+)/);
 		if (!match?.[1]) {
-			continue;
+			return false;
 		}
 
-		const width = parseInt(match[1], 10);
-		if (width >= 80) {
-			return true;
-		}
-	}
-
-	return false;
-}
-
-function injectOverlay(thumbnail: HTMLElement): void {
-	const imageContainer = thumbnail.querySelector(".ytThumbnailViewModelImage");
-	if (!imageContainer) {
-		return;
-	}
-
-	const overlay = document.createElement("div");
-	overlay.className = OVERLAY_CLASS;
-	Object.assign(overlay.style, {
-		position: "absolute",
-		top: "0",
-		left: "0",
-		width: "100%",
-		height: "100%",
-		background: "rgba(0, 0, 0, 0.6)",
-		pointerEvents: "none",
-		zIndex: "1",
+		return parseInt(match[1], 10) >= 80;
 	});
-
-	imageContainer.insertAdjacentElement("afterend", overlay);
 }
 
-function removeAllOverlays(): void {
-	for (const overlay of document.querySelectorAll<HTMLElement>(
-		`.${OVERLAY_CLASS}`,
+function applyDimming(cardLockup: HTMLElement): void {
+	Object.assign(cardLockup.style, { opacity: "0.4" });
+}
+
+function removeAllDimming(): void {
+	for (const cardLockup of document.querySelectorAll<HTMLElement>(
+		"yt-lockup-view-model",
 	)) {
-		overlay.remove();
+		if (cardLockup.style.opacity !== "") {
+			cardLockup.style.opacity = "";
+		}
 	}
 }
 
@@ -139,18 +112,10 @@ function observePage(): void {
 					return false;
 				}
 
-				if (node.matches?.(`.${OVERLAY_CLASS}`)) {
-					return false;
-				}
-
-				if (
+				return !!(
 					node.matches?.("ytd-rich-item-renderer") ||
 					node.querySelector?.("ytd-rich-item-renderer")
-				) {
-					return true;
-				}
-
-				return false;
+				);
 			});
 		});
 
@@ -158,7 +123,7 @@ function observePage(): void {
 			ensureQueued = true;
 			window.requestAnimationFrame(() => {
 				ensureQueued = false;
-				ensureOverlays();
+				ensureDimming();
 			});
 		}
 	});
