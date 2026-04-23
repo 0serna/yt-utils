@@ -5,9 +5,9 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"prepare": "husky",
 		"build": "vite build",
-		"check": "biome check --write . && tsc --noEmit && openspec validate --all --json"
+		"check": "biome check --write . && tsc --noEmit && openspec validate --all --json",
+		"prepare": "husky"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.11",

@@ -4,6 +4,9 @@ import {
 	isDesktopSubscriptionsFeedPage,
 } from "@shared/youtube-dom";
 
+const PROGRESS_SEGMENT_CLASS =
+	"ytThumbnailOverlayProgressBarHostWatchedProgressBarSegment";
+
 let observer: MutationObserver | null = null;
 let ensureQueued = false;
 
@@ -68,7 +71,7 @@ function isShortsCard(card: HTMLElement): boolean {
 
 function isSeenVideo(card: HTMLElement): boolean {
 	const segments = card.querySelectorAll<HTMLElement>(
-		".ytThumbnailOverlayProgressBarHostWatchedProgressBarSegment",
+		`.${PROGRESS_SEGMENT_CLASS}`,
 	);
 
 	return Array.from(segments).some((segment) => {
@@ -107,6 +110,18 @@ function observePage(): void {
 
 	observer = new MutationObserver((mutations) => {
 		const hasRelevantMutation = mutations.some((mutation) => {
+			if (mutation.type === "attributes") {
+				const target = mutation.target;
+				if (!(target instanceof Element)) {
+					return false;
+				}
+
+				return (
+					target.classList.contains(PROGRESS_SEGMENT_CLASS) ||
+					!!target.closest("ytd-rich-item-renderer")
+				);
+			}
+
 			return [...mutation.addedNodes].some((node) => {
 				if (!(node instanceof Element)) {
 					return false;
@@ -114,7 +129,9 @@ function observePage(): void {
 
 				return !!(
 					node.matches?.("ytd-rich-item-renderer") ||
-					node.querySelector?.("ytd-rich-item-renderer")
+					node.querySelector?.("ytd-rich-item-renderer") ||
+					node.classList?.contains(PROGRESS_SEGMENT_CLASS) ||
+					node.querySelector?.(`.${PROGRESS_SEGMENT_CLASS}`)
 				);
 			});
 		});
@@ -131,6 +148,8 @@ function observePage(): void {
 	observer.observe(document.documentElement, {
 		childList: true,
 		subtree: true,
+		attributes: true,
+		attributeFilter: ["style"],
 	});
 }
 
