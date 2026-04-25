@@ -5,6 +5,7 @@ On the YouTube subscriptions feed page (`/feed/subscriptions`), videos that have
 YouTube already tracks watch progress internally. The DOM element `.ytThumbnailOverlayProgressBarHostWatchedProgressBarSegment` contains a `width` style attribute indicating the watch percentage (e.g., `style="width: 87%"`).
 
 **Current watched indicator structure:**
+
 ```
 ytd-rich-item-renderer
   └── yt-lockup-view-model
@@ -22,6 +23,7 @@ ytd-rich-item-renderer
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Add a visible semi-transparent black overlay (`rgba(0, 0, 0, 0.4)`) across the thumbnail image for watched videos
 - Apply to videos with 80%+ watch progress
 - Display immediately on page load
@@ -29,6 +31,7 @@ ytd-rich-item-renderer
 - Follow existing codebase patterns (Feature interface, MutationObserver, DOM utilities)
 
 **Non-Goals:**
+
 - Do not affect Shorts in the subscriptions feed
 - Not a user-configurable feature (no settings, no toggle)
 - Not applying overlay based on watch history outside the current page context
@@ -41,6 +44,7 @@ ytd-rich-item-renderer
 **Decision:** Inject the overlay as a sibling to `div.ytThumbnailViewModelImage` inside `yt-thumbnail-view-model`, positioned absolutely to cover the entire thumbnail area.
 
 **Rationale:** This approach:
+
 - Places the overlay at the correct visual layer (above the image, below the bottom overlay with progress bar)
 - Does not interfere with YouTube's existing overlay structure
 - Allows CSS to handle positioning and sizing via flex/absolute layout
@@ -65,6 +69,7 @@ ytd-rich-item-renderer
 ### 4. Implementation pattern
 
 **Decision:** Follow the existing `subscriptions-hide` feature pattern:
+
 - Implement as a Feature with `matchesPage()` and `activate()`/`deactivate()`
 - Use MutationObserver to watch for `ytd-rich-item-renderer` additions
 - Immediately process all found cards on activation
@@ -74,6 +79,7 @@ ytd-rich-item-renderer
 ### 5. Overlay styling
 
 **Decision:** Use inline styles for the overlay div:
+
 ```css
 position: absolute;
 top: 0;

@@ -12,9 +12,11 @@ The current subtitle policy applies different behaviors based on inferred audio 
 ## Capabilities
 
 ### New Capabilities
+
 None.
 
 ### Modified Capabilities
+
 - `audio-language-subtitle-policy`: replace language-based automatic subtitle selection with a universal default-off policy on watch-page activation while continuing to respect manual per-video overrides.
 
 ## Impact

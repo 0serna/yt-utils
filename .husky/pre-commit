@@ -2,7 +2,8 @@
 staged_files=$(git diff --cached --name-only --diff-filter=ACM)
 
 if [ -n "$staged_files" ]; then
-	printf '%s\n' "$staged_files" | xargs npx biome check --write --no-errors-on-unmatched
+	printf '%s\n' "$staged_files" | xargs -r npx prettier --write --ignore-unknown
+	printf '%s\n' "$staged_files" | xargs -r npx eslint --fix
 	printf '%s\n' "$staged_files" | xargs git add
 fi
 

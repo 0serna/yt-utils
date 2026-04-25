@@ -5,6 +5,7 @@ The extension currently has two flat files (`background.js`, `content.js`) that 
 The rename-to-yt-utils change (prerequisite) establishes the `yt-utils` / `YTUtils` naming convention. This change builds on that foundation by introducing Vite + TypeScript and a modular source structure.
 
 Current state:
+
 ```
 extension/
   manifest.json
@@ -13,6 +14,7 @@ extension/
 ```
 
 Target state:
+
 ```
 src/
   background.ts          ← barrel: imports feature handlers, registers listeners
@@ -33,6 +35,7 @@ src/
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Introduce Vite as the bundler with MV3 Chrome extension support
 - Add TypeScript with strict config
 - Create the `FeatureRegistry` pattern for feature lifecycle coordination
@@ -41,6 +44,7 @@ src/
 - Ensure the build output in `extension/` behaves identically to the current hand-written files
 
 **Non-Goals:**
+
 - Adding new features (speed control is a separate change)
 - Changing any runtime behavior of the mark-as-seen feature
 - Adding a popup UI, settings page, or options page
@@ -54,6 +58,7 @@ src/
 **Decision**: Use `@crxjs/vite-plugin` for Chrome extension development.
 
 **Alternatives considered**:
+
 - **Plain esbuild config**: Works, but loses HMR during development and manifest management. More DIY.
 - **webpack with `chrome-extension-boilerplate`**: Heavier, slower builds, more config. Vite's DX is better.
 - **Rollup config**: Vite uses Rollup internally. Direct Rollup means writing more config for the same result.
@@ -80,11 +85,13 @@ interface Feature {
 ```
 
 `content.ts` barrel imports all features, passes them to the `FeatureRegistry`, which:
+
 - Listens to YouTube's SPA navigation events (`yt-navigate-finish`)
 - On each navigation, calls `deactivate()` on active features, then `activate()` on features whose `isWatchPage` condition matches
 - Provides a shared `FeatureContext` with references to the `MutationObserver` coordinator and message bus
 
 **Alternatives considered**:
+
 - **Each feature self-registers**: Features call `registry.register()` themselves. More decoupled but harder to trace registration order and enforce type contracts.
 - **No registry, just barrel imports**: The current approach. Doesn't scale — adding a feature means editing the barrel file and manually wiring lifecycle.
 

@@ -11,10 +11,12 @@ YouTube now exposes an `Ask` entry point on some watch pages that opens an AI ch
 ## Capabilities
 
 ### New Capabilities
+
 - `youtube-ask-auto-open`: Automatically open the `Ask` chat panel on supported YouTube watch pages.
 
 ### Modified Capabilities
-- 
+
+-
 
 ## Impact
 

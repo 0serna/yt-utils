@@ -13,6 +13,7 @@ The extension currently only enhances YouTube pages, but a lightweight text-sele
 ## Capabilities
 
 ### New Capabilities
+
 - `global-selection-search`: Detect selected text on supported webpages, present an inline Google search affordance, and open the search in a new tab.
 
 ### Modified Capabilities

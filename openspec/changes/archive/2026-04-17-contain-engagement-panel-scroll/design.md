@@ -11,12 +11,14 @@ That means an Ask-specific selector is too narrow for the desired behavior. The 
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Keep wheel scrolling inside the currently expanded engagement panel when that panel has its own main content scroller.
 - Extend the existing contained-scroll experience beyond `Ask` to `In this video`, `Chapters`, and `Transcript` views.
 - Survive YouTube rerenders, SPA navigation, and tab/view switches inside a panel.
 - Keep the fix local to watch-page engagement panels without intercepting global document scroll events.
 
 **Non-Goals:**
+
 - Do not change which panel opens, closes, or becomes active.
 - Do not redesign panel layouts or alter panel content rendering.
 - Do not guarantee containment for arbitrary nested mini-scrollers such as textareas, dropdowns, or transient menus inside a panel.

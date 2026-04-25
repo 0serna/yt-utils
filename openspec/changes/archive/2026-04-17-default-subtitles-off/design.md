@@ -7,12 +7,14 @@ This change simplifies only the subtitle policy. Playback-speed behavior still d
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Make every supported watch page start with subtitles off by default.
 - Preserve the existing per-video manual override behavior after the initial automatic policy application.
 - Remove automatic selection of direct English subtitle tracks and English auto-translation from the subtitle policy path.
 - Keep the change narrow and local to the subtitle feature and shared subtitle-selection helpers.
 
 **Non-Goals:**
+
 - Remove audio-language inference from the codebase entirely.
 - Change playback-speed initialization or any non-subtitle feature behavior.
 - Add settings, prompts, or visible controls for subtitle behavior.
@@ -21,21 +23,25 @@ This change simplifies only the subtitle policy. Playback-speed behavior still d
 ## Decisions
 
 ### Keep the existing feature lifecycle and polling model
+
 The feature already has a working activation, polling, application, verification, and per-video override flow. Reusing that flow keeps the behavioral change small and avoids touching feature lifecycle coordination.
 
 Alternative considered: replace polling with a new event-driven subtitle observer. Rejected because the requested change is a policy simplification, not a lifecycle redesign.
 
 ### Reduce subtitle selection to a single automatic outcome: `off`
+
 The subtitle selection helper should always resolve to the off state for automatic policy application. This removes all language-based branching and all automatic caption-track selection while keeping compatibility with the existing bridge API, matching logic, and verification flow.
 
 Alternative considered: bypass selection helpers and call subtitle-toggle behavior directly from the feature. Rejected because it would duplicate logic already centralized in the shared player helper layer.
 
 ### Preserve manual per-video override detection exactly as a guardrail
+
 The current feature records the applied subtitle signature and stops reapplying policy for a video once the user changes subtitle or audio behavior. That behavior should remain intact so the extension only establishes the initial default and does not fight the user afterward.
 
 Alternative considered: continuously force subtitles off on every poll. Rejected because it conflicts with the desired behavior of allowing the user to re-enable subtitles for the current video.
 
 ### Keep player snapshot audio-language data available for other features
+
 Although subtitle policy will no longer depend on audio language, shared player snapshot fields and bridge logic should not be removed if playback-speed still relies on them. The implementation should narrow subtitle policy without breaking other consumers of the same snapshot.
 
 Alternative considered: remove audio-language fields from shared snapshot types as part of this change. Rejected because that would expand the change scope into unrelated playback-speed behavior.

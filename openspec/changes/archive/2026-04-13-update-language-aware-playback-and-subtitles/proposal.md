@@ -13,9 +13,11 @@ Playback speed currently persists as a global preference, so newly opened videos
 ## Capabilities
 
 ### New Capabilities
+
 <!-- None. -->
 
 ### Modified Capabilities
+
 - `youtube-watch-marking-extension`: change playback-speed behavior from a persisted global default to per-video, language-aware initialization with no cross-video persistence.
 - `audio-language-subtitle-policy`: change automatic subtitle activation from all non-Spanish audio to only non-English, non-Spanish audio, including explicit fallback behavior for unknown language.
 

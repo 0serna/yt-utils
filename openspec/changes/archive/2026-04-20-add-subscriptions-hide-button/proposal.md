@@ -13,6 +13,7 @@ The extension already adds inline YouTube controls, but subscriptions-feed cards
 ## Capabilities
 
 ### New Capabilities
+
 - `youtube-subscriptions-feed-controls`: inline controls that augment supported subscriptions-feed video cards while delegating actions to YouTube's native UI.
 
 ### Modified Capabilities

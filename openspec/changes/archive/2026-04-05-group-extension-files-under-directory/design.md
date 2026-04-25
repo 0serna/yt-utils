@@ -7,11 +7,13 @@ This change is a small repository-layout refactor rather than a feature rewrite.
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Move the extension runtime files into a dedicated subdirectory such as `extension/`.
 - Preserve the current MV3 manifest wiring and background automation behavior after the move.
 - Make contributor documentation point to the dedicated unpacked-extension directory.
 
 **Non-Goals:**
+
 - Changing the user-visible mark-as-seen flow or adding new extension features.
 - Introducing a build step, bundler, or packaging pipeline.
 - Reorganizing unrelated repository files outside what is needed for the extension move.
@@ -19,16 +21,19 @@ This change is a small repository-layout refactor rather than a feature rewrite.
 ## Decisions
 
 ### Use a dedicated top-level `extension/` directory
+
 Place `manifest.json`, `background.js`, and future extension-only assets under a single top-level `extension/` folder. This gives Chrome a clean directory to load and keeps extension runtime files separate from OpenSpec documents and repository metadata.
 
 Alternative considered: keeping the current root layout and only updating documentation. Rejected because it does not solve the underlying directory-selection friction.
 
 ### Keep manifest-relative runtime paths unchanged inside the new folder
+
 The manifest will continue to reference `background.js` with a relative path that is valid from inside `extension/`. Any future icon or asset references should follow the same rule: paths remain relative to the manifest file rather than the repository root.
 
 Alternative considered: moving the manifest while leaving runtime files elsewhere. Rejected because it creates cross-directory references and defeats the goal of a self-contained loadable folder.
 
 ### Update contributor documentation in the same change
+
 The README load instructions will explicitly point users to the dedicated extension folder. This keeps the operational guidance aligned with the repository layout and avoids confusion immediately after the move.
 
 Alternative considered: relying on contributors to infer the new path from the repository structure. Rejected because the whole purpose of the change is to make loading clearer.

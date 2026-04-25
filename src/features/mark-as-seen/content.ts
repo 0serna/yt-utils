@@ -3,10 +3,10 @@ import { applyExtensionButtonStyles } from "@shared/extension-button";
 import { MESSAGE_INLINE_TRIGGER, sendMessage } from "@shared/messaging";
 import type { Feature, FeatureContext } from "@shared/types";
 import {
-	findWatchPageActionsContainer,
-	getElementLabel,
-	isDesktopWatchPage,
-	RELEVANT_MUTATION_SELECTORS,
+  findWatchPageActionsContainer,
+  getElementLabel,
+  isDesktopWatchPage,
+  RELEVANT_MUTATION_SELECTORS,
 } from "@shared/youtube-dom";
 
 const BUTTON_HOST_ID = "yt-utils-inline-host";
@@ -16,18 +16,18 @@ const STATE_RESET_DELAY_MS = 2500;
 type ButtonState = "idle" | "running" | "success" | "error";
 
 const markAsSeenFeature: Feature = {
-	name: "mark-as-seen",
-	isWatchPage: true,
+  name: "mark-as-seen",
+  isWatchPage: true,
 
-	activate(_context: FeatureContext): void {
-		ensureInlineButton();
-		observePage();
-	},
+  activate(_context: FeatureContext): void {
+    ensureInlineButton();
+    observePage();
+  },
 
-	deactivate(): void {
-		removeInlineButton();
-		stopObserving();
-	},
+  deactivate(): void {
+    removeInlineButton();
+    stopObserving();
+  },
 };
 
 export default markAsSeenFeature;
@@ -38,272 +38,272 @@ let ensureButtonQueued = false;
 let observer: MutationObserver | null = null;
 
 function ensureInlineButton(): void {
-	if (!isSupportedDesktopWatchPage()) {
-		removeInlineButton();
-		return;
-	}
+  if (!isSupportedDesktopWatchPage()) {
+    removeInlineButton();
+    return;
+  }
 
-	const actionsContainer = findWatchPageActionsContainer();
+  const actionsContainer = findWatchPageActionsContainer();
 
-	if (!actionsContainer) {
-		return;
-	}
+  if (!actionsContainer) {
+    return;
+  }
 
-	let host = document.getElementById(BUTTON_HOST_ID);
+  let host = document.getElementById(BUTTON_HOST_ID);
 
-	if (!host) {
-		host = createInlineButtonHost();
-	}
+  if (!host) {
+    host = createInlineButtonHost();
+  }
 
-	const insertionTarget = findInsertionTarget(actionsContainer);
+  const insertionTarget = findInsertionTarget(actionsContainer);
 
-	if (insertionTarget?.previousSibling !== host) {
-		if (insertionTarget) {
-			insertionTarget.insertAdjacentElement("beforebegin", host);
-		} else if (host.parentElement !== actionsContainer) {
-			actionsContainer.prepend(host);
-		}
-	}
+  if (insertionTarget?.previousSibling !== host) {
+    if (insertionTarget) {
+      insertionTarget.insertAdjacentElement("beforebegin", host);
+    } else if (host.parentElement !== actionsContainer) {
+      actionsContainer.prepend(host);
+    }
+  }
 
-	syncButtonState();
+  syncButtonState();
 }
 
 function removeInlineButton(): void {
-	const host = document.getElementById(BUTTON_HOST_ID);
+  const host = document.getElementById(BUTTON_HOST_ID);
 
-	if (host) {
-		host.remove();
-	}
+  if (host) {
+    host.remove();
+  }
 }
 
 function observePage(): void {
-	if (observer) {
-		return;
-	}
+  if (observer) {
+    return;
+  }
 
-	observer = new MutationObserver((mutations) => {
-		const hasRelevantMutation = mutations.some((mutation) => {
-			if (isInsideInlineButton(mutation.target)) {
-				return false;
-			}
+  observer = new MutationObserver((mutations) => {
+    const hasRelevantMutation = mutations.some((mutation) => {
+      if (isInsideInlineButton(mutation.target)) {
+        return false;
+      }
 
-			return [...mutation.addedNodes, ...mutation.removedNodes].some((node) => {
-				if (!(node instanceof Element)) {
-					return false;
-				}
+      return [...mutation.addedNodes, ...mutation.removedNodes].some((node) => {
+        if (!(node instanceof Element)) {
+          return false;
+        }
 
-				if (
-					node.id === BUTTON_HOST_ID ||
-					node.querySelector?.(`#${BUTTON_HOST_ID}`)
-				) {
-					return false;
-				}
+        if (
+          node.id === BUTTON_HOST_ID ||
+          node.querySelector?.(`#${BUTTON_HOST_ID}`)
+        ) {
+          return false;
+        }
 
-				return (
-					node.matches?.(RELEVANT_MUTATION_SELECTORS) ||
-					node.querySelector?.(RELEVANT_MUTATION_SELECTORS)
-				);
-			});
-		});
+        return (
+          node.matches?.(RELEVANT_MUTATION_SELECTORS) ||
+          node.querySelector?.(RELEVANT_MUTATION_SELECTORS)
+        );
+      });
+    });
 
-		if (!hasRelevantMutation) {
-			return;
-		}
+    if (!hasRelevantMutation) {
+      return;
+    }
 
-		queueEnsureButton();
-	});
+    queueEnsureButton();
+  });
 
-	observer.observe(document.documentElement, {
-		childList: true,
-		subtree: true,
-	});
+  observer.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
 }
 
 function stopObserving(): void {
-	if (observer) {
-		observer.disconnect();
-		observer = null;
-	}
+  if (observer) {
+    observer.disconnect();
+    observer = null;
+  }
 }
 
 function queueEnsureButton(): void {
-	if (ensureButtonQueued) {
-		return;
-	}
+  if (ensureButtonQueued) {
+    return;
+  }
 
-	ensureButtonQueued = true;
+  ensureButtonQueued = true;
 
-	window.requestAnimationFrame(() => {
-		ensureButtonQueued = false;
-		ensureInlineButton();
-	});
+  window.requestAnimationFrame(() => {
+    ensureButtonQueued = false;
+    ensureInlineButton();
+  });
 }
 
 function isSupportedDesktopWatchPage(): boolean {
-	return isDesktopWatchPage();
+  return isDesktopWatchPage();
 }
 
 function findInsertionTarget(
-	actionsContainer: HTMLElement,
+  actionsContainer: HTMLElement,
 ): HTMLElement | null {
-	const candidates = [...actionsContainer.children].filter(
-		(child) => child.id !== BUTTON_HOST_ID,
-	) as HTMLElement[];
+  const candidates = [...actionsContainer.children].filter(
+    (child) => child.id !== BUTTON_HOST_ID,
+  ) as HTMLElement[];
 
-	return (
-		candidates.find((child) => {
-			const label = getElementLabel(child);
-			return (
-				/like this video/i.test(label) ||
-				child.tagName === "SEGMENTED-LIKE-DISLIKE-BUTTON-VIEW-MODEL"
-			);
-		}) ||
-		candidates[0] ||
-		null
-	);
+  return (
+    candidates.find((child) => {
+      const label = getElementLabel(child);
+      return (
+        /like this video/i.test(label) ||
+        child.tagName === "SEGMENTED-LIKE-DISLIKE-BUTTON-VIEW-MODEL"
+      );
+    }) ||
+    candidates[0] ||
+    null
+  );
 }
 
 function createInlineButtonHost(): HTMLElement {
-	const host = document.createElement("div");
-	host.id = BUTTON_HOST_ID;
-	host.style.display = "inline-flex";
-	host.style.alignItems = "center";
-	host.style.marginInlineEnd = "8px";
-	host.style.flex = "0 0 auto";
-	host.style.pointerEvents = "auto";
+  const host = document.createElement("div");
+  host.id = BUTTON_HOST_ID;
+  host.style.display = "inline-flex";
+  host.style.alignItems = "center";
+  host.style.marginInlineEnd = "8px";
+  host.style.flex = "0 0 auto";
+  host.style.pointerEvents = "auto";
 
-	const button = document.createElement("button");
-	button.id = BUTTON_ID;
-	button.type = "button";
-	button.onclick = onInlineButtonClick;
+  const button = document.createElement("button");
+  button.id = BUTTON_ID;
+  button.type = "button";
+  button.onclick = onInlineButtonClick;
 
-	host.append(button);
-	return host;
+  host.append(button);
+  return host;
 }
 
 function syncButtonState(): void {
-	const button = document.getElementById(BUTTON_ID);
+  const button = document.getElementById(BUTTON_ID);
 
-	if (!button) {
-		return;
-	}
+  if (!button) {
+    return;
+  }
 
-	const palette = getStatePalette(currentState);
-	(button as HTMLButtonElement).disabled = currentState === "running";
-	button.dataset.state = currentState;
-	button.setAttribute("aria-label", palette.label);
-	button.title = palette.label;
-	applyExtensionButtonStyles(button as HTMLButtonElement, {
-		background: palette.background,
-		hoverBackground: palette.hoverBackground,
-		activeBackground: palette.activeBackground,
-		opacity: palette.opacity,
-		cursor: currentState === "running" ? "default" : "pointer",
-		position: "relative",
-		zIndex: "1",
-	});
-	button.innerHTML = getButtonIconMarkup(currentState);
+  const palette = getStatePalette(currentState);
+  (button as HTMLButtonElement).disabled = currentState === "running";
+  button.dataset.state = currentState;
+  button.setAttribute("aria-label", palette.label);
+  button.title = palette.label;
+  applyExtensionButtonStyles(button as HTMLButtonElement, {
+    background: palette.background,
+    hoverBackground: palette.hoverBackground,
+    activeBackground: palette.activeBackground,
+    opacity: palette.opacity,
+    cursor: currentState === "running" ? "default" : "pointer",
+    position: "relative",
+    zIndex: "1",
+  });
+  button.innerHTML = getButtonIconMarkup(currentState);
 }
 
 function getStatePalette(state: ButtonState): {
-	label: string;
-	background: string;
-	hoverBackground: string;
-	activeBackground: string;
-	opacity: string;
+  label: string;
+  background: string;
+  hoverBackground: string;
+  activeBackground: string;
+  opacity: string;
 } {
-	switch (state) {
-		case "running":
-			return {
-				label: "Marking as seen...",
-				background: "rgba(255, 255, 255, 0.2)",
-				hoverBackground: "rgba(255, 255, 255, 0.2)",
-				activeBackground: "rgba(255, 255, 255, 0.2)",
-				opacity: "0.75",
-			};
-		case "success":
-			return {
-				label: "Marked as seen.",
-				background: "#2e7d32",
-				hoverBackground: "#2e7d32",
-				activeBackground: "#2e7d32",
-				opacity: "1",
-			};
-		case "error":
-			return {
-				label: "Mark as seen failed.",
-				background: "#b71c1c",
-				hoverBackground: "#b71c1c",
-				activeBackground: "#b71c1c",
-				opacity: "1",
-			};
-		default:
-			return {
-				label: "Mark as seen",
-				background: "rgba(255, 255, 255, 0.1)",
-				hoverBackground: "rgba(255, 255, 255, 0.2)",
-				activeBackground: "rgba(255, 255, 255, 0.2)",
-				opacity: "1",
-			};
-	}
+  switch (state) {
+    case "running":
+      return {
+        label: "Marking as seen...",
+        background: "rgba(255, 255, 255, 0.2)",
+        hoverBackground: "rgba(255, 255, 255, 0.2)",
+        activeBackground: "rgba(255, 255, 255, 0.2)",
+        opacity: "0.75",
+      };
+    case "success":
+      return {
+        label: "Marked as seen.",
+        background: "#2e7d32",
+        hoverBackground: "#2e7d32",
+        activeBackground: "#2e7d32",
+        opacity: "1",
+      };
+    case "error":
+      return {
+        label: "Mark as seen failed.",
+        background: "#b71c1c",
+        hoverBackground: "#b71c1c",
+        activeBackground: "#b71c1c",
+        opacity: "1",
+      };
+    default:
+      return {
+        label: "Mark as seen",
+        background: "rgba(255, 255, 255, 0.1)",
+        hoverBackground: "rgba(255, 255, 255, 0.2)",
+        activeBackground: "rgba(255, 255, 255, 0.2)",
+        opacity: "1",
+      };
+  }
 }
 
 function getButtonIconMarkup(state: ButtonState): string {
-	if (state === "running") {
-		return (
-			'<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">' +
-			'<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2" opacity="0.35"></circle>' +
-			'<path d="M12 4a8 8 0 0 1 8 8" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"></path>' +
-			"</svg>"
-		);
-	}
+  if (state === "running") {
+    return (
+      '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">' +
+      '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2" opacity="0.35"></circle>' +
+      '<path d="M12 4a8 8 0 0 1 8 8" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"></path>' +
+      "</svg>"
+    );
+  }
 
-	return getBootstrapIconMarkup("check");
+  return getBootstrapIconMarkup("check");
 }
 
 async function onInlineButtonClick(event: Event): Promise<void> {
-	event.preventDefault();
-	event.stopPropagation();
+  event.preventDefault();
+  event.stopPropagation();
 
-	if (currentState === "running") {
-		return;
-	}
+  if (currentState === "running") {
+    return;
+  }
 
-	clearResetTimer();
-	currentState = "running";
-	syncButtonState();
+  clearResetTimer();
+  currentState = "running";
+  syncButtonState();
 
-	try {
-		const response = (await sendMessage({ type: MESSAGE_INLINE_TRIGGER })) as {
-			ok?: boolean;
-			message?: string;
-		} | null;
+  try {
+    const response = (await sendMessage({ type: MESSAGE_INLINE_TRIGGER })) as {
+      ok?: boolean;
+      message?: string;
+    } | null;
 
-		if (!response?.ok) {
-			throw new Error(response?.message || "The automation failed.");
-		}
+    if (!response?.ok) {
+      throw new Error(response?.message || "The automation failed.");
+    }
 
-		currentState = "success";
-		syncButtonState();
-	} catch (error) {
-		console.error("[YTUtils:inline]", error);
-		currentState = "error";
-		syncButtonState();
-		stateResetTimer = window.setTimeout(() => {
-			stateResetTimer = null;
-			currentState = "idle";
-			syncButtonState();
-		}, STATE_RESET_DELAY_MS);
-	}
+    currentState = "success";
+    syncButtonState();
+  } catch (error) {
+    console.error("[YTUtils:inline]", error);
+    currentState = "error";
+    syncButtonState();
+    stateResetTimer = window.setTimeout(() => {
+      stateResetTimer = null;
+      currentState = "idle";
+      syncButtonState();
+    }, STATE_RESET_DELAY_MS);
+  }
 }
 
 function clearResetTimer(): void {
-	if (stateResetTimer !== null) {
-		window.clearTimeout(stateResetTimer);
-		stateResetTimer = null;
-	}
+  if (stateResetTimer !== null) {
+    window.clearTimeout(stateResetTimer);
+    stateResetTimer = null;
+  }
 }
 
 function isInsideInlineButton(node: Node): boolean {
-	return node instanceof Element && Boolean(node.closest(`#${BUTTON_HOST_ID}`));
+  return node instanceof Element && Boolean(node.closest(`#${BUTTON_HOST_ID}`));
 }

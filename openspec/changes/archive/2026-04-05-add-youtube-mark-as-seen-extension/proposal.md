@@ -12,6 +12,7 @@ YouTube does not provide a direct way to manually mark a video as fully watched.
 ## Capabilities
 
 ### New Capabilities
+
 - `youtube-watch-marking-extension`: A Chrome extension can detect a YouTube watch page and automate the share-link redirection flow that causes the current video to be marked as watched.
 
 ### Modified Capabilities

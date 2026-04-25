@@ -11,6 +11,7 @@ YouTube's engagement panels do not behave consistently when the user scrolls to 
 ## Capabilities
 
 ### New Capabilities
+
 - `youtube-engagement-panel-scroll-containment`: Contain scrolling within active YouTube watch-page engagement panels so panel interaction does not scroll the underlying page.
 
 ### Modified Capabilities

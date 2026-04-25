@@ -11,9 +11,11 @@ The YouTube `Ask` panel is useful only if its scroll behavior stays contained in
 ## Capabilities
 
 ### New Capabilities
-- 
+
+-
 
 ### Modified Capabilities
+
 - `youtube-ask-auto-open`: The `Ask` panel must contain its own scrolling and must not leak scroll to the page when its content reaches the top or bottom boundary.
 
 ## Impact

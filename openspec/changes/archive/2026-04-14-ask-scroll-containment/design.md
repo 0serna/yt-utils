@@ -7,11 +7,13 @@ The scrollable element is inside the engagement panel itself, so the fix should 
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Keep scroll input contained within the `Ask` panel.
 - Prevent the YouTube watch page from scrolling when the user is interacting with the chat.
 - Preserve the existing auto-open behavior and overall watch-page flow.
 
 **Non-Goals:**
+
 - Do not change how the chat content loads or renders.
 - Do not intercept page scroll outside the `Ask` surface.
 - Do not add new persistent state or background coordination.

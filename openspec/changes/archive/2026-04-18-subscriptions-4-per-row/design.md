@@ -1,6 +1,7 @@
 ## Context
 
 The YT Utils extension already has several features that modify the YouTube subscriptions feed:
+
 - `subscriptions-hide` - Adds hide buttons to each video card
 - `subscriptions-seen-overlay` - Shows watched status overlay
 - `subscriptions-shorts-removal` - Removes Shorts shelf
@@ -12,6 +13,7 @@ YouTube's subscriptions feed uses a flex-based layout with `ytd-rich-item-render
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Show 4 videos per row on the YouTube subscriptions feed
 - Maintain video thumbnail aspect ratios (16:9) at reduced size
 - Follow existing extension patterns for feature lifecycle
@@ -19,6 +21,7 @@ YouTube's subscriptions feed uses a flex-based layout with `ytd-rich-item-render
 - Clean up properly on deactivation/navigation
 
 **Non-Goals:**
+
 - Configurable grid density (3/4/5 options) - scope to fixed 4-per-row
 - Mobile/tablet support - desktop only
 - Affecting other YouTube pages (home, trending, etc.)
@@ -31,6 +34,7 @@ YouTube's subscriptions feed uses a flex-based layout with `ytd-rich-item-render
 **Rationale:** The grid layout can be modified entirely with CSS. This is simpler than manipulating individual DOM elements and handles YouTube's dynamic re-rendering automatically.
 
 **CSS Strategy:**
+
 ```css
 /* Reduce video card width to fit 4 per row */
 ytd-rich-item-renderer {
@@ -62,13 +66,13 @@ ytd-rich-grid-renderer > div:nth-child(5) {
 
 ## Risks / Trade-offs
 
-| Risk | Mitigation |
-|------|-----------|
-| YouTube layout changes break the feature | Monitor for selector changes; CSS-based approach is more resilient than DOM manipulation |
-| Thumbnails appear distorted | Ensure aspect ratio is preserved via CSS; thumbnails are responsive by default |
-| Overlaps with other grid-modifying extensions | Use `!important` to ensure our styles apply; users can disable if conflicts arise |
-| Very narrow screens (<1600px) may have overflow | The flex layout will wrap naturally; worst case is slightly cramped appearance |
-| YouTube A/B tests different grid structures | Feature uses common selectors that are unlikely to change in A/B tests |
+| Risk                                            | Mitigation                                                                               |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| YouTube layout changes break the feature        | Monitor for selector changes; CSS-based approach is more resilient than DOM manipulation |
+| Thumbnails appear distorted                     | Ensure aspect ratio is preserved via CSS; thumbnails are responsive by default           |
+| Overlaps with other grid-modifying extensions   | Use `!important` to ensure our styles apply; users can disable if conflicts arise        |
+| Very narrow screens (<1600px) may have overflow | The flex layout will wrap naturally; worst case is slightly cramped appearance           |
+| YouTube A/B tests different grid structures     | Feature uses common selectors that are unlikely to change in A/B tests                   |
 
 ## Migration Plan
 

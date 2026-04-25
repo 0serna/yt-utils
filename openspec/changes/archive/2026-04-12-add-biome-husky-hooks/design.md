@@ -7,12 +7,14 @@ This change adds developer-facing tooling, not product behavior. The main constr
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Enforce consistent formatting and basic linting with Biome.
 - Run type checking before commits complete.
 - Keep the hook setup easy to install and maintain with Husky.
 - Avoid adding unnecessary workflow complexity.
 
 **Non-Goals:**
+
 - Adding a full ESLint/Prettier stack.
 - Running production builds on every commit.
 - Changing extension runtime behavior or OpenSpec product specs.

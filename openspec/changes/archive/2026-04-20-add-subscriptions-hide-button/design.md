@@ -7,6 +7,7 @@ On the live subscriptions page, supported video cards already expose two thumbna
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Add a desktop-only inline hide control on supported `www.youtube.com/feed/subscriptions` video cards.
 - Insert that control beside the existing thumbnail overlay actions rather than near the metadata-side `More actions` button.
 - Trigger YouTube's own hide behavior for the same card by driving the native menu and `Hide` menu item.
@@ -14,6 +15,7 @@ On the live subscriptions page, supported video cards already expose two thumbna
 - Avoid rendering a hide button on cards that do not expose the native prerequisites needed to complete the action.
 
 **Non-Goals:**
+
 - Supporting `m.youtube.com`, Home feed, channel feeds, Shorts shelves, playlists, or non-subscriptions YouTube surfaces.
 - Replacing YouTube's native menu behavior with private API calls or custom network requests.
 - Adding persistence, undo history, batch hide actions, keyboard shortcuts, or extension popup controls for feed cleanup.
@@ -22,6 +24,7 @@ On the live subscriptions page, supported video cards already expose two thumbna
 ## Decisions
 
 ### Add a dedicated subscriptions-feed content feature
+
 The change will introduce a new content feature for subscriptions cards instead of extending any existing watch-page feature.
 
 This keeps feed-specific DOM assumptions isolated from watch-page logic and preserves the current pattern of small, focused features registered through the shared registry.
@@ -29,6 +32,7 @@ This keeps feed-specific DOM assumptions isolated from watch-page logic and pres
 Alternative considered: fold subscriptions handling into an existing watch-page feature. Rejected because the target URL, DOM structure, lifecycle, and user interaction differ substantially from the watch page.
 
 ### Expand the feature registry beyond watch-only activation
+
 `FeatureRegistry` will be generalized so features can decide whether they should activate on the current page rather than relying on a single hard-coded watch-page gate.
 
 This is the smallest structural change that supports the new subscriptions-feed feature without forcing unrelated watch-page code into feed contexts.
@@ -36,6 +40,7 @@ This is the smallest structural change that supports the new subscriptions-feed 
 Alternative considered: create a second standalone content entrypoint for subscriptions pages. Rejected because the current repo already centralizes YouTube features under one content script, and a broader registry predicate is simpler than splitting the runtime entrypoints.
 
 ### Inject the button into the thumbnail overlay action host
+
 The hide button will be rendered into the same thumbnail hover overlay host that currently contains the native `Watch later` and `Add to queue` buttons.
 
 This matches the requested placement, keeps the action visually grouped with YouTube's existing quick actions, and avoids adding another metadata-row button competing with `More actions`.
@@ -43,6 +48,7 @@ This matches the requested placement, keeps the action visually grouped with You
 Alternative considered: place the button next to the metadata-side `More actions` button. Rejected because it does not match the intended UX and leaves the thumbnail overlay as the user's primary action cluster.
 
 ### Reuse YouTube's native hide menu path instead of calling internal APIs
+
 On click, the feature will locate the corresponding card's `More actions` button, open that menu, find the native `Hide` menu item, and activate it.
 
 This keeps behavior aligned with what YouTube already supports for the card, reduces the amount of reverse-engineering required, and avoids coupling the extension to undocumented request formats.
@@ -50,6 +56,7 @@ This keeps behavior aligned with what YouTube already supports for the card, red
 Alternative considered: reverse-engineer and call YouTube's internal hide request directly. Rejected because it is harder to maintain, more likely to break silently, and unnecessary when the native menu path already exists.
 
 ### Gate rendering on native prerequisites, not just page type
+
 The feature will only inject a hide button for cards where the thumbnail overlay action host, `More actions` trigger, and native `Hide` menu item can be resolved reliably.
 
 This ensures the extension does not present a dead control on cards or shelves that look similar to standard subscriptions videos but do not expose the same native affordances.
@@ -57,6 +64,7 @@ This ensures the extension does not present a dead control on cards or shelves t
 Alternative considered: render the button on every visible subscriptions card and fail only on click. Rejected because it creates avoidable broken interactions and makes the feed feel less trustworthy.
 
 ### Keep matching logic resilient to rerenders and localization
+
 Card-level wiring will be based primarily on DOM locality and existing card structure, while the final native menu action may still need accessible-text matching against `Hide` and localized variants.
 
 This balances practicality with maintainability: most of the control placement can be structural, and only the final menu-item resolution depends on labels that may vary.

@@ -5,11 +5,13 @@ The extension already implements playback speed as an inline watch-page feature 
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Reduce playback-speed adjustments to `0.05` per click.
 - Keep the existing control, bounds, default speed, and persistence behavior unchanged.
 - Preserve the current desktop watch-page-only scope.
 
 **Non-Goals:**
+
 - Changing the control layout or styling.
 - Introducing keyboard shortcuts, new UI surfaces, or new storage behavior.
 - Modifying the lower or upper bounds.
@@ -17,6 +19,7 @@ The extension already implements playback speed as an inline watch-page feature 
 ## Decisions
 
 ### Keep the control model unchanged and adjust only the step constant
+
 The implementation should continue using the existing inline decrement/value/increment control and the same playback-rate application flow. Only the increment/decrement delta changes from `0.1` to `0.05`.
 
 This keeps the change low-risk and avoids touching unrelated watch-page lifecycle logic.
@@ -24,6 +27,7 @@ This keeps the change low-risk and avoids touching unrelated watch-page lifecycl
 Alternative considered: refactoring the control to accept arbitrary step sizes or presets. Rejected because it adds complexity without solving the current request.
 
 ### Preserve the current clamping and display behavior
+
 The same min/max bounds and one-decimal formatted display should remain in place. The smaller step does not require new bounds or a new rendering model.
 
 This avoids regressions in persistence and keeps the visible speed state stable.

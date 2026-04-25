@@ -7,12 +7,14 @@ Exploration against the live desktop home feed showed that YouTube renders a str
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Extend the existing Shorts-shelf removal behavior to the desktop home feed without changing how the subscriptions feed works.
 - Keep using structural DOM markers rather than localized text matching.
 - Preserve idempotent behavior across initial page load, YouTube SPA navigation, and feed rerenders.
 - Remove every matching Shorts shelf section rendered on a supported desktop feed surface.
 
 **Non-Goals:**
+
 - Supporting watch pages, channel pages, Shorts playback pages, search results, or mobile YouTube.
 - Replacing DOM removal with preference-setting flows such as clicking `Show fewer Shorts`.
 - Adding configuration, per-surface toggles, or extension UI.

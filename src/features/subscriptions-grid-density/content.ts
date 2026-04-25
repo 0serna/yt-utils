@@ -20,33 +20,33 @@ ytd-rich-grid-renderer > #contents {
 `;
 
 const subscriptionsGridDensityFeature: Feature = {
-	name: "subscriptions-grid-density",
-	matchesPage(url: URL): boolean {
-		return isDesktopSubscriptionsFeedPage(url);
-	},
+  name: "subscriptions-grid-density",
+  matchesPage(url: URL): boolean {
+    return isDesktopSubscriptionsFeedPage(url);
+  },
 
-	activate(_context: FeatureContext): void {
-		injectStylesheet();
-	},
+  activate(_context: FeatureContext): void {
+    injectStylesheet();
+  },
 
-	deactivate(): void {
-		removeStylesheet();
-	},
+  deactivate(): void {
+    removeStylesheet();
+  },
 };
 
 export default subscriptionsGridDensityFeature;
 
 function injectStylesheet(): void {
-	if (document.getElementById(STYLE_ELEMENT_ID)) {
-		return;
-	}
+  if (document.getElementById(STYLE_ELEMENT_ID)) {
+    return;
+  }
 
-	const styleElement = document.createElement("style");
-	styleElement.id = STYLE_ELEMENT_ID;
-	styleElement.textContent = CSS_CONTENT;
-	document.head.append(styleElement);
+  const styleElement = document.createElement("style");
+  styleElement.id = STYLE_ELEMENT_ID;
+  styleElement.textContent = CSS_CONTENT;
+  document.head.append(styleElement);
 }
 
 function removeStylesheet(): void {
-	document.getElementById(STYLE_ELEMENT_ID)?.remove();
+  document.getElementById(STYLE_ELEMENT_ID)?.remove();
 }

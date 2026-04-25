@@ -11,6 +11,7 @@ The extension currently lives at the repository root, so loading it in the brows
 ## Capabilities
 
 ### New Capabilities
+
 - `extension-repository-layout`: The repository exposes the browser extension from a dedicated directory so users can load that directory directly as an unpacked extension.
 
 ### Modified Capabilities

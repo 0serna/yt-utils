@@ -7,11 +7,13 @@ Playwright investigation revealed that YouTube's server-side watch tracking reli
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Ensure the heartbeat fires reliably by playing the video briefly after seeking
 - Keep the change minimal — only insert a playback step into the existing automation flow
 - Maintain backward compatibility with all existing triggers (inline button, extension action)
 
 **Non-Goals:**
+
 - No changes to the share dialog flow, URL generation, or redirect logic
 - No changes to the inline button UI or messaging layer
 - No changes to error handling or timeout behavior beyond the new wait
@@ -25,9 +27,10 @@ Playwright investigation revealed that YouTube's server-side watch tracking reli
 **Rationale:** YouTube's heartbeat fires approximately 2 seconds after playback starts, regardless of the current playback position. A fixed 2-second play is sufficient to trigger the heartbeat while minimizing user-visible delay.
 
 **Alternatives considered:**
-- *Wait for heartbeat network response*: Too complex — would require intercepting network requests from the content script, which is not feasible with `chrome.scripting.executeScript`.
-- *Play until `ended` event*: Would require waiting for the full remaining 1% of the video, which could be several seconds for long videos.
-- *Play for 1 second*: Risky — heartbeat timing may vary; 2 seconds provides a safety margin.
+
+- _Wait for heartbeat network response_: Too complex — would require intercepting network requests from the content script, which is not feasible with `chrome.scripting.executeScript`.
+- _Play until `ended` event_: Would require waiting for the full remaining 1% of the video, which could be several seconds for long videos.
+- _Play for 1 second_: Risky — heartbeat timing may vary; 2 seconds provides a safety margin.
 
 ### Decision: Insert playback step between seek and pause
 

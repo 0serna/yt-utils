@@ -14,6 +14,7 @@ The extension already automates YouTube watch-page behavior, but subtitle handli
 ## Capabilities
 
 ### New Capabilities
+
 - `audio-language-subtitle-policy`: Automatically manage YouTube subtitles based on the active audio language, with English direct and auto-translate fallback rules.
 
 ### Modified Capabilities

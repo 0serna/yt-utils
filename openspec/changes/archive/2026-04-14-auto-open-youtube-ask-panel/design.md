@@ -7,11 +7,13 @@ The new behavior is narrow: open the `Ask` panel automatically when it is availa
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Open the `Ask` panel automatically on supported YouTube watch pages.
 - Detect whether the panel is already open before interacting.
 - Avoid fighting the user after they manually close the panel.
 
 **Non-Goals:**
+
 - Do not add chat input automation or prompt generation.
 - Do not persist state across browser restarts.
 - Do not change behavior on non-watch pages.

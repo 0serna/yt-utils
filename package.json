@@ -1,21 +1,24 @@
 {
-	"name": "yt-utils",
-	"version": "0.1.0",
-	"description": "A Chrome extension with YouTube helpers and inline search utilities.",
-	"private": true,
-	"type": "module",
-	"scripts": {
-		"build": "vite build",
-		"check": "biome check --write . && tsc --noEmit && openspec validate --all --json",
-		"prepare": "husky"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "^2.4.11",
-		"@crxjs/vite-plugin": "^2.0.0",
-		"@types/chrome": "^0.1.40",
-		"@types/node": "^25.6.0",
-		"husky": "^9.1.7",
-		"typescript": "^6.0.2",
-		"vite": "^8.0.8"
-	}
+  "name": "yt-utils",
+  "version": "0.1.0",
+  "description": "A Chrome extension with YouTube helpers and inline search utilities.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "check": "prettier --check . && eslint . && tsc --noEmit && openspec validate --all --json",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^2.0.0",
+    "@types/chrome": "^0.1.40",
+    "@types/node": "^25.6.0",
+    "eslint": "*",
+    "eslint-config-prettier": "*",
+    "husky": "^9.1.7",
+    "prettier": "*",
+    "typescript": "^6.0.2",
+    "typescript-eslint": "*",
+    "vite": "^8.0.8"
+  }
 }

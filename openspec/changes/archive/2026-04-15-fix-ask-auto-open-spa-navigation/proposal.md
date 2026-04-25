@@ -11,9 +11,11 @@ The Ask auto-open feature can miss newly selected videos during YouTube SPA navi
 ## Capabilities
 
 ### New Capabilities
+
 None.
 
 ### Modified Capabilities
+
 - `youtube-ask-auto-open`: Refine SPA navigation behavior so stale Ask UI from the previous video does not suppress auto-open on the current video.
 
 ## Impact

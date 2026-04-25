@@ -3,6 +3,7 @@
 The `subscriptions-seen-overlay` feature currently injects a dark overlay div (`rgba(0, 0, 0, 0.6)`) after the `.ytThumbnailViewModelImage` container inside each `yt-thumbnail-view-model`. This only dims the thumbnail image, not the title, channel name, or other metadata. The feature uses a `MutationObserver` to detect new cards and a "seen" detection heuristic based on YouTube's native progress bar (80%+ width = seen).
 
 The DOM structure of a subscription card:
+
 ```
 ytd-rich-item-renderer
   └── yt-lockup-view-model          ← target for card-level opacity
@@ -15,6 +16,7 @@ ytd-rich-item-renderer
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Apply CSS `opacity: 0.4` to the entire `yt-lockup-view-model` element for seen videos
 - Remove the thumbnail-only overlay injection logic entirely
 - Keep the same "seen" detection heuristic (80%+ progress bar width)
@@ -22,6 +24,7 @@ ytd-rich-item-renderer
 - Keep feature scoped to subscriptions feed only
 
 **Non-Goals:**
+
 - No hover restoration effect
 - No CSS transition animation
 - No expansion to other YouTube pages (home, search, channel)
@@ -37,6 +40,7 @@ ytd-rich-item-renderer
 **Rationale**: `yt-lockup-view-model` contains exactly the visual content (thumbnail + metadata) without affecting any layout or spacing that `ytd-rich-item-renderer` might control. This minimizes risk of breaking the grid layout.
 
 **Alternatives considered**:
+
 - `ytd-rich-item-renderer`: Could affect grid spacing or margins
 - Individual elements (thumbnail + metadata separately): More complex, defeats the "single line" simplicity goal
 
@@ -60,9 +64,9 @@ ytd-rich-item-renderer
 
 ## Risks / Trade-offs
 
-| Risk | Mitigation |
-|---|---|
-| YouTube DOM structure changes (`yt-lockup-view-model` selector breaks) | Same risk exists for current selectors; feature will silently skip cards that don't match |
-| `opacity` interacts with YouTube's touch-feedback hover effects | Acceptable trade-off; hover effects will still work but on a dimmed card |
-| `opacity` affects child element interactivity (clicks, links) | `opacity` does not affect pointer events; links remain clickable |
-| Unseen videos that later become seen won't auto-dim without page refresh | MutationObserver already handles new cards; existing cards are re-scanned on DOM changes |
+| Risk                                                                     | Mitigation                                                                                |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| YouTube DOM structure changes (`yt-lockup-view-model` selector breaks)   | Same risk exists for current selectors; feature will silently skip cards that don't match |
+| `opacity` interacts with YouTube's touch-feedback hover effects          | Acceptable trade-off; hover effects will still work but on a dimmed card                  |
+| `opacity` affects child element interactivity (clicks, links)            | `opacity` does not affect pointer events; links remain clickable                          |
+| Unseen videos that later become seen won't auto-dim without page refresh | MutationObserver already handles new cards; existing cards are re-scanned on DOM changes  |

@@ -9,12 +9,14 @@ Existing features like `subscriptions-seen-overlay` already demonstrate the patt
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Remove the Shorts shelf section from the desktop subscriptions feed entirely.
 - Re-apply removal across YouTube SPA navigation and feed rerenders.
 - Keep implementation minimal: a dedicated content feature following the existing pattern.
 - Avoid affecting regular video cards or non-subscriptions pages.
 
 **Non-Goals:**
+
 - Removing individual shorts cards that appear inline with regular videos (only the dedicated shelf section).
 - Supporting mobile YouTube (`m.youtube.com`), Home feed, channel pages, or other non-subscriptions surfaces.
 - Adding user configuration, toggle UI, or extension popup controls.

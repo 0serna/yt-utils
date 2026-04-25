@@ -14,206 +14,206 @@ let syncInProgress = false;
 let sessionToken = 0;
 
 const engagementPanelScrollContainmentFeature: Feature = {
-	name: "youtube-engagement-panel-scroll-containment",
-	isWatchPage: true,
+  name: "youtube-engagement-panel-scroll-containment",
+  isWatchPage: true,
 
-	activate(_context: FeatureContext): void {
-		sessionToken += 1;
-		startPolling();
-		observePage();
-		void queueSync(sessionToken);
-	},
+  activate(_context: FeatureContext): void {
+    sessionToken += 1;
+    startPolling();
+    observePage();
+    void queueSync(sessionToken);
+  },
 
-	deactivate(): void {
-		sessionToken += 1;
-		stopPolling();
-		stopObserving();
-	},
+  deactivate(): void {
+    sessionToken += 1;
+    stopPolling();
+    stopObserving();
+  },
 };
 
 export default engagementPanelScrollContainmentFeature;
 
 function isSupportedWatchPage(): boolean {
-	return isDesktopWatchPage();
+  return isDesktopWatchPage();
 }
 
 function startPolling(): void {
-	if (pollTimer !== null) {
-		return;
-	}
+  if (pollTimer !== null) {
+    return;
+  }
 
-	pollTimer = window.setInterval(() => {
-		void queueSync(sessionToken);
-	}, POLL_INTERVAL_MS);
+  pollTimer = window.setInterval(() => {
+    void queueSync(sessionToken);
+  }, POLL_INTERVAL_MS);
 }
 
 function stopPolling(): void {
-	if (pollTimer !== null) {
-		window.clearInterval(pollTimer);
-		pollTimer = null;
-	}
+  if (pollTimer !== null) {
+    window.clearInterval(pollTimer);
+    pollTimer = null;
+  }
 }
 
 function observePage(): void {
-	if (observer) {
-		return;
-	}
+  if (observer) {
+    return;
+  }
 
-	observer = new MutationObserver((mutations) => {
-		const hasRelevantMutation = mutations.some((mutation) => {
-			if (!(mutation.target instanceof Element)) {
-				return false;
-			}
+  observer = new MutationObserver((mutations) => {
+    const hasRelevantMutation = mutations.some((mutation) => {
+      if (!(mutation.target instanceof Element)) {
+        return false;
+      }
 
-			if (isInsideEngagementPanelSurface(mutation.target)) {
-				return true;
-			}
+      if (isInsideEngagementPanelSurface(mutation.target)) {
+        return true;
+      }
 
-			return [...mutation.addedNodes, ...mutation.removedNodes].some((node) => {
-				if (!(node instanceof Element)) {
-					return false;
-				}
+      return [...mutation.addedNodes, ...mutation.removedNodes].some((node) => {
+        if (!(node instanceof Element)) {
+          return false;
+        }
 
-				return isInsideEngagementPanelSurface(node);
-			});
-		});
+        return isInsideEngagementPanelSurface(node);
+      });
+    });
 
-		if (!hasRelevantMutation) {
-			return;
-		}
+    if (!hasRelevantMutation) {
+      return;
+    }
 
-		queueEnsureSync();
-	});
+    queueEnsureSync();
+  });
 
-	observer.observe(document.documentElement, {
-		attributes: true,
-		childList: true,
-		subtree: true,
-		attributeFilter: ["visibility", "hidden", "aria-hidden", "class", "style"],
-	});
+  observer.observe(document.documentElement, {
+    attributes: true,
+    childList: true,
+    subtree: true,
+    attributeFilter: ["visibility", "hidden", "aria-hidden", "class", "style"],
+  });
 }
 
 function stopObserving(): void {
-	if (observer) {
-		observer.disconnect();
-		observer = null;
-	}
+  if (observer) {
+    observer.disconnect();
+    observer = null;
+  }
 }
 
 function queueEnsureSync(): void {
-	if (ensureQueued) {
-		return;
-	}
+  if (ensureQueued) {
+    return;
+  }
 
-	ensureQueued = true;
+  ensureQueued = true;
 
-	window.requestAnimationFrame(() => {
-		ensureQueued = false;
-		void queueSync(sessionToken);
-	});
+  window.requestAnimationFrame(() => {
+    ensureQueued = false;
+    void queueSync(sessionToken);
+  });
 }
 
 async function queueSync(token: number): Promise<void> {
-	if (token !== sessionToken || !isSupportedWatchPage()) {
-		return;
-	}
+  if (token !== sessionToken || !isSupportedWatchPage()) {
+    return;
+  }
 
-	if (syncInProgress) {
-		return;
-	}
+  if (syncInProgress) {
+    return;
+  }
 
-	syncInProgress = true;
-	try {
-		await syncContainment(token);
-	} finally {
-		syncInProgress = false;
-	}
+  syncInProgress = true;
+  try {
+    await syncContainment(token);
+  } finally {
+    syncInProgress = false;
+  }
 }
 
 async function syncContainment(token: number): Promise<void> {
-	if (token !== sessionToken || !isSupportedWatchPage()) {
-		return;
-	}
+  if (token !== sessionToken || !isSupportedWatchPage()) {
+    return;
+  }
 
-	for (const panel of findExpandedEngagementPanels()) {
-		const scrollContainer = findPrimaryScrollContainer(panel);
-		if (!scrollContainer) {
-			continue;
-		}
+  for (const panel of findExpandedEngagementPanels()) {
+    const scrollContainer = findPrimaryScrollContainer(panel);
+    if (!scrollContainer) {
+      continue;
+    }
 
-		if (scrollContainer.style.overscrollBehaviorY !== CONTAINMENT_VALUE) {
-			scrollContainer.style.overscrollBehaviorY = CONTAINMENT_VALUE;
-		}
-	}
+    if (scrollContainer.style.overscrollBehaviorY !== CONTAINMENT_VALUE) {
+      scrollContainer.style.overscrollBehaviorY = CONTAINMENT_VALUE;
+    }
+  }
 }
 
 function findExpandedEngagementPanels(): HTMLElement[] {
-	return [...document.querySelectorAll<HTMLElement>(PANEL_SELECTOR)].filter(
-		(panel) => isPanelExpanded(panel),
-	);
+  return [...document.querySelectorAll<HTMLElement>(PANEL_SELECTOR)].filter(
+    (panel) => isPanelExpanded(panel),
+  );
 }
 
 function isPanelExpanded(panel: HTMLElement): boolean {
-	const visibility = panel.getAttribute("visibility");
+  const visibility = panel.getAttribute("visibility");
 
-	if (visibility === EXPANDED_PANEL_VISIBILITY) {
-		return true;
-	}
+  if (visibility === EXPANDED_PANEL_VISIBILITY) {
+    return true;
+  }
 
-	return isVisible(panel);
+  return isVisible(panel);
 }
 
 function findPrimaryScrollContainer(panel: HTMLElement): HTMLElement | null {
-	const candidates = [...panel.querySelectorAll<HTMLElement>("*")]
-		.filter((element) => isPrimaryScrollCandidate(element))
-		.map((element) => ({
-			element,
-			score: scoreScrollCandidate(element),
-		}))
-		.sort((left, right) => right.score - left.score);
+  const candidates = [...panel.querySelectorAll<HTMLElement>("*")]
+    .filter((element) => isPrimaryScrollCandidate(element))
+    .map((element) => ({
+      element,
+      score: scoreScrollCandidate(element),
+    }))
+    .sort((left, right) => right.score - left.score);
 
-	return candidates[0]?.element ?? null;
+  return candidates[0]?.element ?? null;
 }
 
 function isPrimaryScrollCandidate(element: HTMLElement): boolean {
-	if (!isVisible(element)) {
-		return false;
-	}
+  if (!isVisible(element)) {
+    return false;
+  }
 
-	if (
-		element.tagName === "TEXTAREA" ||
-		element.tagName === "INPUT" ||
-		element.tagName === "SELECT"
-	) {
-		return false;
-	}
+  if (
+    element.tagName === "TEXTAREA" ||
+    element.tagName === "INPUT" ||
+    element.tagName === "SELECT"
+  ) {
+    return false;
+  }
 
-	const style = window.getComputedStyle(element);
-	if (style.overflowY !== "auto" && style.overflowY !== "scroll") {
-		return false;
-	}
+  const style = window.getComputedStyle(element);
+  if (style.overflowY !== "auto" && style.overflowY !== "scroll") {
+    return false;
+  }
 
-	return element.clientHeight >= MIN_SCROLL_CONTAINER_HEIGHT;
+  return element.clientHeight >= MIN_SCROLL_CONTAINER_HEIGHT;
 }
 
 function scoreScrollCandidate(element: HTMLElement): number {
-	const style = window.getComputedStyle(element);
-	const hasOverflow = element.scrollHeight > element.clientHeight + 4;
-	const overflowBonus = hasOverflow ? 1_000_000 : 0;
-	const areaScore = element.clientWidth * element.clientHeight;
-	const scrollModeBonus = style.overflowY === "scroll" ? 10_000 : 0;
+  const style = window.getComputedStyle(element);
+  const hasOverflow = element.scrollHeight > element.clientHeight + 4;
+  const overflowBonus = hasOverflow ? 1_000_000 : 0;
+  const areaScore = element.clientWidth * element.clientHeight;
+  const scrollModeBonus = style.overflowY === "scroll" ? 10_000 : 0;
 
-	return overflowBonus + scrollModeBonus + areaScore;
+  return overflowBonus + scrollModeBonus + areaScore;
 }
 
 function isInsideEngagementPanelSurface(node: Node): boolean {
-	if (!(node instanceof Element)) {
-		return false;
-	}
+  if (!(node instanceof Element)) {
+    return false;
+  }
 
-	return Boolean(
-		node.closest(
-			`${PANEL_SELECTOR}, ytd-watch-metadata, #actions-inner, #top-level-buttons-computed, ytd-menu-renderer`,
-		),
-	);
+  return Boolean(
+    node.closest(
+      `${PANEL_SELECTOR}, ytd-watch-metadata, #actions-inner, #top-level-buttons-computed, ytd-menu-renderer`,
+    ),
+  );
 }

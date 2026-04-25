@@ -5,6 +5,7 @@ The project is a Chrome extension currently named "Mark As Seen" that automates 
 The rename is purely cosmetic and contractual: no logic changes, no architectural shifts. It's a prerequisite so that the subsequent modularization change works with the correct naming from day one.
 
 Current naming surface area:
+
 - `manifest.json`: `name`, `description`, `default_title`
 - `background.js`: message type `"mark-as-seen:inline-trigger"`, log prefix `[mark-as-seen]`, badge/title strings
 - `content.js`: message type `"mark-as-seen:inline-trigger"`, DOM IDs `mark-as-seen-inline-host` / `mark-as-seen-inline-button`, log prefix `[mark-as-seen-inline]`
@@ -13,12 +14,14 @@ Current naming surface area:
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Replace all `mark-as-seen` identifiers with `yt-utils` equivalents
 - Replace user-facing strings ("Mark As Seen") with "YT Utils"
 - Preserve all runtime behavior — the extension must work identically after rename
 - Produce a clean baseline for the modularization change
 
 **Non-Goals:**
+
 - Structural or architectural changes (those belong in the modularization change)
 - Adding TypeScript or a build step
 - Adding new features or capabilities

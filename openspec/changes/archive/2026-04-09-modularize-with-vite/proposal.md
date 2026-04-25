@@ -20,11 +20,13 @@ The extension is growing beyond a single feature (mark-as-seen) toward multiple 
 ## Capabilities
 
 ### New Capabilities
+
 - `build-pipeline`: Vite + TypeScript build pipeline that compiles `src/` into the loadable `extension/` directory, with HMR support during development
 - `feature-registry`: A typed registry that coordinates feature lifecycle (activate/deactivate) on YouTube page navigations, enabling multiple features to coexist in the same content script bundle
 - `project-structure`: Source layout with `src/features/` for per-feature modules and `src/shared/` for cross-feature utilities, replacing the flat two-file structure
 
 ### Modified Capabilities
+
 - `youtube-watch-marking-extension`: The mark-as-seen automation behavior is unchanged at runtime, but its implementation is now split across `src/features/mark-as-seen/content.ts` and `src/features/mark-as-seen/background.ts` instead of the flat `content.js`/`background.js` files
 - `extension-repository-layout`: The `extension/` directory becomes a build output. The local setup instructions must document the build step. The loadable directory path remains `extension/` for Chrome's `Load unpacked`.
 

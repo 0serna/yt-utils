@@ -13,9 +13,11 @@ The repository currently has TypeScript and build commands, but no consistent lo
 ## Capabilities
 
 ### New Capabilities
+
 - `developer-quality-gates`: Local pre-commit workflow that enforces formatting, linting, and type checking with Biome and Husky.
 
 ### Modified Capabilities
+
 - None
 
 ## Impact
