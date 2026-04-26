@@ -1,5 +1,6 @@
 import askAutoOpenFeature from "./features/ask-auto-open/content";
 import audioLanguageSubtitlePolicyFeature from "./features/audio-language-subtitle-policy/content";
+import autoSwitchToVideosTabFeature from "./features/auto-switch-to-videos-tab/content";
 import engagementPanelScrollContainmentFeature from "./features/engagement-panel-scroll-containment/content";
 import markAsSeenFeature from "./features/mark-as-seen/content";
 import playbackSpeedFeature from "./features/playback-speed/content";
@@ -19,3 +20,4 @@ registry.register(subscriptionsHideFeature);
 registry.register(subscriptionsSeenOverlayFeature);
 registry.register(subscriptionsShortsRemovalFeature);
 registry.register(subscriptionsGridDensityFeature);
+registry.register(autoSwitchToVideosTabFeature);
