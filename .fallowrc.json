@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "entry": [
+    "src/background.ts",
+    "src/content.ts",
+    "src/global-selection.ts",
+    "src/main-world/youtube-player-bridge.ts"
+  ],
+  "duplicates": {
+    "enabled": false,
+    "threshold": 15,
+    "ignore": ["src/**"]
+  },
+  "health": {
+    "maxCyclomatic": 25,
+    "maxCognitive": 25,
+    "maxCrap": 600
+  }
+}

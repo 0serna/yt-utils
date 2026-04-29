@@ -87,44 +87,6 @@ export function isEnglishLanguage(value: string | null | undefined): boolean {
   return normalizeLanguageCode(value)?.startsWith("en") ?? false;
 }
 
-export function inferAudioLanguage(
-  audioTrack: AudioTrack | null,
-  captionTracks: CaptionTrack[],
-): string | null {
-  const audioTrackCaptionLanguage = normalizeLanguageCode(
-    audioTrack?.captionTracks?.[0]?.languageCode,
-  );
-  if (audioTrackCaptionLanguage && audioTrackCaptionLanguage !== "und") {
-    return audioTrackCaptionLanguage;
-  }
-
-  const direct = normalizeLanguageCode(
-    audioTrack?.yG?.id || audioTrack?.hs?.id || audioTrack?.id,
-  );
-  if (direct && direct !== "und") {
-    return direct;
-  }
-
-  const captionLanguage = normalizeLanguageCode(captionTracks[0]?.languageCode);
-  if (captionLanguage && captionLanguage !== "und") {
-    return captionLanguage;
-  }
-
-  const audioName =
-    audioTrack?.yG?.name?.trim() || audioTrack?.hs?.name?.trim() || null;
-  if (audioName) {
-    if (/spanish/i.test(audioName)) {
-      return "es";
-    }
-
-    if (/english/i.test(audioName)) {
-      return "en";
-    }
-  }
-
-  return null;
-}
-
 export function determineSubtitleSelection(
   _snapshot: PlayerSnapshot,
 ): SubtitleSelection {

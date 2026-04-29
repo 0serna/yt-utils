@@ -6,8 +6,6 @@ const LABELS = {
   moreActions: [/\bmore actions\b/i, /\bm[aá]s acciones\b/i],
 } as const;
 
-export { LABELS };
-
 export function waitFor<T>(
   getValue: () => T | null | undefined | false,
   options?: {
@@ -63,7 +61,7 @@ export function findButton(
   );
 }
 
-export function findMenuItem(
+function findMenuItem(
   root: ParentNode,
   matchers: readonly RegExp[],
 ): HTMLElement | null {
@@ -74,76 +72,6 @@ export function findMenuItem(
       (element) => isVisible(element) && matchesAnyLabel(element, matchers),
     ) ?? null
   );
-}
-
-export function findShareDialog(): HTMLElement | null {
-  const dialogs = document.querySelectorAll<HTMLElement>(
-    "tp-yt-paper-dialog, [role='dialog']",
-  );
-
-  return (
-    [...dialogs].find((dialog) => {
-      if (!isVisible(dialog)) {
-        return false;
-      }
-
-      return (
-        Boolean(findShareUrlInput(dialog)) &&
-        Boolean(findButton(dialog, LABELS.copy))
-      );
-    }) ?? null
-  );
-}
-
-export function findStartAtCheckbox(
-  dialog: ParentNode,
-  matchers: readonly RegExp[],
-): HTMLElement | null {
-  const selectors = [
-    "#start-at-checkbox",
-    "tp-yt-paper-checkbox[role='checkbox']",
-    "input[type='checkbox']",
-    "[role='checkbox']",
-  ];
-
-  for (const selector of selectors) {
-    const candidates = dialog.querySelectorAll<HTMLElement>(selector);
-
-    for (const candidate of candidates) {
-      if (!isVisible(candidate)) {
-        continue;
-      }
-
-      if (
-        candidate.id === "start-at-checkbox" ||
-        matchesAnyLabel(candidate, matchers)
-      ) {
-        return candidate;
-      }
-    }
-  }
-
-  return null;
-}
-
-export function findShareUrlInput(dialog: ParentNode): HTMLInputElement | null {
-  const selectors = ["#share-url", "input[readonly]", "input[type='text']"];
-
-  for (const selector of selectors) {
-    const candidates = dialog.querySelectorAll<HTMLInputElement>(selector);
-
-    for (const candidate of candidates) {
-      if (!isVisible(candidate)) {
-        continue;
-      }
-
-      if (candidate.value?.includes("youtu")) {
-        return candidate;
-      }
-    }
-  }
-
-  return null;
 }
 
 export function findWatchPageActionsContainer(): HTMLElement | null {
@@ -222,24 +150,12 @@ export function findShortsShelf(): HTMLElement | null {
   );
 }
 
-export function findShortsShelves(): HTMLElement[] {
+function findShortsShelves(): HTMLElement[] {
   return [
     ...document.querySelectorAll<HTMLElement>(
       "ytd-rich-shelf-renderer[is-shorts]",
     ),
   ];
-}
-
-export function removeShortsSection(): void {
-  const shelf = findShortsShelf();
-  if (!shelf) {
-    return;
-  }
-
-  const section = shelf.closest<HTMLElement>("ytd-rich-section-renderer");
-  if (section) {
-    section.remove();
-  }
 }
 
 export function removeAllShortsSections(): void {

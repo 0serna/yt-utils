@@ -181,7 +181,7 @@ function runYoutubeMarkAsSeenAutomation(
   return execute();
 }
 
-export { clearActionStatus, runYoutubeMarkAsSeenAutomation };
+export { clearActionStatus };
 
 export async function runMarkAsSeenForTab(
   tabId: number,

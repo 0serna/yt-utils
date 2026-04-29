@@ -1,15 +1,6 @@
 export const MESSAGE_INLINE_TRIGGER = "yt-utils:inline-trigger" as const;
 export const MESSAGE_GOOGLE_SEARCH = "yt-utils:google-search" as const;
 
-export type InlineTriggerMessage = {
-  type: typeof MESSAGE_INLINE_TRIGGER;
-};
-
-export type GoogleSearchMessage = {
-  type: typeof MESSAGE_GOOGLE_SEARCH;
-  query: string;
-};
-
 export type ExtensionResult = {
   ok: boolean;
   code?: string;
