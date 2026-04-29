@@ -6,8 +6,13 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "check": "prettier --check . && eslint . && tsc --noEmit && openspec validate --all --json",
+    "check": "prettier --check . && eslint . && fallow --fail-on-issues && tsc --noEmit && openspec validate --all --json",
+    "format": "prettier --write .",
     "prepare": "husky"
+  },
+  "lint-staged": {
+    "*": "prettier --write --ignore-unknown",
+    "*.{js,jsx,ts,tsx}": "eslint --fix"
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.0.0",
@@ -15,7 +20,9 @@
     "@types/node": "^25.6.0",
     "eslint": "*",
     "eslint-config-prettier": "*",
+    "fallow": "^2.55.0",
     "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "prettier": "*",
     "typescript": "^6.0.2",
     "typescript-eslint": "*",

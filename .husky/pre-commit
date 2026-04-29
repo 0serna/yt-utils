@@ -1,10 +1,2 @@
 #!/usr/bin/env sh
-staged_files=$(git diff --cached --name-only --diff-filter=ACM)
-
-if [ -n "$staged_files" ]; then
-	printf '%s\n' "$staged_files" | xargs -r npx prettier --write --ignore-unknown
-	printf '%s\n' "$staged_files" | xargs -r npx eslint --fix
-	printf '%s\n' "$staged_files" | xargs git add
-fi
-
-npm run check
+npx lint-staged
