@@ -1,22 +1,26 @@
-# Agent Instructions
+## Project Structure
 
-## Commands
+```text
+.
+├── src/                  # extension source code
+│   ├── features/         # feature modules with content/background logic
+│   ├── main-world/       # MAIN-world YouTube player bridge scripts
+│   ├── shared/           # shared helpers, messaging, and types
+│   ├── background.ts     # extension service worker entrypoint
+│   ├── content.ts        # YouTube content-script entrypoint
+│   └── global-selection.ts # all-pages text selection content script
+├── openspec/             # specs, active changes, and archived changes
+└── README.md             # project overview and setup notes
+```
 
-- `npm run build` - build extension (outputs to `extension/`)
-- `npm run check` - biome lint/format + tsc + openspec validate
+## Repository Commands
+
+- `npm install`: install dependencies.
+- `npm run build`: build the extension with Vite.
+- `npm run check`: run Prettier check, ESLint, Fallow, TypeScript, and OpenSpec validation.
+- `npm run format`: format files with Prettier.
 
 ## Workflow
 
 - Use `playwriter` to explore and analyze web pages.
 - When you need to validate the extension, you can run `npm run build` and ask the user (`question` tool) to reload the extension.
-
-## Architecture
-
-- Chrome extension (MV3) built with Vite + `@crxjs/vite-plugin`
-- `src/background.ts` - service worker
-- `src/content.ts` - YouTube content script
-- `src/global-selection.ts` - runs on all pages for text selection
-- `src/main-world/` - MAIN world scripts (YouTube player bridge)
-- `src/features/` - feature modules
-- `src/shared/` - shared helpers and messaging
-- Path aliases: `@features/*`, `@shared/*`

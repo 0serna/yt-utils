@@ -1,42 +1,13 @@
-type PlayerTextRun = {
-  text?: string;
-};
-
-type TranslationLanguage = {
-  languageCode?: string;
-  languageName?: string;
-};
-
-type CaptionTrack = {
-  languageCode?: string;
-  kind?: string;
-  name?: {
-    simpleText?: string;
-    runs?: PlayerTextRun[];
-  };
-  displayName?: string;
-  isTranslatable?: boolean;
-  isTranslateable?: boolean;
-  translationLanguage?: TranslationLanguage | null;
-  vssId?: string;
-};
-
-type AudioTrack = {
-  id?: string;
-  hs?: {
-    id?: string;
-    name?: string;
-    isDefault?: boolean;
-    isAutoDubbed?: boolean;
-  };
-  yG?: {
-    id?: string;
-    name?: string;
-    isDefault?: boolean;
-    isAutoDubbed?: boolean;
-  };
-  captionTracks?: CaptionTrack[];
-};
+import { BRIDGE_SOURCE } from "@shared/youtube-player-model";
+import type {
+  AudioTrack,
+  BridgeRequest,
+  BridgeResponse,
+  CaptionTrack,
+  PlayerSnapshot,
+  SubtitleSelection,
+  TranslationLanguage,
+} from "@shared/youtube-player-model";
 
 type PlayerResponse = {
   captions?: {
@@ -61,34 +32,6 @@ type YoutubePlayer = HTMLElement & {
   setOption?: (namespace: string, key: string, value: unknown) => void;
 };
 
-type SubtitleSelection = { mode: "off" };
-
-type PlayerSnapshot = {
-  videoId: string | null;
-  audioTrack: AudioTrack | null;
-  audioLanguage: string | null;
-  captionTracks: CaptionTrack[];
-  translationLanguages: TranslationLanguage[];
-  currentCaptionTrack: CaptionTrack | null;
-  subtitlesOn: boolean;
-};
-
-type BridgeRequest = {
-  source: typeof BRIDGE_SOURCE;
-  kind: "request";
-  id: string;
-  action: "readSnapshot" | "applySelection";
-  selection?: SubtitleSelection;
-};
-
-type BridgeResponse = {
-  source: typeof BRIDGE_SOURCE;
-  kind: "response";
-  id: string;
-  result: PlayerSnapshot | boolean | null;
-};
-
-const BRIDGE_SOURCE = "yt-utils:youtube-player-bridge";
 const BRIDGE_FLAG = "__ytUtilsYoutubePlayerBridgeInstalled";
 
 const bridgeWindow = window as unknown as Window &
