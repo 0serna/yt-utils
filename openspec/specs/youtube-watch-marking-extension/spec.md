@@ -8,17 +8,17 @@ Provide a single-click Chrome extension for supported YouTube watch pages that a
 
 ### Requirement: Action runs only on supported YouTube watch pages
 
-The extension SHALL start the mark-as-seen automation only when the user activates either the extension action or the inline desktop watch-page button while the current tab is a supported standard YouTube watch page URL. The implementation SHALL live in `src/features/mark-as-seen/background.ts` for the service worker handler and `src/features/mark-as-seen/content.ts` for the inline trigger logic.
+The extension SHALL start the mark-as-seen automation only when the user activates either the extension action or the inline desktop watch-page button while the current tab is a supported standard YouTube watch page URL. The background service worker SHALL validate the active tab and request automation from the YouTube content script instead of injecting a serialized automation function.
 
 #### Scenario: User clicks extension action on a watch page
 
 - **WHEN** the active tab URL is a supported `youtube.com/watch` video page and the user clicks the extension action
-- **THEN** the background handler in `src/features/mark-as-seen/background.ts` starts the mark-as-seen automation for that tab
+- **THEN** the background handler in `src/features/mark-as-seen/background.ts` requests mark-as-seen automation from the content script for that tab
 
 #### Scenario: User clicks inline button on a watch page
 
 - **WHEN** the current page is a supported desktop `www.youtube.com/watch` video page and the user clicks the inline check button managed by `src/features/mark-as-seen/content.ts`
-- **THEN** the content feature sends the `yt-utils:inline-trigger` message and the background handler starts the mark-as-seen automation for that tab
+- **THEN** the content feature sends the `yt-utils:inline-trigger` message and the background handler requests mark-as-seen automation from the content script for that tab
 
 #### Scenario: User triggers the extension on an unsupported page
 
@@ -65,7 +65,7 @@ When the inline check button is used, the extension SHALL keep that button visib
 
 ### Requirement: Extension automates the watch-completion flow in order
 
-The extension SHALL perform the requested YouTube interactions in this order: seek the current video to 99% progress, play briefly to trigger YouTube's heartbeat signal, and pause the video. The background service worker SHALL use the `yt-utils:inline-trigger` message type for inline trigger communication.
+The extension SHALL perform the requested YouTube interactions in this order: seek the current video to 99% progress, play briefly to trigger YouTube's heartbeat signal, and pause the video. Internal automation requests SHALL use `yt-utils:` prefixed message types and execute from content-script code that can import shared helpers.
 
 #### Scenario: Successful ordered automation
 

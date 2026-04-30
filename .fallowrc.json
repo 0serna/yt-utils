@@ -5,14 +5,5 @@
     "src/content.ts",
     "src/global-selection.ts",
     "src/main-world/youtube-player-bridge.ts"
-  ],
-  "duplicates": {
-    "enabled": true,
-    "threshold": 15
-  },
-  "health": {
-    "maxCyclomatic": 25,
-    "maxCognitive": 25,
-    "maxCrap": 600
-  }
+  ]
 }

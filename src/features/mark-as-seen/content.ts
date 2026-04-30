@@ -7,6 +7,9 @@ import {
   placeWatchActionHost,
   RELEVANT_MUTATION_SELECTORS,
 } from "@shared/youtube-dom";
+import { registerMarkAsSeenAutomationHandler } from "./content-automation";
+
+registerMarkAsSeenAutomationHandler();
 
 const BUTTON_HOST_ID = "yt-utils-inline-host";
 const BUTTON_ID = "yt-utils-inline-button";

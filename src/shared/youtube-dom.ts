@@ -1,3 +1,5 @@
+import { createExtensionError } from "./errors";
+
 const LABELS = {
   share: [/\bshare\b/i, /\bcompartir\b/i],
   copy: [/\bcopy\b/i, /\bcopy link\b/i, /\bcopiar\b/i, /\bcopiar enlace\b/i],
@@ -31,7 +33,7 @@ export function waitFor<T>(
 
       if (Date.now() - startedAt > timeout) {
         reject(
-          createAutomationError(
+          createExtensionError(
             options?.errorCode || "WAIT_FAILED",
             options?.errorMessage || "Timed out waiting for the next step.",
           ),
@@ -44,6 +46,10 @@ export function waitFor<T>(
 
     check();
   });
+}
+
+export function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 export function findButton(
@@ -274,18 +280,4 @@ function matchesAnyLabel(
 ): boolean {
   const label = getElementLabel(element);
   return matchers.some((matcher) => matcher.test(label));
-}
-
-function createAutomationError(
-  code: string,
-  message: string,
-  details?: unknown,
-): Error & { code: string; details: unknown } {
-  const error = new Error(message) as Error & {
-    code: string;
-    details: unknown;
-  };
-  error.code = code;
-  error.details = details;
-  return error;
 }

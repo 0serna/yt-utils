@@ -3,7 +3,7 @@
   "name": "YT Utils",
   "version": "0.1.0",
   "description": "A Chrome extension with YouTube helpers and inline search utilities.",
-  "permissions": ["activeTab", "scripting", "storage", "tabs"],
+  "permissions": ["activeTab", "storage", "tabs"],
   "host_permissions": [
     "<all_urls>",
     "https://www.youtube.com/*",

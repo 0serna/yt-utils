@@ -1,4 +1,3 @@
-import { BRIDGE_SOURCE } from "@shared/youtube-player-model";
 import type {
   AudioTrack,
   BridgeRequest,
@@ -32,6 +31,7 @@ type YoutubePlayer = HTMLElement & {
   setOption?: (namespace: string, key: string, value: unknown) => void;
 };
 
+const BRIDGE_SOURCE = "yt-utils:youtube-player-bridge";
 const BRIDGE_FLAG = "__ytUtilsYoutubePlayerBridgeInstalled";
 
 const bridgeWindow = window as unknown as Window &
@@ -203,16 +203,12 @@ function normalizeVideoId(value: string | null | undefined): string | null {
 function normalizeLanguageCode(
   value: string | null | undefined,
 ): string | null {
-  if (!value) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  if (normalized.length === 0) {
     return null;
   }
 
-  const normalized = value
-    .trim()
-    .toLowerCase()
-    .split(".")[0]
-    .replaceAll("_", "-");
-  return normalized.length > 0 ? normalized : null;
+  return normalized.split(".", 1)[0].replaceAll("_", "-");
 }
 
 function cloneValue<T>(value: T): T {
