@@ -19,6 +19,7 @@ import {
   isSpanishLanguage,
   readPlayerSnapshot,
 } from "@shared/youtube-player";
+import type { PlayerSnapshot } from "@shared/youtube-player";
 
 const CONTROL_HOST_ID = "yt-utils-speed-host";
 const SPEED_DECREMENT_ID = "yt-utils-speed-decrement";
@@ -135,29 +136,24 @@ function createSpeedControlHost(): HTMLElement {
 }
 
 function syncControlState(): void {
-  const decrementBtn = document.getElementById(
-    SPEED_DECREMENT_ID,
-  ) as HTMLButtonElement | null;
-  const incrementBtn = document.getElementById(
-    SPEED_INCREMENT_ID,
-  ) as HTMLButtonElement | null;
+  syncSpeedButton(SPEED_DECREMENT_ID, localSpeed <= PLAYBACK_SPEED_MIN);
+  syncSpeedButton(SPEED_INCREMENT_ID, localSpeed >= PLAYBACK_SPEED_MAX);
+
   const valueDisplay = document.getElementById(SPEED_VALUE_ID);
-
-  if (decrementBtn) {
-    decrementBtn.disabled = localSpeed <= PLAYBACK_SPEED_MIN;
-    decrementBtn.style.opacity = decrementBtn.disabled ? "0.4" : "1";
-    decrementBtn.style.cursor = decrementBtn.disabled ? "default" : "pointer";
-  }
-
-  if (incrementBtn) {
-    incrementBtn.disabled = localSpeed >= PLAYBACK_SPEED_MAX;
-    incrementBtn.style.opacity = incrementBtn.disabled ? "0.4" : "1";
-    incrementBtn.style.cursor = incrementBtn.disabled ? "default" : "pointer";
-  }
-
   if (valueDisplay) {
     valueDisplay.textContent = formatPlaybackSpeed(localSpeed);
   }
+}
+
+function syncSpeedButton(buttonId: string, atLimit: boolean): void {
+  const button = document.getElementById(buttonId) as HTMLButtonElement | null;
+  if (!button) {
+    return;
+  }
+
+  button.disabled = atLimit;
+  button.style.opacity = atLimit ? "0.4" : "1";
+  button.style.cursor = atLimit ? "default" : "pointer";
 }
 
 function startPolling(): void {
@@ -208,34 +204,9 @@ function observePage(): void {
   }
 
   observer = new MutationObserver((mutations) => {
-    const hasRelevantMutation = mutations.some((mutation) => {
-      if (isInsideSpeedControl(mutation.target)) {
-        return false;
-      }
-
-      return [...mutation.addedNodes, ...mutation.removedNodes].some((node) => {
-        if (!(node instanceof Element)) {
-          return false;
-        }
-
-        if (
-          node.id === CONTROL_HOST_ID ||
-          node.querySelector?.(`#${CONTROL_HOST_ID}`)
-        ) {
-          return false;
-        }
-
-        return (
-          node.matches?.(RELEVANT_MUTATION_SELECTORS) ||
-          node.querySelector?.(RELEVANT_MUTATION_SELECTORS)
-        );
-      });
-    });
-
-    if (!hasRelevantMutation) {
+    if (!mutations.some(isRelevantSpeedMutation)) {
       return;
     }
-
     queueEnsureSpeedControl();
   });
 
@@ -243,6 +214,31 @@ function observePage(): void {
     childList: true,
     subtree: true,
   });
+}
+
+function isRelevantSpeedMutation(mutation: MutationRecord): boolean {
+  return (
+    !isInsideSpeedControl(mutation.target) &&
+    [...mutation.addedNodes, ...mutation.removedNodes].some(
+      (node) =>
+        node instanceof Element &&
+        isExternalSpeedNode(node) &&
+        nodeMatchesOrContainsSelector(node, RELEVANT_MUTATION_SELECTORS),
+    )
+  );
+}
+
+function isExternalSpeedNode(node: Element): boolean {
+  return (
+    node.id !== CONTROL_HOST_ID && !node.querySelector?.(`#${CONTROL_HOST_ID}`)
+  );
+}
+
+function nodeMatchesOrContainsSelector(
+  node: Element,
+  selector: string,
+): boolean {
+  return !!(node.matches?.(selector) || node.querySelector?.(selector));
 }
 
 function stopObserving(): void {
@@ -280,20 +276,28 @@ async function queueSync(token: number): Promise<void> {
 }
 
 async function syncSpeedForCurrentVideo(token: number): Promise<void> {
-  if (token !== sessionToken || userInteracted) {
+  if (shouldSkipSync(token)) {
     return;
   }
 
   const snapshot = await readPlayerSnapshot();
-  if (token !== sessionToken || userInteracted || !snapshot) {
+  if (!snapshot) {
     return;
   }
 
-  const nextSpeed = isSpanishLanguage(snapshot.audioLanguage)
-    ? normalizePlaybackSpeed(1.1)
-    : isEnglishLanguage(snapshot.audioLanguage)
-      ? normalizePlaybackSpeed(1.0)
-      : PLAYBACK_SPEED_DEFAULT;
+  if (shouldSkipSync(token)) {
+    return;
+  }
+
+  applySpeedForLanguage(snapshot);
+}
+
+function shouldSkipSync(token: number): boolean {
+  return token !== sessionToken || userInteracted;
+}
+
+function applySpeedForLanguage(snapshot: PlayerSnapshot): void {
+  const nextSpeed = getSpeedForLanguage(snapshot.audioLanguage);
 
   if (localSpeed === nextSpeed) {
     return;
@@ -302,6 +306,18 @@ async function syncSpeedForCurrentVideo(token: number): Promise<void> {
   localSpeed = nextSpeed;
   syncControlState();
   applySpeedToVideo();
+}
+
+function getSpeedForLanguage(audioLanguage: string | null | undefined): number {
+  if (isSpanishLanguage(audioLanguage)) {
+    return normalizePlaybackSpeed(1.1);
+  }
+
+  if (isEnglishLanguage(audioLanguage)) {
+    return normalizePlaybackSpeed(1.0);
+  }
+
+  return PLAYBACK_SPEED_DEFAULT;
 }
 
 function isInsideSpeedControl(node: Node): boolean {

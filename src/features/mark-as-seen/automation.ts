@@ -12,20 +12,19 @@ const WATCH_PAGE_HOSTS = new Set([
 ]);
 
 function isSupportedWatchPage(rawUrl: string | undefined): boolean {
-  if (!rawUrl) {
-    return false;
-  }
-
   try {
-    const url = new URL(rawUrl);
-    return (
-      WATCH_PAGE_HOSTS.has(url.hostname) &&
-      url.pathname === "/watch" &&
-      url.searchParams.has("v")
-    );
+    return rawUrl ? isValidWatchUrl(new URL(rawUrl)) : false;
   } catch {
     return false;
   }
+}
+
+function isValidWatchUrl(url: URL): boolean {
+  return (
+    WATCH_PAGE_HOSTS.has(url.hostname) &&
+    url.pathname === "/watch" &&
+    url.searchParams.has("v")
+  );
 }
 
 async function setActionStatus(
@@ -49,26 +48,8 @@ export async function runMarkAsSeenForTab(
   rawUrl: string | undefined,
 ): Promise<ExtensionResult> {
   try {
-    if (!isSupportedWatchPage(rawUrl)) {
-      throw createExtensionError(
-        "UNSUPPORTED_PAGE",
-        "Open a standard YouTube watch page before using the extension.",
-      );
-    }
-
-    const response = await sendMarkAsSeenAutomationRequest(tabId);
-    const result = normalizeExtensionResult(
-      response,
-      "The automation did not complete successfully.",
-    );
-
-    if (!result.ok) {
-      throw createExtensionError(
-        result.code || "AUTOMATION_FAILED",
-        result.message || "The automation did not complete successfully.",
-        result.details,
-      );
-    }
+    validateWatchPage(rawUrl);
+    await runAutomationRequest(tabId);
 
     await setActionStatus(tabId, {
       text: "OK",
@@ -76,30 +57,65 @@ export async function runMarkAsSeenForTab(
       title: "Video marked as seen.",
     });
 
-    return {
-      ok: true,
-      message: "Video marked as seen.",
-      details: null,
-    };
+    return { ok: true, message: "Video marked as seen.", details: null };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "The automation failed.";
-
-    console.error("[YTUtils]", error);
-
-    await setActionStatus(tabId, {
-      text: "ERR",
-      color: "#b71c1c",
-      title: message,
-    });
-
-    return {
-      ok: false,
-      code: (error as Error & { code?: string })?.code || "AUTOMATION_FAILED",
-      message,
-      details: (error as Error & { details?: unknown })?.details ?? null,
-    };
+    return handleAutomationError(tabId, error);
   }
+}
+
+async function runAutomationRequest(tabId: number): Promise<void> {
+  const response = await sendMarkAsSeenAutomationRequest(tabId);
+  const result = normalizeExtensionResult(
+    response,
+    "The automation did not complete successfully.",
+  );
+
+  if (!result.ok) {
+    throw createExtensionError(
+      result.code || "AUTOMATION_FAILED",
+      result.message || "The automation did not complete successfully.",
+      result.details,
+    );
+  }
+}
+
+function validateWatchPage(rawUrl: string | undefined): void {
+  if (!isSupportedWatchPage(rawUrl)) {
+    throw createExtensionError(
+      "UNSUPPORTED_PAGE",
+      "Open a standard YouTube watch page before using the extension.",
+    );
+  }
+}
+
+async function handleAutomationError(
+  tabId: number,
+  error: unknown,
+): Promise<ExtensionResult> {
+  const { message, code, details } = normalizeExtensionError(error);
+
+  console.error("[YTUtils]", error);
+
+  await setActionStatus(tabId, {
+    text: "ERR",
+    color: "#b71c1c",
+    title: message,
+  });
+
+  return { ok: false, code, message, details };
+}
+
+export function normalizeExtensionError(error: unknown): {
+  code: string;
+  message: string;
+  details: unknown;
+} {
+  const err = error as Error & { code?: string; details?: unknown };
+  return {
+    code: err.code || "AUTOMATION_FAILED",
+    message: error instanceof Error ? error.message : "The automation failed.",
+    details: err.details ?? null,
+  };
 }
 
 function sendMarkAsSeenAutomationRequest(tabId: number): Promise<unknown> {

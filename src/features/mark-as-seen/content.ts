@@ -72,31 +72,7 @@ function observePage(): void {
   }
 
   observer = new MutationObserver((mutations) => {
-    const hasRelevantMutation = mutations.some((mutation) => {
-      if (isInsideInlineButton(mutation.target)) {
-        return false;
-      }
-
-      return [...mutation.addedNodes, ...mutation.removedNodes].some((node) => {
-        if (!(node instanceof Element)) {
-          return false;
-        }
-
-        if (
-          node.id === BUTTON_HOST_ID ||
-          node.querySelector?.(`#${BUTTON_HOST_ID}`)
-        ) {
-          return false;
-        }
-
-        return (
-          node.matches?.(RELEVANT_MUTATION_SELECTORS) ||
-          node.querySelector?.(RELEVANT_MUTATION_SELECTORS)
-        );
-      });
-    });
-
-    if (!hasRelevantMutation) {
+    if (!hasRelevantInlineMutation(mutations)) {
       return;
     }
 
@@ -106,6 +82,32 @@ function observePage(): void {
   observer.observe(document.documentElement, {
     childList: true,
     subtree: true,
+  });
+}
+
+function hasRelevantInlineMutation(mutations: MutationRecord[]): boolean {
+  return mutations.some((mutation) => {
+    if (isInsideInlineButton(mutation.target)) {
+      return false;
+    }
+
+    return [...mutation.addedNodes, ...mutation.removedNodes].some((node) => {
+      if (!(node instanceof Element)) {
+        return false;
+      }
+
+      if (
+        node.id === BUTTON_HOST_ID ||
+        node.querySelector?.(`#${BUTTON_HOST_ID}`)
+      ) {
+        return false;
+      }
+
+      return (
+        node.matches?.(RELEVANT_MUTATION_SELECTORS) ||
+        node.querySelector?.(RELEVANT_MUTATION_SELECTORS)
+      );
+    });
   });
 }
 
@@ -240,27 +242,43 @@ async function onInlineButtonClick(event: Event): Promise<void> {
   syncButtonState();
 
   try {
-    const response = (await sendMessage({ type: MESSAGE_INLINE_TRIGGER })) as {
-      ok?: boolean;
-      message?: string;
-    } | null;
-
-    if (!response?.ok) {
-      throw new Error(response?.message || "The automation failed.");
-    }
-
-    currentState = "success";
-    syncButtonState();
+    await executeInlineAction();
+    transitionToState("success");
   } catch (error) {
     console.error("[YTUtils:inline]", error);
-    currentState = "error";
-    syncButtonState();
-    stateResetTimer = window.setTimeout(() => {
-      stateResetTimer = null;
-      currentState = "idle";
-      syncButtonState();
-    }, STATE_RESET_DELAY_MS);
+    transitionToState("error");
+    scheduleStateReset();
   }
+}
+
+async function executeInlineAction(): Promise<void> {
+  const response = (await sendMessage({ type: MESSAGE_INLINE_TRIGGER })) as {
+    ok?: boolean;
+    message?: string;
+  } | null;
+
+  if (!response || !response.ok) {
+    throw new Error(getResponseErrorMessage(response));
+  }
+}
+
+function getResponseErrorMessage(
+  response: { message?: string } | null,
+): string {
+  return (response && response.message) || "The automation failed.";
+}
+
+function transitionToState(state: ButtonState): void {
+  currentState = state;
+  syncButtonState();
+}
+
+function scheduleStateReset(): void {
+  stateResetTimer = window.setTimeout(() => {
+    stateResetTimer = null;
+    currentState = "idle";
+    syncButtonState();
+  }, STATE_RESET_DELAY_MS);
 }
 
 function clearResetTimer(): void {

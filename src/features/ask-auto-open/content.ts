@@ -102,31 +102,12 @@ function findAskButton(): HTMLElement | null {
 }
 
 async function syncAskPanel(token: number): Promise<void> {
-  if (token !== sessionToken || !isDesktopWatchPage()) {
-    return;
-  }
-
-  const videoId = getCurrentVideoId();
+  const videoId = await validateSyncContext(token);
   if (!videoId) {
     return;
   }
 
-  const snapshot = await readPlayerSnapshot();
-  if (
-    token !== sessionToken ||
-    !snapshot?.videoId ||
-    snapshot.videoId !== videoId
-  ) {
-    return;
-  }
-
-  if (completedVideoId && completedVideoId !== videoId) {
-    completedVideoId = null;
-  }
-
-  if (expandedVideoId && expandedVideoId !== videoId) {
-    expandedVideoId = null;
-  }
+  resetStaleState(videoId);
 
   if (completedVideoId === videoId) {
     return;
@@ -139,24 +120,68 @@ async function syncAskPanel(token: number): Promise<void> {
 
   syncAskScrollContainment();
 
+  if (handlePanelState(videoId, panel)) {
+    return;
+  }
+
+  await openAskPanel(videoId, token);
+}
+
+async function validateSyncContext(token: number): Promise<string | null> {
+  if (token !== sessionToken || !isDesktopWatchPage()) {
+    return null;
+  }
+
+  const videoId = getCurrentVideoId();
+  if (!videoId) {
+    return null;
+  }
+
+  const snapshot = await readPlayerSnapshot();
+  if (
+    token !== sessionToken ||
+    !snapshot?.videoId ||
+    snapshot.videoId !== videoId
+  ) {
+    return null;
+  }
+
+  return videoId;
+}
+
+function resetStaleState(videoId: string): void {
+  if (completedVideoId && completedVideoId !== videoId) {
+    completedVideoId = null;
+  }
+
+  if (expandedVideoId && expandedVideoId !== videoId) {
+    expandedVideoId = null;
+  }
+}
+
+function handlePanelState(videoId: string, panel: HTMLElement): boolean {
   if (isAskPanelExpanded(panel)) {
     if (
       expandedVideoId !== videoId &&
       Date.now() - activatedAt < PANEL_SETTLE_DELAY_MS
     ) {
-      return;
+      return true;
     }
 
     expandedVideoId = videoId;
     completedVideoId = videoId;
-    return;
+    return true;
   }
 
   if (expandedVideoId === videoId) {
     completedVideoId = videoId;
-    return;
+    return true;
   }
 
+  return false;
+}
+
+async function openAskPanel(videoId: string, token: number): Promise<void> {
   const askButton = findAskButton();
   if (!askButton) {
     return;

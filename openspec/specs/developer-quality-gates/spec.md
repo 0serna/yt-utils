@@ -38,10 +38,10 @@ The project SHALL run Fallow with failure behavior enabled as part of the unifie
 - **WHEN** Fallow detects dead code, duplicate code, unresolved imports, or configured health violations after entry points are applied
 - **THEN** the repository check command fails until the issues are resolved
 
-#### Scenario: Test coverage is introduced before Fallow health is fully resolved
+#### Scenario: Fallow health violations are resolved
 
-- **WHEN** characterization tests are added while existing Fallow health violations remain
-- **THEN** the repository check command continues to report and fail on those violations instead of suppressing them or weakening configured health thresholds
+- **WHEN** the repository check command runs after the Fallow health debt reduction is complete
+- **THEN** Fallow completes without health violations above the configured thresholds
 
 ### Requirement: Fallow health limits are explicit
 
@@ -84,7 +84,7 @@ The project SHALL reduce targeted Fallow health findings through tested code sim
 - **WHEN** a refactor targets functions reported by Fallow health
 - **THEN** the resulting code reduces or eliminates those findings without adding `fallow-ignore` suppressions or raising configured health limits
 
-#### Scenario: Remaining findings persist after focused refactor
+#### Scenario: Remaining findings are resolved before completion
 
-- **WHEN** unrelated or unresolved Fallow health findings remain after the targeted refactor
-- **THEN** those findings remain visible to the repository check command for future cleanup
+- **WHEN** the Fallow health debt reduction change is complete
+- **THEN** the repository check command passes without unresolved Fallow health findings

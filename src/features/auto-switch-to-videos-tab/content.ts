@@ -4,20 +4,15 @@ import { clickElement, waitFor } from "@shared/youtube-dom";
 const SESSION_STORAGE_KEY_PREFIX = "yt-utils:auto-switch-to-videos-tab:";
 const WAIT_TIMEOUT_MS = 2000;
 
+const CHANNEL_PATH_PREFIXES = ["/@", "/c/", "/user/", "/channel/"];
+
 const autoSwitchToVideosTabFeature: Feature = {
   name: "auto-switch-to-videos-tab",
 
   matchesPage(url: URL): boolean {
-    if (url.hostname !== "www.youtube.com") {
-      return false;
-    }
-
-    const path = url.pathname;
     return (
-      path.startsWith("/@") ||
-      path.startsWith("/c/") ||
-      path.startsWith("/user/") ||
-      path.startsWith("/channel/")
+      url.hostname === "www.youtube.com" &&
+      CHANNEL_PATH_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))
     );
   },
 
@@ -57,23 +52,18 @@ function getSessionStorageKey(): string {
 }
 
 function getVideosTabIfHomeSelected(): HTMLElement | null {
-  const tabs = document.querySelectorAll<HTMLElement>('[role="tab"]');
-  let homeSelected = false;
-  let videosTab: HTMLElement | null = null;
+  const tabs = [...document.querySelectorAll<HTMLElement>('[role="tab"]')];
+  const homeSelected = tabs.some(
+    (tab) =>
+      tab.textContent?.trim() === "Home" &&
+      tab.getAttribute("aria-selected") === "true",
+  );
 
-  for (const tab of tabs) {
-    const text = tab.textContent?.trim();
-    if (text === "Home" && tab.getAttribute("aria-selected") === "true") {
-      homeSelected = true;
-    } else if (text === "Videos") {
-      videosTab = tab;
-    }
-    if (homeSelected && videosTab) {
-      break;
-    }
+  if (!homeSelected) {
+    return null;
   }
 
-  return homeSelected ? videosTab : null;
+  return tabs.find((tab) => tab.textContent?.trim() === "Videos") ?? null;
 }
 
 async function trySwitchToVideosTab(): Promise<void> {

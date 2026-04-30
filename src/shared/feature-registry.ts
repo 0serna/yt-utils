@@ -31,22 +31,27 @@ export class FeatureRegistry {
 
   private syncFeatures(): void {
     const url = window.location.href;
-    const parsedUrl = new URL(url);
 
     if (url === this.lastUrl) {
       return;
     }
 
     this.lastUrl = url;
+    this.deactivateAll();
+    this.activateFeaturesForUrl(new URL(url));
+  }
 
+  private deactivateAll(): void {
     for (const feature of this.activeFeatures) {
       feature.deactivate();
     }
 
     this.activeFeatures.clear();
+  }
 
+  private activateFeaturesForUrl(url: URL): void {
     for (const feature of this.features) {
-      if (shouldActivateFeature(feature, parsedUrl)) {
+      if (shouldActivateFeature(feature, url)) {
         feature.activate({ sendMessage });
         this.activeFeatures.add(feature);
       }
@@ -59,13 +64,13 @@ function shouldActivateFeature(feature: Feature, url: URL): boolean {
     return feature.matchesPage(url);
   }
 
-  if (feature.isWatchPage) {
-    return (
-      url.hostname === "www.youtube.com" &&
-      url.pathname === "/watch" &&
-      url.searchParams.has("v")
-    );
-  }
+  return !!(feature.isWatchPage && isWatchPageUrl(url));
+}
 
-  return false;
+function isWatchPageUrl(url: URL): boolean {
+  return (
+    url.hostname === "www.youtube.com" &&
+    url.pathname === "/watch" &&
+    url.searchParams.has("v")
+  );
 }

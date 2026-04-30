@@ -4,11 +4,11 @@ function isGoogleSearchMessage(message: unknown): message is {
   type: typeof MESSAGE_GOOGLE_SEARCH;
   query: string;
 } {
+  const msg = message as { type?: string; query?: unknown };
   return (
-    (message as { type?: string; query?: unknown })?.type ===
-      MESSAGE_GOOGLE_SEARCH &&
-    typeof (message as { query?: unknown })?.query === "string" &&
-    (message as { query: string }).query.trim().length > 0
+    msg.type === MESSAGE_GOOGLE_SEARCH &&
+    typeof msg.query === "string" &&
+    msg.query.trim().length > 0
   );
 }
 

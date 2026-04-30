@@ -47,14 +47,17 @@ function syncContainment(token: number): void {
   }
 
   for (const panel of findExpandedEngagementPanels()) {
-    const scrollContainer = findPrimaryScrollContainer(panel);
-    if (!scrollContainer) {
-      continue;
-    }
+    applyContainmentToPanel(panel);
+  }
+}
 
-    if (scrollContainer.style.overscrollBehaviorY !== CONTAINMENT_VALUE) {
-      scrollContainer.style.overscrollBehaviorY = CONTAINMENT_VALUE;
-    }
+function applyContainmentToPanel(panel: HTMLElement): void {
+  const scrollContainer = findPrimaryScrollContainer(panel);
+  if (
+    scrollContainer &&
+    scrollContainer.style.overscrollBehaviorY !== CONTAINMENT_VALUE
+  ) {
+    scrollContainer.style.overscrollBehaviorY = CONTAINMENT_VALUE;
   }
 }
 
@@ -87,24 +90,27 @@ function findPrimaryScrollContainer(panel: HTMLElement): HTMLElement | null {
 }
 
 function isPrimaryScrollCandidate(element: HTMLElement): boolean {
-  if (!isVisible(element)) {
-    return false;
-  }
+  return (
+    isVisible(element) &&
+    !isFormControl(element) &&
+    hasScrollableOverflow(element)
+  );
+}
 
-  if (
+function hasScrollableOverflow(element: HTMLElement): boolean {
+  const style = window.getComputedStyle(element);
+  return (
+    (style.overflowY === "auto" || style.overflowY === "scroll") &&
+    element.clientHeight >= MIN_SCROLL_CONTAINER_HEIGHT
+  );
+}
+
+function isFormControl(element: HTMLElement): boolean {
+  return (
     element.tagName === "TEXTAREA" ||
     element.tagName === "INPUT" ||
     element.tagName === "SELECT"
-  ) {
-    return false;
-  }
-
-  const style = window.getComputedStyle(element);
-  if (style.overflowY !== "auto" && style.overflowY !== "scroll") {
-    return false;
-  }
-
-  return element.clientHeight >= MIN_SCROLL_CONTAINER_HEIGHT;
+  );
 }
 
 function scoreScrollCandidate(element: HTMLElement): number {

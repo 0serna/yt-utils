@@ -7,6 +7,7 @@ import {
   readSubtitleSignature,
   waitForSubtitleSelection,
 } from "@shared/youtube-player";
+import type { PlayerSnapshot, SubtitleSelection } from "@shared/youtube-player";
 
 const POLL_INTERVAL_MS = 500;
 
@@ -61,81 +62,133 @@ async function queueSync(): Promise<void> {
   }
 
   syncQueued = true;
+  const token = sessionToken;
   try {
-    await syncPolicy(sessionToken);
+    await syncPolicy(token);
   } finally {
     syncQueued = false;
   }
 }
 
 async function syncPolicy(token: number): Promise<void> {
-  if (token !== sessionToken) {
+  const ctx = await getPolicyContext(token);
+  if (!ctx) {
     return;
   }
 
-  const snapshot = await readPlayerSnapshot();
-  if (!snapshot?.videoId) {
-    return;
-  }
+  const { videoId, snapshot, currentSignature } = ctx;
+  const appliedSignature = appliedStateByVideo.get(videoId);
 
-  if (overriddenVideos.has(snapshot.videoId)) {
-    return;
-  }
-
-  const currentSignature = readSubtitleSignature(snapshot);
-  const appliedSignature = appliedStateByVideo.get(snapshot.videoId);
-
-  if (appliedSignature && currentSignature !== appliedSignature) {
-    overriddenVideos.add(snapshot.videoId);
+  if (isPolicyOverridden(videoId, currentSignature, appliedSignature)) {
     return;
   }
 
   const desiredSelection = determineSubtitleSelection(snapshot);
 
-  if (!appliedSignature) {
-    if (matchesSubtitleSelection(snapshot, desiredSelection)) {
-      appliedStateByVideo.set(snapshot.videoId, currentSignature);
-      return;
+  if (appliedSignature) {
+    // Already applied for this video; check if it's still valid.
+    if (currentSignature !== appliedSignature) {
+      overriddenVideos.add(videoId);
     }
-
-    const started = await applySubtitleSelection(desiredSelection);
-    if (!started) {
-      return;
-    }
-
-    const applied = await waitForSubtitleSelection(
-      readPlayerSnapshot,
-      desiredSelection,
-      { timeoutMs: 1800, intervalMs: 100 },
-    );
-
-    if (!applied || token !== sessionToken) {
-      return;
-    }
-
-    const verifiedSnapshot = await readPlayerSnapshot();
-    if (
-      !verifiedSnapshot?.videoId ||
-      verifiedSnapshot.videoId !== snapshot.videoId
-    ) {
-      return;
-    }
-
-    if (!matchesSubtitleSelection(verifiedSnapshot, desiredSelection)) {
-      return;
-    }
-
-    appliedStateByVideo.set(
-      verifiedSnapshot.videoId,
-      readSubtitleSignature(verifiedSnapshot),
-    );
     return;
   }
 
-  if (currentSignature !== appliedSignature) {
-    overriddenVideos.add(snapshot.videoId);
+  await ensureSubtitleSelection(
+    videoId,
+    snapshot,
+    desiredSelection,
+    currentSignature,
+    token,
+  );
+}
+
+type PolicyContext = {
+  videoId: string;
+  snapshot: PlayerSnapshot;
+  currentSignature: string;
+};
+
+async function getPolicyContext(token: number): Promise<PolicyContext | null> {
+  if (token !== sessionToken) {
+    return null;
+  }
+
+  const snapshot = await readPlayerSnapshot();
+  if (token !== sessionToken) {
+    return null;
+  }
+
+  if (!snapshot?.videoId) {
+    return null;
+  }
+
+  return {
+    videoId: snapshot.videoId,
+    snapshot,
+    currentSignature: readSubtitleSignature(snapshot),
+  };
+}
+
+function isPolicyOverridden(
+  videoId: string,
+  currentSignature: string,
+  appliedSignature: string | undefined,
+): boolean {
+  if (overriddenVideos.has(videoId)) {
+    return true;
+  }
+
+  if (appliedSignature && currentSignature !== appliedSignature) {
+    overriddenVideos.add(videoId);
+    return true;
+  }
+
+  return false;
+}
+
+async function ensureSubtitleSelection(
+  videoId: string,
+  snapshot: PlayerSnapshot,
+  desiredSelection: SubtitleSelection,
+  currentSignature: string,
+  token: number,
+): Promise<void> {
+  if (matchesSubtitleSelection(snapshot, desiredSelection)) {
+    appliedStateByVideo.set(videoId, currentSignature);
     return;
   }
+
+  const started = await applySubtitleSelection(desiredSelection);
+  if (!started) {
+    return;
+  }
+
+  const applied = await waitForSubtitleSelection(
+    readPlayerSnapshot,
+    desiredSelection,
+    { timeoutMs: 1800, intervalMs: 100 },
+  );
+
+  if (!applied || token !== sessionToken) {
+    return;
+  }
+
+  const verifiedSnapshot = await readPlayerSnapshot();
+  if (
+    !verifiedSnapshot?.videoId ||
+    verifiedSnapshot.videoId !== snapshot.videoId
+  ) {
+    return;
+  }
+
+  if (!matchesSubtitleSelection(verifiedSnapshot, desiredSelection)) {
+    return;
+  }
+
+  appliedStateByVideo.set(
+    verifiedSnapshot.videoId,
+    readSubtitleSignature(verifiedSnapshot),
+  );
 }
 
 function isSupportedWatchPage(): boolean {

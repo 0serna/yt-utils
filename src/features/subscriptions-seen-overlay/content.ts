@@ -41,24 +41,22 @@ function ensureDimming(): void {
 }
 
 function ensureDimmingForCard(card: HTMLElement): void {
-  if (isShortsCard(card)) {
-    return;
-  }
-
   const cardLockup = card.querySelector<HTMLElement>("yt-lockup-view-model");
-  if (!cardLockup) {
-    return;
+  if (shouldDimCard(card, cardLockup)) {
+    applyDimming(cardLockup);
   }
+}
 
-  if (cardLockup.style.opacity !== "") {
-    return;
-  }
-
-  if (!isSeenVideo(card)) {
-    return;
-  }
-
-  applyDimming(cardLockup);
+function shouldDimCard(
+  card: HTMLElement,
+  lockup: HTMLElement | null,
+): lockup is HTMLElement {
+  return (
+    !isShortsCard(card) &&
+    !!lockup &&
+    lockup.style.opacity === "" &&
+    isSeenVideo(card)
+  );
 }
 
 function isShortsCard(card: HTMLElement): boolean {
@@ -109,34 +107,7 @@ function observePage(): void {
   }
 
   observer = new MutationObserver((mutations) => {
-    const hasRelevantMutation = mutations.some((mutation) => {
-      if (mutation.type === "attributes") {
-        const target = mutation.target;
-        if (!(target instanceof Element)) {
-          return false;
-        }
-
-        return (
-          target.classList.contains(PROGRESS_SEGMENT_CLASS) ||
-          !!target.closest("ytd-rich-item-renderer")
-        );
-      }
-
-      return [...mutation.addedNodes].some((node) => {
-        if (!(node instanceof Element)) {
-          return false;
-        }
-
-        return !!(
-          node.matches?.("ytd-rich-item-renderer") ||
-          node.querySelector?.("ytd-rich-item-renderer") ||
-          node.classList?.contains(PROGRESS_SEGMENT_CLASS) ||
-          node.querySelector?.(`.${PROGRESS_SEGMENT_CLASS}`)
-        );
-      });
-    });
-
-    if (hasRelevantMutation && !ensureQueued) {
+    if (hasRelevantSeenMutation(mutations)) {
       ensureQueued = true;
       window.requestAnimationFrame(() => {
         ensureQueued = false;
@@ -151,6 +122,60 @@ function observePage(): void {
     attributes: true,
     attributeFilter: ["style"],
   });
+}
+
+function hasRelevantSeenMutation(mutations: MutationRecord[]): boolean {
+  return (
+    !ensureQueued &&
+    mutations.some((mutation) =>
+      mutation.type === "attributes"
+        ? isRelevantAttributeMutation(mutation)
+        : isRelevantChildListMutation(mutation),
+    )
+  );
+}
+
+function isRelevantAttributeMutation(mutation: MutationRecord): boolean {
+  const target = mutation.target;
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  return (
+    target.classList.contains(PROGRESS_SEGMENT_CLASS) ||
+    !!target.closest("ytd-rich-item-renderer")
+  );
+}
+
+function isRelevantChildListMutation(mutation: MutationRecord): boolean {
+  return [...mutation.addedNodes].some(isSeenOverlayMutationNode);
+}
+
+function isSeenOverlayMutationNode(node: Node): boolean {
+  return node instanceof Element && hasSeenOverlayMatch(node);
+}
+
+function hasSeenOverlayMatch(node: Element): boolean {
+  return (
+    isRichItemRenderer(node) ||
+    hasChildRichItemRenderer(node) ||
+    hasProgressSegmentClass(node)
+  );
+}
+
+function isRichItemRenderer(node: Element): boolean {
+  return !!node.matches?.("ytd-rich-item-renderer");
+}
+
+function hasChildRichItemRenderer(node: Element): boolean {
+  return !!node.querySelector?.("ytd-rich-item-renderer");
+}
+
+function hasProgressSegmentClass(node: Element): boolean {
+  return (
+    node.classList?.contains(PROGRESS_SEGMENT_CLASS) ||
+    !!node.querySelector?.(`.${PROGRESS_SEGMENT_CLASS}`)
+  );
 }
 
 function stopObserving(): void {

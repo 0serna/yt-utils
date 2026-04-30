@@ -73,7 +73,6 @@ function readActiveSelection(): {
     activeElement instanceof HTMLTextAreaElement
   ) {
     const text = readControlSelection(activeElement);
-
     if (!text) {
       return null;
     }
@@ -85,12 +84,16 @@ function readActiveSelection(): {
     };
   }
 
-  const selection = window.getSelection();
-  if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
-    return null;
-  }
+  return readDocumentSelection();
+}
 
-  if (isContentEditableSelection(selection)) {
+function readDocumentSelection(): {
+  query: string;
+  anchor: DOMRect;
+  source: "document";
+} | null {
+  const selection = window.getSelection();
+  if (!isUsableDocumentSelection(selection)) {
     return null;
   }
 
@@ -99,18 +102,23 @@ function readActiveSelection(): {
     return null;
   }
 
-  const range = selection.getRangeAt(0);
-  const rect = getSelectionRect(range);
-
+  const rect = getSelectionRect(selection.getRangeAt(0));
   if (!rect) {
     return null;
   }
 
-  return {
-    query: text,
-    anchor: rect,
-    source: "document",
-  };
+  return { query: text, anchor: rect, source: "document" };
+}
+
+function isUsableDocumentSelection(
+  selection: Selection | null,
+): selection is Selection {
+  return (
+    !!selection &&
+    !selection.isCollapsed &&
+    selection.rangeCount > 0 &&
+    !isContentEditableSelection(selection)
+  );
 }
 
 function isSupportedTextInput(

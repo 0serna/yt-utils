@@ -15,6 +15,8 @@ const BUTTON_HOST_ID_PREFIX = "yt-utils-subscriptions-hide-host-";
 const BUTTON_ID_PREFIX = "yt-utils-subscriptions-hide-button-";
 const CARD_KEY_ATTRIBUTE = "ytUtilsSubscriptionsHideKey";
 const HIDE_ACTION_TIMEOUT_MS = 3000;
+const RELEVANT_HIDE_SELECTOR =
+  "ytd-rich-item-renderer, yt-thumbnail-hover-overlay-toggle-actions-view-model, yt-lockup-metadata-view-model, [role='menuitem']";
 
 let observer: MutationObserver | null = null;
 let ensureQueued = false;
@@ -62,19 +64,23 @@ function ensureHideButton(card: HTMLElement): void {
   }
 
   const cardKey = getCardKey(card);
-  const hostId = getHostId(cardKey);
-  const buttonId = getButtonId(cardKey);
-  let host = document.getElementById(hostId);
-
-  if (!host) {
-    host = createHideButtonHost(cardKey, buttonId);
-  }
-
-  if (host.parentElement !== overlayActionsHost) {
-    overlayActionsHost.append(host);
-  }
-
+  const host = getOrCreateHideButtonHost(cardKey);
+  appendIfNeeded(host, overlayActionsHost);
   syncHideButtonState(cardKey);
+}
+
+function getOrCreateHideButtonHost(cardKey: string): HTMLElement {
+  const hostId = getHostId(cardKey);
+  return (
+    document.getElementById(hostId) ??
+    createHideButtonHost(cardKey, getButtonId(cardKey))
+  );
+}
+
+function appendIfNeeded(host: HTMLElement, parent: HTMLElement): void {
+  if (host.parentElement !== parent) {
+    parent.append(host);
+  }
 }
 
 function createHideButtonHost(cardKey: string, buttonId: string): HTMLElement {
@@ -131,12 +137,21 @@ function syncHideButtonState(cardKey: string): void {
     return;
   }
 
-  const pending = pendingCardKeys.has(cardKey);
+  applyButtonPendingState(button, pendingCardKeys.has(cardKey));
+}
+
+function applyButtonPendingState(
+  button: HTMLButtonElement,
+  pending: boolean,
+): void {
+  const state = pending
+    ? { opacity: "0.65", cursor: "default", label: "Hiding..." }
+    : { opacity: "1", cursor: "pointer", label: "Hide" };
   button.disabled = pending;
-  button.style.opacity = pending ? "0.65" : "1";
-  button.style.cursor = pending ? "default" : "pointer";
-  button.setAttribute("aria-label", pending ? "Hiding..." : "Hide");
-  button.title = pending ? "Hiding..." : "Hide";
+  button.style.opacity = state.opacity;
+  button.style.cursor = state.cursor;
+  button.setAttribute("aria-label", state.label);
+  button.title = state.label;
 }
 
 async function onHideButtonClick(cardKey: string, event: Event): Promise<void> {
@@ -156,20 +171,7 @@ async function onHideButtonClick(cardKey: string, event: Event): Promise<void> {
   syncHideButtonState(cardKey);
 
   try {
-    const menuButton = findSubscriptionsCardMenuButton(card);
-    if (!menuButton) {
-      throw new Error("The card menu button is unavailable.");
-    }
-
-    clickElement(menuButton);
-
-    const hideMenuItem = await waitFor(() => findSubscriptionsHideMenuItem(), {
-      timeout: HIDE_ACTION_TIMEOUT_MS,
-      errorCode: "HIDE_ACTION_UNAVAILABLE",
-      errorMessage: "The native Hide action did not appear.",
-    });
-
-    clickElement(hideMenuItem);
+    await executeHideAction(card);
   } catch (error) {
     console.error("[YTUtils:subscriptions-hide]", error);
   } finally {
@@ -179,41 +181,30 @@ async function onHideButtonClick(cardKey: string, event: Event): Promise<void> {
   }
 }
 
+async function executeHideAction(card: HTMLElement): Promise<void> {
+  const menuButton = findSubscriptionsCardMenuButton(card);
+  if (!menuButton) {
+    throw new Error("The card menu button is unavailable.");
+  }
+
+  clickElement(menuButton);
+
+  const hideMenuItem = await waitFor(() => findSubscriptionsHideMenuItem(), {
+    timeout: HIDE_ACTION_TIMEOUT_MS,
+    errorCode: "HIDE_ACTION_UNAVAILABLE",
+    errorMessage: "The native Hide action did not appear.",
+  });
+
+  clickElement(hideMenuItem);
+}
+
 function observePage(): void {
   if (observer) {
     return;
   }
 
   observer = new MutationObserver((mutations) => {
-    const hasRelevantMutation = mutations.some((mutation) => {
-      if (isInsideHideButton(mutation.target)) {
-        return false;
-      }
-
-      return [...mutation.addedNodes, ...mutation.removedNodes].some((node) => {
-        if (!(node instanceof Element)) {
-          return false;
-        }
-
-        if (
-          node.id.startsWith(BUTTON_HOST_ID_PREFIX) ||
-          node.querySelector?.(`[id^="${BUTTON_HOST_ID_PREFIX}"]`)
-        ) {
-          return false;
-        }
-
-        return (
-          node.matches?.(
-            "ytd-rich-item-renderer, yt-thumbnail-hover-overlay-toggle-actions-view-model, yt-lockup-metadata-view-model, [role='menuitem']",
-          ) ||
-          node.querySelector?.(
-            "ytd-rich-item-renderer, yt-thumbnail-hover-overlay-toggle-actions-view-model, yt-lockup-metadata-view-model, [role='menuitem']",
-          )
-        );
-      });
-    });
-
-    if (hasRelevantMutation) {
+    if (mutations.some(isRelevantHideMutation)) {
       queueEnsureHideButtons();
     }
   });
@@ -222,6 +213,32 @@ function observePage(): void {
     childList: true,
     subtree: true,
   });
+}
+
+function isRelevantHideMutation(mutation: MutationRecord): boolean {
+  return (
+    !isInsideHideButton(mutation.target) &&
+    [...mutation.addedNodes, ...mutation.removedNodes].some(
+      (node) =>
+        node instanceof Element &&
+        isExternalHideNode(node) &&
+        nodeMatchesOrContainsSelector(node, RELEVANT_HIDE_SELECTOR),
+    )
+  );
+}
+
+function isExternalHideNode(node: Element): boolean {
+  return (
+    !node.id.startsWith(BUTTON_HOST_ID_PREFIX) &&
+    !node.querySelector?.(`[id^="${BUTTON_HOST_ID_PREFIX}"]`)
+  );
+}
+
+function nodeMatchesOrContainsSelector(
+  node: Element,
+  selector: string,
+): boolean {
+  return !!(node.matches?.(selector) || node.querySelector?.(selector));
 }
 
 function stopObserving(): void {
