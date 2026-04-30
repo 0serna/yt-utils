@@ -3,7 +3,7 @@ import eslintConfigPrettier from "eslint-config-prettier/flat";
 
 export default tseslint.config(
   {
-    ignores: ["extension/", "node_modules/", "dist/"],
+    ignores: ["extension/", "node_modules/", "dist/", "coverage/"],
   },
   ...tseslint.configs.recommended,
   {
