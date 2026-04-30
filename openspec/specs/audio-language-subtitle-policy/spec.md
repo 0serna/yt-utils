@@ -8,7 +8,7 @@ Define subtitle policy for YouTube watch pages as a universal default-off behavi
 
 ### Requirement: Watch-page subtitle policy SHALL disable subtitles by default
 
-The extension SHALL disable subtitles when a supported YouTube watch page becomes active, regardless of active audio language, available caption tracks, or translation availability.
+The extension SHALL disable subtitles when a supported YouTube watch page becomes active, regardless of active audio language, available caption tracks, translation availability, or internal refactoring of player snapshot and bridge code.
 
 #### Scenario: Watch page loads with subtitles on
 

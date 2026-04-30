@@ -116,13 +116,15 @@ function getCaptionTrackSignature(track: CaptionTrack | null): string {
     return "caption:none";
   }
 
-  const translation =
-    normalizeLanguageCode(track.translationLanguage?.languageCode) || "none";
-  const languageCode = normalizeLanguageCode(track.languageCode) || "none";
-  const kind = track.kind || "none";
-  const vssId = track.vssId || "none";
-
-  return `caption:${languageCode}:${kind}:${vssId}:${translation}`;
+  return [
+    "caption",
+    signaturePart(normalizeLanguageCode(track.languageCode)),
+    signaturePart(track.kind),
+    signaturePart(track.vssId),
+    signaturePart(
+      normalizeLanguageCode(track.translationLanguage?.languageCode),
+    ),
+  ].join(":");
 }
 
 function getAudioTrackSignature(track: AudioTrack | null): string {
@@ -130,11 +132,16 @@ function getAudioTrackSignature(track: AudioTrack | null): string {
     return "audio:none";
   }
 
-  const id = normalizeLanguageCode(track.hs?.id || track.id) || "none";
-  const name = normalizeText(track.hs?.name) || "none";
-  const autoDubbed = track.hs?.isAutoDubbed ? "auto" : "original";
+  return [
+    "audio",
+    signaturePart(normalizeLanguageCode(track.hs?.id || track.id)),
+    signaturePart(normalizeText(track.hs?.name)),
+    track.hs?.isAutoDubbed ? "auto" : "original",
+  ].join(":");
+}
 
-  return `audio:${id}:${name}:${autoDubbed}`;
+function signaturePart(value: string | null | undefined): string {
+  return value || "none";
 }
 
 function normalizeText(value: string | null | undefined): string | null {

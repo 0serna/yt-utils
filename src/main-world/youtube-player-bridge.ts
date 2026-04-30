@@ -31,38 +31,74 @@ type YoutubePlayer = HTMLElement & {
   setOption?: (namespace: string, key: string, value: unknown) => void;
 };
 
+type SnapshotInputs = {
+  response: PlayerResponse | null;
+  captionTracks: CaptionTrack[];
+  videoData: PlayerResponse["videoDetails"] | null;
+  audioTrack: AudioTrack | null;
+  currentCaptionTrack: CaptionTrack | null;
+  translationLanguages: TranslationLanguage[];
+};
+
+type BridgeResult = PlayerSnapshot | boolean | null;
+
+type BridgeRequestHandler = (request: BridgeRequest) => BridgeResult;
+
 const BRIDGE_SOURCE = "yt-utils:youtube-player-bridge";
 const BRIDGE_FLAG = "__ytUtilsYoutubePlayerBridgeInstalled";
 
 const bridgeWindow = window as unknown as Window &
   Record<string, boolean | undefined>;
 
+const bridgeRequestHandlers: Record<
+  BridgeRequest["action"],
+  BridgeRequestHandler
+> = {
+  readSnapshot: () => readPlayerSnapshot(),
+  applySelection: (request) =>
+    applySubtitleSelection(request.selection ?? null),
+};
+
 if (!bridgeWindow[BRIDGE_FLAG]) {
   bridgeWindow[BRIDGE_FLAG] = true;
-  window.addEventListener("message", (event: MessageEvent<BridgeRequest>) => {
-    if (
-      event.source !== window ||
-      event.data?.source !== BRIDGE_SOURCE ||
-      event.data?.kind !== "request"
-    ) {
-      return;
-    }
+  window.addEventListener("message", handleBridgeMessage);
+}
 
-    let result: PlayerSnapshot | boolean | null = null;
-    if (event.data.action === "readSnapshot") {
-      result = readPlayerSnapshot();
-    } else if (event.data.action === "applySelection") {
-      result = applySubtitleSelection(event.data.selection ?? null);
-    }
+function handleBridgeMessage(event: MessageEvent<BridgeRequest>): void {
+  if (!isBridgeRequestEvent(event)) {
+    return;
+  }
 
-    const response: BridgeResponse = {
-      source: BRIDGE_SOURCE,
-      kind: "response",
-      id: event.data.id,
-      result,
-    };
-    window.postMessage(response, window.location.origin);
-  });
+  window.postMessage(
+    createBridgeResponse(event.data, handleBridgeRequest(event.data)),
+    window.location.origin,
+  );
+}
+
+function isBridgeRequestEvent(
+  event: MessageEvent<BridgeRequest>,
+): event is MessageEvent<BridgeRequest> {
+  return (
+    event.source === window &&
+    event.data?.source === BRIDGE_SOURCE &&
+    event.data?.kind === "request"
+  );
+}
+
+function handleBridgeRequest(request: BridgeRequest): BridgeResult {
+  return bridgeRequestHandlers[request.action]?.(request) ?? null;
+}
+
+function createBridgeResponse(
+  request: BridgeRequest,
+  result: BridgeResult,
+): BridgeResponse {
+  return {
+    source: BRIDGE_SOURCE,
+    kind: "response",
+    id: request.id,
+    result,
+  };
 }
 
 function getMoviePlayer(): YoutubePlayer | null {
@@ -76,23 +112,30 @@ function readPlayerSnapshot(): PlayerSnapshot | null {
     return null;
   }
 
+  const inputs = readSnapshotInputs(player);
+  return {
+    videoId: readVideoId(inputs.videoData, inputs.response),
+    audioTrack: inputs.audioTrack,
+    audioLanguage: inferAudioLanguage(inputs.audioTrack, inputs.captionTracks),
+    captionTracks: inputs.captionTracks,
+    translationLanguages: inputs.translationLanguages,
+    currentCaptionTrack: inputs.currentCaptionTrack,
+    subtitlesOn: Boolean(player.isSubtitlesOn?.()),
+  };
+}
+
+function readSnapshotInputs(player: YoutubePlayer): SnapshotInputs {
   const response = player.getPlayerResponse?.() || null;
   const captionTracklist =
     response?.captions?.playerCaptionsTracklistRenderer || null;
-  const videoData = player.getVideoData?.() || response?.videoDetails || null;
-  const audioTrack = cloneValue(player.getAudioTrack?.() || null);
-  const currentCaptionTrack = cloneValue(readCurrentCaptionTrack(player));
-  const captionTracks = cloneValue(captionTracklist?.captionTracks || []);
-  const translationLanguages = cloneValue(readTranslationLanguages(player));
 
   return {
-    videoId: readVideoId(videoData, response),
-    audioTrack,
-    audioLanguage: inferAudioLanguage(audioTrack, captionTracks),
-    captionTracks,
-    translationLanguages,
-    currentCaptionTrack,
-    subtitlesOn: Boolean(player.isSubtitlesOn?.()),
+    response,
+    videoData: player.getVideoData?.() || response?.videoDetails || null,
+    audioTrack: cloneValue(player.getAudioTrack?.() || null),
+    currentCaptionTrack: cloneValue(readCurrentCaptionTrack(player)),
+    captionTracks: cloneValue(captionTracklist?.captionTracks || []),
+    translationLanguages: cloneValue(readTranslationLanguages(player)),
   };
 }
 
@@ -111,15 +154,7 @@ function applySubtitleSelection(selection: SubtitleSelection | null): boolean {
 
 function readCurrentCaptionTrack(player: YoutubePlayer): CaptionTrack | null {
   const raw = player.getOption?.("captions", "track");
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return null;
-  }
-
-  if (Object.keys(raw).length === 0) {
-    return null;
-  }
-
-  return raw as CaptionTrack;
+  return isNonEmptyObject(raw) ? (raw as CaptionTrack) : null;
 }
 
 function readTranslationLanguages(
@@ -144,51 +179,54 @@ function readVideoId(
   videoData: PlayerResponse["videoDetails"] | null,
   response: PlayerResponse | null,
 ): string | null {
-  return (
-    normalizeVideoId(videoData?.video_id) ||
-    normalizeVideoId(videoData?.videoId) ||
-    normalizeVideoId(response?.videoDetails?.video_id) ||
-    normalizeVideoId(response?.videoDetails?.videoId) ||
-    normalizeVideoId(new URLSearchParams(window.location.search).get("v"))
-  );
+  return readFirstNormalizedVideoId([
+    videoData?.video_id,
+    videoData?.videoId,
+    response?.videoDetails?.video_id,
+    response?.videoDetails?.videoId,
+    new URLSearchParams(window.location.search).get("v"),
+  ]);
 }
 
 function inferAudioLanguage(
   audioTrack: AudioTrack | null,
   captionTracks: CaptionTrack[],
 ): string | null {
-  const audioTrackCaptionLanguage = normalizeLanguageCode(
-    audioTrack?.captionTracks?.[0]?.languageCode,
+  return (
+    readFirstKnownLanguage([
+      audioTrack?.captionTracks?.[0]?.languageCode,
+      audioTrack?.yG?.id || audioTrack?.hs?.id || audioTrack?.id,
+      captionTracks[0]?.languageCode,
+    ]) || inferLanguageFromName(audioTrack?.yG?.name || audioTrack?.hs?.name)
   );
-  if (audioTrackCaptionLanguage && audioTrackCaptionLanguage !== "und") {
-    return audioTrackCaptionLanguage;
-  }
+}
 
-  const direct = normalizeLanguageCode(
-    audioTrack?.yG?.id || audioTrack?.hs?.id || audioTrack?.id,
+function readFirstNormalizedVideoId(
+  values: Array<string | null | undefined>,
+): string | null {
+  return values.map(normalizeVideoId).find(Boolean) ?? null;
+}
+
+function readFirstKnownLanguage(
+  values: Array<string | null | undefined>,
+): string | null {
+  return values.map(normalizeLanguageCode).find(isKnownLanguageCode) ?? null;
+}
+
+function inferLanguageFromName(
+  value: string | null | undefined,
+): string | null {
+  const name = value?.trim() || "";
+  return (
+    [
+      { pattern: /spanish/i, language: "es" },
+      { pattern: /english/i, language: "en" },
+    ].find(({ pattern }) => pattern.test(name))?.language ?? null
   );
-  if (direct && direct !== "und") {
-    return direct;
-  }
+}
 
-  const captionLanguage = normalizeLanguageCode(captionTracks[0]?.languageCode);
-  if (captionLanguage && captionLanguage !== "und") {
-    return captionLanguage;
-  }
-
-  const audioName =
-    audioTrack?.yG?.name?.trim() || audioTrack?.hs?.name?.trim() || null;
-  if (audioName) {
-    if (/spanish/i.test(audioName)) {
-      return "es";
-    }
-
-    if (/english/i.test(audioName)) {
-      return "en";
-    }
-  }
-
-  return null;
+function isKnownLanguageCode(value: string | null): value is string {
+  return Boolean(value && value !== "und");
 }
 
 function normalizeVideoId(value: string | null | undefined): string | null {
@@ -209,6 +247,15 @@ function normalizeLanguageCode(
   }
 
   return normalized.split(".", 1)[0].replaceAll("_", "-");
+}
+
+function isNonEmptyObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.keys(value).length > 0,
+  );
 }
 
 function cloneValue<T>(value: T): T {
