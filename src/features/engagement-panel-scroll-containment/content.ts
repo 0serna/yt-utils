@@ -1,3 +1,7 @@
+import {
+  createDomSyncController,
+  hasRelevantSurfaceMutation,
+} from "@shared/dom-sync-controller";
 import type { Feature, FeatureContext } from "@shared/types";
 import { isDesktopWatchPage, isVisible } from "@shared/youtube-dom";
 
@@ -7,131 +11,38 @@ const EXPANDED_PANEL_VISIBILITY = "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED";
 const CONTAINMENT_VALUE = "contain";
 const MIN_SCROLL_CONTAINER_HEIGHT = 120;
 
-let observer: MutationObserver | null = null;
-let pollTimer: number | null = null;
-let ensureQueued = false;
-let syncInProgress = false;
 let sessionToken = 0;
+
+const domSyncController = createDomSyncController({
+  pollIntervalMs: POLL_INTERVAL_MS,
+  observerOptions: {
+    attributes: true,
+    childList: true,
+    subtree: true,
+    attributeFilter: ["visibility", "hidden", "aria-hidden", "class", "style"],
+  },
+  hasRelevantMutation: (mutations) =>
+    hasRelevantSurfaceMutation(mutations, isInsideEngagementPanelSurface),
+  sync: syncContainment,
+});
 
 const engagementPanelScrollContainmentFeature: Feature = {
   name: "youtube-engagement-panel-scroll-containment",
   isWatchPage: true,
 
   activate(_context: FeatureContext): void {
-    sessionToken += 1;
-    startPolling();
-    observePage();
-    void queueSync(sessionToken);
+    sessionToken = domSyncController.activate();
   },
 
   deactivate(): void {
-    sessionToken += 1;
-    stopPolling();
-    stopObserving();
+    sessionToken = domSyncController.deactivate();
   },
 };
 
 export default engagementPanelScrollContainmentFeature;
 
-function isSupportedWatchPage(): boolean {
-  return isDesktopWatchPage();
-}
-
-function startPolling(): void {
-  if (pollTimer !== null) {
-    return;
-  }
-
-  pollTimer = window.setInterval(() => {
-    void queueSync(sessionToken);
-  }, POLL_INTERVAL_MS);
-}
-
-function stopPolling(): void {
-  if (pollTimer !== null) {
-    window.clearInterval(pollTimer);
-    pollTimer = null;
-  }
-}
-
-function observePage(): void {
-  if (observer) {
-    return;
-  }
-
-  observer = new MutationObserver((mutations) => {
-    const hasRelevantMutation = mutations.some((mutation) => {
-      if (!(mutation.target instanceof Element)) {
-        return false;
-      }
-
-      if (isInsideEngagementPanelSurface(mutation.target)) {
-        return true;
-      }
-
-      return [...mutation.addedNodes, ...mutation.removedNodes].some((node) => {
-        if (!(node instanceof Element)) {
-          return false;
-        }
-
-        return isInsideEngagementPanelSurface(node);
-      });
-    });
-
-    if (!hasRelevantMutation) {
-      return;
-    }
-
-    queueEnsureSync();
-  });
-
-  observer.observe(document.documentElement, {
-    attributes: true,
-    childList: true,
-    subtree: true,
-    attributeFilter: ["visibility", "hidden", "aria-hidden", "class", "style"],
-  });
-}
-
-function stopObserving(): void {
-  if (observer) {
-    observer.disconnect();
-    observer = null;
-  }
-}
-
-function queueEnsureSync(): void {
-  if (ensureQueued) {
-    return;
-  }
-
-  ensureQueued = true;
-
-  window.requestAnimationFrame(() => {
-    ensureQueued = false;
-    void queueSync(sessionToken);
-  });
-}
-
-async function queueSync(token: number): Promise<void> {
-  if (token !== sessionToken || !isSupportedWatchPage()) {
-    return;
-  }
-
-  if (syncInProgress) {
-    return;
-  }
-
-  syncInProgress = true;
-  try {
-    await syncContainment(token);
-  } finally {
-    syncInProgress = false;
-  }
-}
-
-async function syncContainment(token: number): Promise<void> {
-  if (token !== sessionToken || !isSupportedWatchPage()) {
+function syncContainment(token: number): void {
+  if (token !== sessionToken || !isDesktopWatchPage()) {
     return;
   }
 

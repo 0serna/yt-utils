@@ -74,7 +74,7 @@ function findMenuItem(
   );
 }
 
-export function findWatchPageActionsContainer(): HTMLElement | null {
+function findWatchPageActionsContainer(): HTMLElement | null {
   const selectors = [
     "ytd-watch-metadata #top-level-buttons-computed",
     "#actions-inner ytd-menu-renderer #top-level-buttons-computed",
@@ -90,6 +90,70 @@ export function findWatchPageActionsContainer(): HTMLElement | null {
   }
 
   return null;
+}
+
+export function placeWatchActionHost(
+  host: HTMLElement,
+  options?: {
+    excludedHostIds?: readonly string[];
+    preferredBeforeHostId?: string;
+  },
+): boolean {
+  const actionsContainer = findWatchPageActionsContainer();
+  if (!actionsContainer) {
+    return false;
+  }
+
+  const preferredBeforeHost = options?.preferredBeforeHostId
+    ? document.getElementById(options.preferredBeforeHostId)
+    : null;
+  if (
+    preferredBeforeHost &&
+    preferredBeforeHost.parentElement === actionsContainer
+  ) {
+    placeHostBefore(host, preferredBeforeHost);
+    return true;
+  }
+
+  const insertionTarget = findWatchActionInsertionTarget(
+    actionsContainer,
+    options?.excludedHostIds ?? [host.id],
+  );
+  if (insertionTarget) {
+    placeHostBefore(host, insertionTarget);
+  } else if (host.parentElement !== actionsContainer) {
+    actionsContainer.prepend(host);
+  }
+
+  return true;
+}
+
+function findWatchActionInsertionTarget(
+  actionsContainer: HTMLElement,
+  excludedHostIds: readonly string[],
+): HTMLElement | null {
+  const excludedIds = new Set(excludedHostIds);
+  const candidates = [...actionsContainer.children].filter(
+    (child) => !excludedIds.has(child.id),
+  ) as HTMLElement[];
+
+  return (
+    candidates.find((child) => {
+      const label = getElementLabel(child);
+      return (
+        /like this video/i.test(label) ||
+        child.tagName === "SEGMENTED-LIKE-DISLIKE-BUTTON-VIEW-MODEL"
+      );
+    }) ||
+    candidates[0] ||
+    null
+  );
+}
+
+function placeHostBefore(host: HTMLElement, target: HTMLElement): void {
+  if (target.previousSibling !== host) {
+    target.insertAdjacentElement("beforebegin", host);
+  }
 }
 
 export const RELEVANT_MUTATION_SELECTORS =
@@ -179,7 +243,7 @@ export function isVisible(element: Element): boolean {
   );
 }
 
-export function getElementLabel(element: Element): string {
+function getElementLabel(element: Element): string {
   const values = [
     element.getAttribute("aria-label"),
     element.getAttribute("title"),

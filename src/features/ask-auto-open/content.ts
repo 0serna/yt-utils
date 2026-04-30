@@ -1,3 +1,7 @@
+import {
+  createDomSyncController,
+  hasRelevantSurfaceMutation,
+} from "@shared/dom-sync-controller";
 import type { Feature, FeatureContext } from "@shared/types";
 import {
   clickElement,
@@ -17,45 +21,45 @@ const PANEL_SETTLE_DELAY_MS = 1500;
 const ASK_LABELS = [/\bask\b/i, /\bpreguntar\b/i];
 const ASK_SCROLL_OVERSCROLL_BEHAVIOR = "contain";
 
-let observer: MutationObserver | null = null;
-let pollTimer: number | null = null;
-let ensureQueued = false;
-let syncInProgress = false;
 let sessionToken = 0;
 let completedVideoId: string | null = null;
 let expandedVideoId: string | null = null;
 let activatedAt = 0;
+
+const domSyncController = createDomSyncController({
+  pollIntervalMs: POLL_INTERVAL_MS,
+  observerOptions: {
+    attributes: true,
+    childList: true,
+    subtree: true,
+    attributeFilter: ["visibility", "hidden", "aria-hidden", "class", "style"],
+  },
+  hasRelevantMutation: (mutations) =>
+    hasRelevantSurfaceMutation(mutations, isInsideAskSurface),
+  sync: syncAskPanel,
+});
 
 const askAutoOpenFeature: Feature = {
   name: "youtube-ask-auto-open",
   isWatchPage: true,
 
   activate(_context: FeatureContext): void {
-    sessionToken += 1;
     activatedAt = Date.now();
     completedVideoId = null;
     expandedVideoId = null;
-    observePage();
-    startPolling();
     syncAskScrollContainment();
-    void queueSync(sessionToken);
+    sessionToken = domSyncController.activate();
   },
 
   deactivate(): void {
-    sessionToken += 1;
+    sessionToken = domSyncController.deactivate();
     activatedAt = 0;
     completedVideoId = null;
     expandedVideoId = null;
-    stopPolling();
-    stopObserving();
   },
 };
 
 export default askAutoOpenFeature;
-
-function isSupportedDesktopWatchPage(): boolean {
-  return isDesktopWatchPage();
-}
 
 function getCurrentVideoId(): string | null {
   return new URLSearchParams(window.location.search).get("v");
@@ -97,97 +101,8 @@ function findAskButton(): HTMLElement | null {
   return findButton(document, ASK_LABELS);
 }
 
-function startPolling(): void {
-  if (pollTimer !== null) {
-    return;
-  }
-
-  pollTimer = window.setInterval(() => {
-    void queueSync(sessionToken);
-  }, POLL_INTERVAL_MS);
-}
-
-function stopPolling(): void {
-  if (pollTimer !== null) {
-    window.clearInterval(pollTimer);
-    pollTimer = null;
-  }
-}
-
-function observePage(): void {
-  if (observer) {
-    return;
-  }
-
-  observer = new MutationObserver((mutations) => {
-    const hasRelevantMutation = mutations.some((mutation) => {
-      if (!(mutation.target instanceof Element)) {
-        return false;
-      }
-
-      if (isInsideAskSurface(mutation.target)) {
-        return true;
-      }
-
-      return [...mutation.addedNodes, ...mutation.removedNodes].some((node) => {
-        if (!(node instanceof Element)) {
-          return false;
-        }
-
-        return isInsideAskSurface(node);
-      });
-    });
-
-    if (!hasRelevantMutation) {
-      return;
-    }
-
-    queueEnsureSync();
-  });
-
-  observer.observe(document.documentElement, {
-    attributes: true,
-    childList: true,
-    subtree: true,
-    attributeFilter: ["visibility", "hidden", "aria-hidden", "class", "style"],
-  });
-}
-
-function stopObserving(): void {
-  if (observer) {
-    observer.disconnect();
-    observer = null;
-  }
-}
-
-function queueEnsureSync(): void {
-  if (ensureQueued) {
-    return;
-  }
-
-  ensureQueued = true;
-
-  window.requestAnimationFrame(() => {
-    ensureQueued = false;
-    void queueSync(sessionToken);
-  });
-}
-
-async function queueSync(token: number): Promise<void> {
-  if (syncInProgress) {
-    return;
-  }
-
-  syncInProgress = true;
-  try {
-    await syncAskPanel(token);
-  } finally {
-    syncInProgress = false;
-  }
-}
-
 async function syncAskPanel(token: number): Promise<void> {
-  if (token !== sessionToken || !isSupportedDesktopWatchPage()) {
+  if (token !== sessionToken || !isDesktopWatchPage()) {
     return;
   }
 

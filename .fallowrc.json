@@ -7,9 +7,8 @@
     "src/main-world/youtube-player-bridge.ts"
   ],
   "duplicates": {
-    "enabled": false,
-    "threshold": 15,
-    "ignore": ["src/**"]
+    "enabled": true,
+    "threshold": 15
   },
   "health": {
     "maxCyclomatic": 25,

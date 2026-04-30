@@ -10,9 +10,8 @@ import {
 } from "@shared/playback-speed";
 import type { Feature, FeatureContext } from "@shared/types";
 import {
-  findWatchPageActionsContainer,
-  getElementLabel,
   isDesktopWatchPage,
+  placeWatchActionHost,
   RELEVANT_MUTATION_SELECTORS,
 } from "@shared/youtube-dom";
 import {
@@ -30,7 +29,7 @@ const MARK_AS_SEEN_HOST_ID = "yt-utils-inline-host";
 let localSpeed: number = PLAYBACK_SPEED_DEFAULT;
 let observer: MutationObserver | null = null;
 let ensureQueued = false;
-let userInteracted: boolean = false;
+let userInteracted = false;
 let pollTimer: number | null = null;
 let sessionToken = 0;
 let syncQueued = false;
@@ -60,18 +59,9 @@ const playbackSpeedFeature: Feature = {
 
 export default playbackSpeedFeature;
 
-function isSupportedDesktopWatchPage(): boolean {
-  return isDesktopWatchPage();
-}
-
 function ensureSpeedControl(): void {
-  if (!isSupportedDesktopWatchPage()) {
+  if (!isDesktopWatchPage()) {
     removeSpeedControl();
-    return;
-  }
-
-  const actionsContainer = findWatchPageActionsContainer();
-  if (!actionsContainer) {
     return;
   }
 
@@ -80,20 +70,13 @@ function ensureSpeedControl(): void {
     host = createSpeedControlHost();
   }
 
-  const markAsSeenHost = document.getElementById(MARK_AS_SEEN_HOST_ID);
-  if (markAsSeenHost && markAsSeenHost.parentElement === actionsContainer) {
-    if (markAsSeenHost.previousSibling !== host) {
-      markAsSeenHost.insertAdjacentElement("beforebegin", host);
-    }
-  } else {
-    const insertionTarget = findInsertionTarget(actionsContainer);
-    if (insertionTarget) {
-      if (insertionTarget.previousSibling !== host) {
-        insertionTarget.insertAdjacentElement("beforebegin", host);
-      }
-    } else if (host.parentElement !== actionsContainer) {
-      actionsContainer.prepend(host);
-    }
+  if (
+    !placeWatchActionHost(host, {
+      excludedHostIds: [CONTROL_HOST_ID, MARK_AS_SEEN_HOST_ID],
+      preferredBeforeHostId: MARK_AS_SEEN_HOST_ID,
+    })
+  ) {
+    return;
   }
 
   syncControlState();
@@ -104,27 +87,6 @@ function removeSpeedControl(): void {
   if (host) {
     host.remove();
   }
-}
-
-function findInsertionTarget(
-  actionsContainer: HTMLElement,
-): HTMLElement | null {
-  const candidates = [...actionsContainer.children].filter(
-    (child) =>
-      child.id !== CONTROL_HOST_ID && child.id !== MARK_AS_SEEN_HOST_ID,
-  ) as HTMLElement[];
-
-  return (
-    candidates.find((child) => {
-      const label = getElementLabel(child);
-      return (
-        /like this video/i.test(label) ||
-        child.tagName === "SEGMENTED-LIKE-DISLIKE-BUTTON-VIEW-MODEL"
-      );
-    }) ||
-    candidates[0] ||
-    null
-  );
 }
 
 function createSpeedControlHost(): HTMLElement {

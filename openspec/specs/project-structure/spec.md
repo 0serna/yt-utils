@@ -20,6 +20,24 @@ The project SHALL organize source code under `src/` with a `features/<name>/` su
 - **WHEN** two or more features need a common YouTube DOM helper
 - **THEN** that helper lives in `src/shared/youtube-dom.ts` and is imported by both features
 
+### Requirement: Cross-feature DOM orchestration lives in shared utilities
+
+The project SHALL place repeated DOM synchronization mechanics used by multiple feature content scripts in shared utilities rather than duplicating polling, mutation observation, animation-frame queueing, and in-flight guards in each feature.
+
+#### Scenario: Multiple features need DOM synchronization
+
+- **WHEN** two or more feature content scripts need the same polling and mutation-triggered synchronization mechanics
+- **THEN** those mechanics are implemented in a shared utility and imported by the features
+
+### Requirement: Watch action insertion logic is shared
+
+The project SHALL place repeated YouTube watch action row insertion logic in shared utilities when multiple controls inject hosts into the same action area.
+
+#### Scenario: Multiple controls use the watch action row
+
+- **WHEN** multiple feature controls insert host elements into the YouTube watch action row
+- **THEN** target selection and host placement logic are shared rather than duplicated per feature
+
 ### Requirement: Background script barrel imports feature handlers
 
 The `src/background.ts` barrel file SHALL import all feature background handlers and register their message listeners with `chrome.runtime.onMessage`.

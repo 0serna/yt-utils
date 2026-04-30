@@ -3,9 +3,8 @@ import { applyExtensionButtonStyles } from "@shared/extension-button";
 import { MESSAGE_INLINE_TRIGGER, sendMessage } from "@shared/messaging";
 import type { Feature, FeatureContext } from "@shared/types";
 import {
-  findWatchPageActionsContainer,
-  getElementLabel,
   isDesktopWatchPage,
+  placeWatchActionHost,
   RELEVANT_MUTATION_SELECTORS,
 } from "@shared/youtube-dom";
 
@@ -38,14 +37,8 @@ let ensureButtonQueued = false;
 let observer: MutationObserver | null = null;
 
 function ensureInlineButton(): void {
-  if (!isSupportedDesktopWatchPage()) {
+  if (!isDesktopWatchPage()) {
     removeInlineButton();
-    return;
-  }
-
-  const actionsContainer = findWatchPageActionsContainer();
-
-  if (!actionsContainer) {
     return;
   }
 
@@ -55,14 +48,8 @@ function ensureInlineButton(): void {
     host = createInlineButtonHost();
   }
 
-  const insertionTarget = findInsertionTarget(actionsContainer);
-
-  if (insertionTarget?.previousSibling !== host) {
-    if (insertionTarget) {
-      insertionTarget.insertAdjacentElement("beforebegin", host);
-    } else if (host.parentElement !== actionsContainer) {
-      actionsContainer.prepend(host);
-    }
+  if (!placeWatchActionHost(host, { excludedHostIds: [BUTTON_HOST_ID] })) {
+    return;
   }
 
   syncButtonState();
@@ -137,30 +124,6 @@ function queueEnsureButton(): void {
     ensureButtonQueued = false;
     ensureInlineButton();
   });
-}
-
-function isSupportedDesktopWatchPage(): boolean {
-  return isDesktopWatchPage();
-}
-
-function findInsertionTarget(
-  actionsContainer: HTMLElement,
-): HTMLElement | null {
-  const candidates = [...actionsContainer.children].filter(
-    (child) => child.id !== BUTTON_HOST_ID,
-  ) as HTMLElement[];
-
-  return (
-    candidates.find((child) => {
-      const label = getElementLabel(child);
-      return (
-        /like this video/i.test(label) ||
-        child.tagName === "SEGMENTED-LIKE-DISLIKE-BUTTON-VIEW-MODEL"
-      );
-    }) ||
-    candidates[0] ||
-    null
-  );
 }
 
 function createInlineButtonHost(): HTMLElement {
