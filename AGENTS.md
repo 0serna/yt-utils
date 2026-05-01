@@ -9,14 +9,15 @@
 │   ├── background.ts     # extension service worker entrypoint
 │   ├── content.ts        # YouTube content-script entrypoint
 │   └── global-selection.ts # all-pages text selection content script
-├── openspec/             # specs, active changes, and archived changes
-└── README.md             # project overview and setup notes
+├── openspec/             # specs, changes, and validation
+└── extension/            # build output (generated)
 ```
 
 ## Repository Commands
 
 - `npm install`: install dependencies.
 - `npm run build`: build the extension with Vite.
+- `npm test`: run tests with Vitest.
 - `npm run check`: run Prettier check, ESLint, Fallow, TypeScript, and OpenSpec validation.
 - `npm run format`: format files with Prettier.
 

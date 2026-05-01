@@ -18,10 +18,10 @@ The current YouTube Ask auto-open behavior opens Ask whenever that UI is availab
 
 ### Modified Capabilities
 
-- `youtube-ask-auto-open`: Ask auto-open becomes the fallback behavior when no valid chapters panel is available for the current video, and the fallback selects the summarize chip when available.
+- `youtube-watch-panel-auto-open`: Chapters panel priority is inserted before Ask, and Ask becomes the fallback behavior when no valid chapters panel is available for the current video, selecting the summarize chip when available.
 
 ## Impact
 
-- Affects `src/features/ask-auto-open/content.ts` and related watch-page DOM detection logic.
+- Affects `src/features/watch-panel-auto-open/content.ts` and related watch-page DOM detection logic.
 - May add or adjust tests around panel priority, chapters detection, Ask fallback timing, summarize chip selection, and SPA navigation state.
 - No new external dependencies, extension permissions, or public APIs are expected.

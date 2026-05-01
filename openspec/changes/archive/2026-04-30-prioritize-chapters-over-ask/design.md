@@ -1,6 +1,6 @@
 ## Context
 
-The existing `youtube-ask-auto-open` content feature runs on desktop YouTube watch pages, waits for the current player video ID to match the URL video ID, and opens the `Ask` engagement panel once per video when that panel is available and closed. The new behavior needs to keep that safety model while inserting a higher-priority `Chapters`/`Capítulos` panel path when YouTube exposes a real chapter list for the current video. When Ask remains the fallback, the feature should select YouTube's summarize chip so the opened Ask panel immediately starts the intended summary flow.
+The existing `youtube-watch-panel-auto-open` content feature runs on desktop YouTube watch pages, waits for the current player video ID to match the URL video ID, and opens the most useful engagement panel once per video (Chapters first, Ask as fallback). The new behavior needs to keep that safety model while inserting a higher-priority `Chapters`/`Capítulos` panel path when YouTube exposes a real chapter list for the current video. When Ask remains the fallback, the feature should select YouTube's summarize chip so the opened Ask panel immediately starts the intended summary flow.
 
 YouTube's DOM is not a stable API, so the implementation should continue to rely on guarded DOM detection, visible controls, engagement panel visibility attributes, and silent retry/fallback behavior rather than hard failures.
 

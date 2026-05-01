@@ -1,4 +1,4 @@
-import askAutoOpenFeature from "./features/ask-auto-open/content";
+import watchPanelAutoOpenFeature from "./features/watch-panel-auto-open/content";
 import audioLanguageSubtitlePolicyFeature from "./features/audio-language-subtitle-policy/content";
 import autoSwitchToVideosTabFeature from "./features/auto-switch-to-videos-tab/content";
 import engagementPanelScrollContainmentFeature from "./features/engagement-panel-scroll-containment/content";
@@ -15,7 +15,7 @@ registry.register(markAsSeenFeature);
 registry.register(audioLanguageSubtitlePolicyFeature);
 registry.register(playbackSpeedFeature);
 registry.register(engagementPanelScrollContainmentFeature);
-registry.register(askAutoOpenFeature);
+registry.register(watchPanelAutoOpenFeature);
 registry.register(subscriptionsHideFeature);
 registry.register(subscriptionsSeenOverlayFeature);
 registry.register(subscriptionsShortsRemovalFeature);
