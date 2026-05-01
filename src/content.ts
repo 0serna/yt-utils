@@ -5,8 +5,8 @@ import engagementPanelScrollContainmentFeature from "./features/engagement-panel
 import markAsSeenFeature from "./features/mark-as-seen/content";
 import playbackSpeedFeature from "./features/playback-speed/content";
 import subscriptionsGridDensityFeature from "./features/subscriptions-grid-density/content";
-import subscriptionsHideFeature from "./features/subscriptions-hide/content";
-import subscriptionsSeenOverlayFeature from "./features/subscriptions-seen-overlay/content";
+import seenCardDimmingFeature from "./features/seen-card-dimming/content";
+import subscriptionsFeedControlsFeature from "./features/subscriptions-feed-controls/content";
 import subscriptionsShortsRemovalFeature from "./features/subscriptions-shorts-removal/content";
 import { FeatureRegistry } from "./shared/feature-registry";
 
@@ -16,8 +16,8 @@ registry.register(audioLanguageSubtitlePolicyFeature);
 registry.register(playbackSpeedFeature);
 registry.register(engagementPanelScrollContainmentFeature);
 registry.register(watchPanelAutoOpenFeature);
-registry.register(subscriptionsHideFeature);
-registry.register(subscriptionsSeenOverlayFeature);
+registry.register(subscriptionsFeedControlsFeature);
+registry.register(seenCardDimmingFeature);
 registry.register(subscriptionsShortsRemovalFeature);
 registry.register(subscriptionsGridDensityFeature);
 registry.register(autoSwitchToVideosTabFeature);

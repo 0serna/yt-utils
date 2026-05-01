@@ -23,7 +23,7 @@ let ensureQueued = false;
 let nextCardKey = 0;
 const pendingCardKeys = new Set<string>();
 
-const subscriptionsHideFeature: Feature = {
+const subscriptionsFeedControlsFeature: Feature = {
   name: "youtube-subscriptions-feed-controls",
   matchesPage(url: URL): boolean {
     return isDesktopSubscriptionsFeedPage(url);
@@ -41,7 +41,7 @@ const subscriptionsHideFeature: Feature = {
   },
 };
 
-export default subscriptionsHideFeature;
+export default subscriptionsFeedControlsFeature;
 
 function ensureHideButtons(): void {
   if (!isDesktopSubscriptionsFeedPage()) {
@@ -173,7 +173,7 @@ async function onHideButtonClick(cardKey: string, event: Event): Promise<void> {
   try {
     await executeHideAction(card);
   } catch (error) {
-    console.error("[YTUtils:subscriptions-hide]", error);
+    console.error("[YTUtils:subscriptions-feed-controls]", error);
   } finally {
     pendingCardKeys.delete(cardKey);
     syncHideButtonState(cardKey);

@@ -166,13 +166,11 @@ function findSummarizeChip(): HTMLElement | null {
   const chips = askPanel.querySelectorAll<HTMLElement>(
     "button, [role='button']",
   );
-  for (const chip of chips) {
-    if (isVisible(chip) && isEnabled(chip) && matchesSummarizeLabel(chip)) {
-      return chip;
-    }
-  }
+  return [...chips].find(isSummarizeChipCandidate) ?? null;
+}
 
-  return null;
+function isSummarizeChipCandidate(chip: HTMLElement): boolean {
+  return isVisible(chip) && isEnabled(chip) && matchesSummarizeLabel(chip);
 }
 
 function isEnabled(element: HTMLElement): boolean {

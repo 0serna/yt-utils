@@ -10,8 +10,8 @@ const PROGRESS_SEGMENT_CLASS =
 let observer: MutationObserver | null = null;
 let ensureQueued = false;
 
-const subscriptionsSeenOverlayFeature: Feature = {
-  name: "subscriptions-seen-overlay",
+const seenCardDimmingFeature: Feature = {
+  name: "seen-card-dimming",
   matchesPage(url: URL): boolean {
     return isDesktopSubscriptionsFeedPage(url);
   },
@@ -27,7 +27,7 @@ const subscriptionsSeenOverlayFeature: Feature = {
   },
 };
 
-export default subscriptionsSeenOverlayFeature;
+export default seenCardDimmingFeature;
 
 function ensureDimming(): void {
   if (!isDesktopSubscriptionsFeedPage()) {

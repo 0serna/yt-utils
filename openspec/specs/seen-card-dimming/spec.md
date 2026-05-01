@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change dim-seen-video-cards. Update Purpose after archive.
+Dim watched subscriptions-feed video cards so already-seen videos are visually de-emphasized without changing YouTube behavior.
 
 ## Requirements
 
@@ -54,9 +54,9 @@ The extension SHALL apply opacity dimming to eligible video cards that appear dy
 
 ### Requirement: Dimming is removed on feature deactivation
 
-When the subscriptions-seen-overlay feature is deactivated, the extension SHALL restore full opacity (`opacity: ""`) to all previously dimmed `yt-lockup-view-model` elements.
+When the seen-card-dimming feature is deactivated, the extension SHALL restore full opacity (`opacity: ""`) to all previously dimmed `yt-lockup-view-model` elements.
 
 #### Scenario: Cards restore on feature deactivation
 
-- **WHEN** the user disables the subscriptions-seen-overlay feature
+- **WHEN** the user disables the seen-card-dimming feature
 - **THEN** all dimmed video cards return to full opacity immediately
