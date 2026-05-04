@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { isDesktopWatchPage, placeWatchActionHost } from "@shared/youtube-dom";
+import { sendMessage } from "@shared/messaging";
 
 vi.mock("@shared/youtube-dom", () => ({
   isDesktopWatchPage: vi.fn(() => true),
@@ -101,5 +102,19 @@ describe("mark-as-seen content feature", () => {
     feature.default.activate({ sendMessage: vi.fn() });
     feature.default.deactivate();
     expect(() => feature.default.deactivate()).not.toThrow();
+  });
+
+  it("resets success state when deactivated", async () => {
+    const feature = await importFreshFeature();
+    feature.default.activate({ sendMessage: vi.fn() });
+
+    document.getElementById("yt-utils-inline-button")?.click();
+    await vi.waitFor(() => expect(sendMessage).toHaveBeenCalled());
+
+    feature.default.deactivate();
+    feature.default.activate({ sendMessage: vi.fn() });
+
+    const button = document.getElementById("yt-utils-inline-button");
+    expect(button?.dataset.state).toBe("idle");
   });
 });

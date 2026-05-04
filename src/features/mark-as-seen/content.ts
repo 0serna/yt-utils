@@ -29,6 +29,7 @@ const markAsSeenFeature: Feature = {
   deactivate(): void {
     removeInlineButton();
     stopObserving();
+    resetButtonState();
   },
 };
 
@@ -64,6 +65,11 @@ function removeInlineButton(): void {
   if (host) {
     host.remove();
   }
+}
+
+function resetButtonState(): void {
+  clearResetTimer();
+  currentState = "idle";
 }
 
 function observePage(): void {
