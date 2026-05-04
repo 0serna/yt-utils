@@ -11,6 +11,7 @@ Provide an inline playback-speed control on supported YouTube watch pages and in
 The extension SHALL render a single inline playback-speed control on supported desktop `www.youtube.com/watch` pages near the existing inline action area.
 The control SHALL display decrement and increment buttons plus the current speed as visible text with an `x` suffix.
 The control SHALL use `0.05` increments, clamp values to `0.50x` through `2.00x`, disable the button at the matching bound, and reflect the current video's initialized playback speed.
+The current speed text SHALL be clickable and SHALL reset playback speed to `1.00x` when activated.
 
 #### Scenario: Supported desktop watch page renders the playback speed control
 
@@ -31,6 +32,13 @@ The control SHALL use `0.05` increments, clamp values to `0.50x` through `2.00x`
 
 - **WHEN** the user is on a non-desktop or non-watch YouTube surface
 - **THEN** the extension does not render the inline playback-speed control
+
+#### Scenario: User clicks current speed text to reset to default
+
+- **WHEN** the user clicks the current speed text in the inline playback-speed control
+- **THEN** the extension resets playback speed to `1.00x`, applies it to the video, and disables automatic language-based speed changes for the current video
+- **AND WHEN** the speed is already `1.00x`
+- **THEN** the click has no effect
 
 ### Requirement: Extension applies and persists a per-video playback speed preference
 

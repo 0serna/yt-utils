@@ -120,7 +120,9 @@ function createSpeedControlHost(): HTMLElement {
   valueDisplay.style.whiteSpace = "nowrap";
   valueDisplay.style.minWidth = "32px";
   valueDisplay.style.textAlign = "center";
+  valueDisplay.style.cursor = "pointer";
   valueDisplay.textContent = formatPlaybackSpeed(PLAYBACK_SPEED_DEFAULT);
+  valueDisplay.onclick = onReset;
 
   const incrementBtn = document.createElement("button");
   incrementBtn.id = SPEED_INCREMENT_ID;
@@ -194,6 +196,18 @@ function onIncrement(event: Event): void {
   event.stopPropagation();
   userInteracted = true;
   localSpeed = normalizePlaybackSpeed(localSpeed + PLAYBACK_SPEED_STEP);
+  syncControlState();
+  applySpeedToVideo();
+}
+
+function onReset(event: Event): void {
+  event.preventDefault();
+  event.stopPropagation();
+  if (localSpeed === PLAYBACK_SPEED_DEFAULT) {
+    return;
+  }
+  userInteracted = true;
+  localSpeed = PLAYBACK_SPEED_DEFAULT;
   syncControlState();
   applySpeedToVideo();
 }
