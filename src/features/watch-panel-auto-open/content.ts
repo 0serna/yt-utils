@@ -28,11 +28,8 @@ const PANEL_SETTLE_DELAY_MS = 1500;
 const ASK_LABELS = [/\bask\b/i, /\bpreguntar\b/i];
 const CHAPTERS_LABELS = [/\bchapters\b/i, /\bcapítulos\b/i];
 const CHAPTER_ITEM_SELECTOR = "ytd-macro-markers-list-item-renderer";
-const SUMMARIZE_LABELS = [
-  /summarize the video/i,
-  /resumir el video/i,
-  /^resumir$/i,
-];
+const SUMMARIZE_PROMPT =
+  "Please summarize this video for me, including timestamps, in chronological order, and in a bulleted list format.";
 const ASK_SCROLL_OVERSCROLL_BEHAVIOR = "contain";
 
 let sessionToken = 0;
@@ -109,12 +106,8 @@ function findChaptersPanel(): HTMLElement | null {
   return null;
 }
 
-function getPanelVisibility(panel: HTMLElement): string | null {
-  return panel.getAttribute("visibility");
-}
-
 function isAskPanelExpanded(panel: HTMLElement): boolean {
-  const visibility = getPanelVisibility(panel);
+  const visibility = panel.getAttribute("visibility");
 
   if (visibility === "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED") {
     return true;
@@ -159,40 +152,6 @@ function findAskButton(): HTMLElement | null {
   return findButton(document, ASK_LABELS);
 }
 
-function findSummarizeChip(): HTMLElement | null {
-  const askPanel = findAskPanel();
-  if (!askPanel) return null;
-
-  const chips = askPanel.querySelectorAll<HTMLElement>(
-    "button, [role='button']",
-  );
-  return [...chips].find(isSummarizeChipCandidate) ?? null;
-}
-
-function isSummarizeChipCandidate(chip: HTMLElement): boolean {
-  return isVisible(chip) && isEnabled(chip) && matchesSummarizeLabel(chip);
-}
-
-function isEnabled(element: HTMLElement): boolean {
-  if (element.getAttribute("disabled") !== null) return false;
-  if (element.getAttribute("aria-disabled") === "true") return false;
-  return true;
-}
-
-function matchesSummarizeLabel(element: HTMLElement): boolean {
-  const text = getElementText(element);
-  return SUMMARIZE_LABELS.some((re) => re.test(text));
-}
-
-function getElementText(element: HTMLElement): string {
-  return (
-    element.getAttribute("aria-label") ||
-    element.getAttribute("title") ||
-    element.textContent ||
-    ""
-  );
-}
-
 async function syncCurrentVideoPanel(token: number): Promise<void> {
   const videoId = await validateSyncContext(token);
   if (!videoId) {
@@ -211,7 +170,7 @@ async function syncValidatedVideoPanel(
   }
 
   const askPanel = findAskPanel();
-  const askExpanded = isCurrentAskPanelExpanded(askPanel);
+  const askExpanded = askPanel ? isAskPanelExpanded(askPanel) : false;
 
   if (handleAlreadyExpandedAsk(videoId, askExpanded)) {
     return;
@@ -266,10 +225,6 @@ async function openAskFallbackIfNeeded(
   }
 
   await openAskPanel(videoId, token);
-}
-
-function isCurrentAskPanelExpanded(panel: HTMLElement | null): boolean {
-  return panel ? isAskPanelExpanded(panel) : false;
 }
 
 function syncCollapsedAskPanelScrollContainment(
@@ -415,52 +370,104 @@ async function openAskPanel(videoId: string, token: number): Promise<void> {
         errorMessage: "Timed out waiting for the Ask panel to open.",
       },
     );
-
-    if (!isContextValid(token, videoId)) {
-      return;
-    }
-
-    await waitForSummarizeChip(videoId, token);
-
-    if (!isContextValid(token, videoId)) {
-      return;
-    }
-
-    completeVideo(videoId);
-
-    syncAskScrollContainment();
   } catch {
-    // Intentionally silent: the feature should not interfere when YouTube
-    // changes the UI or the panel does not respond. Keep retrying while the
-    // current video's Ask panel remains closed.
+    return;
   }
+
+  if (!isContextValid(token, videoId)) {
+    return;
+  }
+
+  await typeAndSendPrompt();
+
+  if (!isContextValid(token, videoId)) {
+    return;
+  }
+
+  completeVideo(videoId);
+  syncAskScrollContainment();
 }
 
-async function waitForSummarizeChip(
-  videoId: string,
-  token: number,
-): Promise<void> {
-  try {
-    const chip = await waitFor(() => findSummarizeChip(), {
-      timeout: SYNC_TIMEOUT_MS,
-      interval: 100,
-      errorCode: "SUMMARIZE_CHIP_NOT_FOUND",
-      errorMessage: "Timed out waiting for summarize chip.",
-    });
+function findChatInput(): HTMLElement | null {
+  const askPanel = findAskPanel();
+  if (!askPanel) return null;
+  return askPanel.querySelector<HTMLElement>(
+    "textarea.chatInputViewModelChatInput",
+  );
+}
 
-    if (!isContextValid(token, videoId)) {
+function findSendButton(): HTMLElement | null {
+  const askPanel = findAskPanel();
+  if (!askPanel) return null;
+  return askPanel.querySelector<HTMLElement>('button[aria-label="Send"]');
+}
+
+async function typeAndSendPrompt(): Promise<void> {
+  try {
+    const input = await waitFor(
+      () => {
+        const el = findChatInput();
+        return el && isVisible(el) ? el : null;
+      },
+      {
+        timeout: SYNC_TIMEOUT_MS,
+        interval: 100,
+        errorCode: "CHAT_INPUT_NOT_FOUND",
+        errorMessage: "Timed out waiting for chat input.",
+      },
+    );
+
+    const sendButton = findSendButton();
+    if (!sendButton) {
       return;
     }
 
-    clickElement(chip);
+    input.focus();
+
+    if (
+      input instanceof HTMLInputElement ||
+      input instanceof HTMLTextAreaElement
+    ) {
+      input.value = SUMMARIZE_PROMPT;
+    } else {
+      input.textContent = SUMMARIZE_PROMPT;
+    }
+
+    input.dispatchEvent(
+      new InputEvent("input", {
+        bubbles: true,
+        cancelable: true,
+        inputType: "insertText",
+        data: SUMMARIZE_PROMPT,
+      }),
+    );
+
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: SUMMARIZE_PROMPT[0],
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+
+    input.dispatchEvent(
+      new KeyboardEvent("keyup", {
+        key: SUMMARIZE_PROMPT[0],
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+
+    clickElement(sendButton);
   } catch {
-    // Intentionally silent: no enabled summarize chip appeared within timeout.
-    // Leave Ask open without retrying.
+    // Intentionally silent: chat input or send button unavailable.
   }
 }
 
 function syncAskScrollContainment(): void {
-  const scrollContainer = findAskScrollContainer();
+  const scrollContainer = document.querySelector<HTMLElement>(
+    ASK_SCROLL_CONTAINER_SELECTOR,
+  );
 
   if (!scrollContainer) {
     return;
@@ -471,10 +478,6 @@ function syncAskScrollContainment(): void {
   ) {
     scrollContainer.style.overscrollBehaviorY = ASK_SCROLL_OVERSCROLL_BEHAVIOR;
   }
-}
-
-function findAskScrollContainer(): HTMLElement | null {
-  return document.querySelector<HTMLElement>(ASK_SCROLL_CONTAINER_SELECTOR);
 }
 
 function isInsidePanelSurface(node: Node): boolean {

@@ -429,24 +429,33 @@ describe("watch-panel-auto-open feature", () => {
       );
     });
 
-    it("clicks summarize chip when available after ask fallback opens", async () => {
+    it("types prompt and clicks Send when chat input is available after ask fallback opens", async () => {
       const panel = appendEngagementPanel(
         "PAyouchat",
         "ENGAGEMENT_PANEL_VISIBILITY_HIDDEN",
       );
       panel.style.display = "none";
 
-      const summarizeChip = document.createElement("button");
-      summarizeChip.setAttribute("aria-label", "Summarize the video");
+      const chatInput = document.createElement("textarea");
+      chatInput.className = "chatInputViewModelChatInput";
+      panel.appendChild(chatInput);
+
+      const sendButton = document.createElement("button");
+      sendButton.setAttribute("aria-label", "Send");
+      panel.appendChild(sendButton);
 
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
-      const { findButton, clickElement, waitFor } =
+      const { findButton, clickElement, waitFor, isVisible } =
         await import("@shared/youtube-dom");
 
       const askButton = document.createElement("button");
       vi.mocked(findButton).mockReturnValue(askButton);
+      vi.mocked(isVisible).mockImplementation((el) => {
+        if (el === chatInput) return true;
+        return false;
+      });
       vi.mocked(waitFor).mockImplementation(
         (() => {
           let callIndex = 0;
@@ -455,7 +464,7 @@ describe("watch-panel-auto-open feature", () => {
             if (callIndex === 1)
               return Promise.reject(new Error("chapters timeout"));
             if (callIndex === 2) return Promise.resolve(askButton);
-            return Promise.resolve(summarizeChip);
+            return Promise.resolve(chatInput);
           };
         })(),
       );
@@ -465,7 +474,7 @@ describe("watch-panel-auto-open feature", () => {
 
       await vi.waitFor(
         () => {
-          expect(clickElement).toHaveBeenCalledWith(summarizeChip);
+          expect(clickElement).toHaveBeenCalledWith(sendButton);
         },
         { timeout: 2000 },
       );
@@ -473,7 +482,7 @@ describe("watch-panel-auto-open feature", () => {
       panel.remove();
     });
 
-    it("does not click summarize chip when ask was already expanded before fallback", async () => {
+    it("does not interact when ask was already expanded before fallback", async () => {
       const panel = appendEngagementPanel(
         "PAyouchat",
         "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
