@@ -28,12 +28,16 @@ const PANEL_SETTLE_DELAY_MS = 1500;
 const ASK_LABELS = [/\bask\b/i, /\bpreguntar\b/i];
 const CHAPTERS_LABELS = [/\bchapters\b/i, /\bcapítulos\b/i];
 const CHAPTER_ITEM_SELECTOR = "ytd-macro-markers-list-item-renderer";
+const CHAT_INPUT_SELECTOR =
+  'textarea.chatInputViewModelChatInput, textarea[placeholder="Ask a question..."], textarea[placeholder="Haz una pregunta..."]';
+const SEND_BUTTON_SELECTOR = 'button[aria-label="Send"]';
 const SUMMARIZE_PROMPT =
   "Please summarize this video for me, including timestamps, in chronological order, and in a bulleted list format.";
 const ASK_SCROLL_OVERSCROLL_BEHAVIOR = "contain";
 
 let sessionToken = 0;
 let completedVideoId: string | null = null;
+let promptedVideoId: string | null = null;
 let expandedVideoId: string | null = null;
 let activatedAt = 0;
 
@@ -57,6 +61,7 @@ const watchPanelAutoOpenFeature: Feature = {
   activate(_context: FeatureContext): void {
     activatedAt = Date.now();
     completedVideoId = null;
+    promptedVideoId = null;
     expandedVideoId = null;
     syncAskScrollContainment();
     sessionToken = domSyncController.activate();
@@ -66,6 +71,7 @@ const watchPanelAutoOpenFeature: Feature = {
     sessionToken = domSyncController.deactivate();
     activatedAt = 0;
     completedVideoId = null;
+    promptedVideoId = null;
     expandedVideoId = null;
   },
 };
@@ -165,14 +171,14 @@ async function syncValidatedVideoPanel(
   videoId: string,
   token: number,
 ): Promise<void> {
-  if (!prepareVideoState(videoId)) {
-    return;
-  }
-
   const askPanel = findAskPanel();
   const askExpanded = askPanel ? isAskPanelExpanded(askPanel) : false;
 
-  if (handleAlreadyExpandedAsk(videoId, askExpanded)) {
+  if (!prepareVideoState(videoId, askExpanded)) {
+    return;
+  }
+
+  if (await handleAlreadyExpandedAsk(videoId, askExpanded)) {
     return;
   }
 
@@ -185,16 +191,26 @@ async function syncValidatedVideoPanel(
   await openAskFallbackIfNeeded(videoId, token, askExpanded);
 }
 
-function prepareVideoState(videoId: string): boolean {
+function prepareVideoState(videoId: string, askExpanded: boolean): boolean {
   resetStaleState(videoId);
-  return completedVideoId !== videoId;
+  return (
+    completedVideoId !== videoId ||
+    shouldPromptExpandedAsk(videoId, askExpanded)
+  );
 }
 
-function handleAlreadyExpandedAsk(
+async function handleAlreadyExpandedAsk(
   videoId: string,
   askExpanded: boolean,
-): boolean {
+): Promise<boolean> {
   if (shouldDeferInitialExpandedAsk(videoId, askExpanded)) {
+    return true;
+  }
+
+  if (shouldPromptExpandedAsk(videoId, askExpanded)) {
+    promptedVideoId = videoId;
+    await typeAndSendPrompt();
+    completeVideo(videoId);
     return true;
   }
 
@@ -225,6 +241,13 @@ async function openAskFallbackIfNeeded(
   }
 
   await openAskPanel(videoId, token);
+}
+
+function shouldPromptExpandedAsk(
+  videoId: string,
+  askExpanded: boolean,
+): boolean {
+  return askExpanded && promptedVideoId !== videoId;
 }
 
 function syncCollapsedAskPanelScrollContainment(
@@ -276,6 +299,10 @@ async function validateSyncContext(token: number): Promise<string | null> {
 function resetStaleState(videoId: string): void {
   if (completedVideoId && completedVideoId !== videoId) {
     completedVideoId = null;
+  }
+
+  if (promptedVideoId && promptedVideoId !== videoId) {
+    promptedVideoId = null;
   }
 
   if (expandedVideoId && expandedVideoId !== videoId) {
@@ -378,6 +405,7 @@ async function openAskPanel(videoId: string, token: number): Promise<void> {
     return;
   }
 
+  promptedVideoId = videoId;
   await typeAndSendPrompt();
 
   if (!isContextValid(token, videoId)) {
@@ -391,15 +419,13 @@ async function openAskPanel(videoId: string, token: number): Promise<void> {
 function findChatInput(): HTMLElement | null {
   const askPanel = findAskPanel();
   if (!askPanel) return null;
-  return askPanel.querySelector<HTMLElement>(
-    "textarea.chatInputViewModelChatInput",
-  );
+  return askPanel.querySelector<HTMLElement>(CHAT_INPUT_SELECTOR);
 }
 
 function findSendButton(): HTMLElement | null {
   const askPanel = findAskPanel();
   if (!askPanel) return null;
-  return askPanel.querySelector<HTMLElement>('button[aria-label="Send"]');
+  return askPanel.querySelector<HTMLElement>(SEND_BUTTON_SELECTOR);
 }
 
 async function typeAndSendPrompt(): Promise<void> {
@@ -424,39 +450,7 @@ async function typeAndSendPrompt(): Promise<void> {
 
     input.focus();
 
-    if (
-      input instanceof HTMLInputElement ||
-      input instanceof HTMLTextAreaElement
-    ) {
-      input.value = SUMMARIZE_PROMPT;
-    } else {
-      input.textContent = SUMMARIZE_PROMPT;
-    }
-
-    input.dispatchEvent(
-      new InputEvent("input", {
-        bubbles: true,
-        cancelable: true,
-        inputType: "insertText",
-        data: SUMMARIZE_PROMPT,
-      }),
-    );
-
-    input.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: SUMMARIZE_PROMPT[0],
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
-
-    input.dispatchEvent(
-      new KeyboardEvent("keyup", {
-        key: SUMMARIZE_PROMPT[0],
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
+    typePromptText(input);
 
     clickElement(sendButton);
   } catch {
@@ -478,6 +472,68 @@ function syncAskScrollContainment(): void {
   ) {
     scrollContainer.style.overscrollBehaviorY = ASK_SCROLL_OVERSCROLL_BEHAVIOR;
   }
+}
+
+function typePromptText(input: HTMLElement): void {
+  const textInput = getTextInput(input);
+
+  if (textInput) {
+    textInput.value = "";
+  } else {
+    input.textContent = "";
+  }
+
+  for (const character of SUMMARIZE_PROMPT) {
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: character,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    input.dispatchEvent(
+      new KeyboardEvent("keypress", {
+        key: character,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+
+    if (textInput) {
+      textInput.value += character;
+    } else {
+      input.textContent = `${input.textContent || ""}${character}`;
+    }
+
+    input.dispatchEvent(
+      new InputEvent("input", {
+        bubbles: true,
+        cancelable: true,
+        inputType: "insertText",
+        data: character,
+      }),
+    );
+    input.dispatchEvent(
+      new KeyboardEvent("keyup", {
+        key: character,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  }
+}
+
+function getTextInput(
+  input: HTMLElement,
+): HTMLInputElement | HTMLTextAreaElement | null {
+  if (
+    input instanceof HTMLInputElement ||
+    input instanceof HTMLTextAreaElement
+  ) {
+    return input;
+  }
+
+  return null;
 }
 
 function isInsidePanelSurface(node: Node): boolean {

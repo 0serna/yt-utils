@@ -48,6 +48,21 @@ function appendChapterItem(panel: HTMLElement): HTMLElement {
   return chapterItem;
 }
 
+function appendAskPromptControls(panel: HTMLElement): {
+  chatInput: HTMLTextAreaElement;
+  sendButton: HTMLButtonElement;
+} {
+  const chatInput = document.createElement("textarea");
+  chatInput.className = "chatInputViewModelChatInput";
+  panel.appendChild(chatInput);
+
+  const sendButton = document.createElement("button");
+  sendButton.setAttribute("aria-label", "Send");
+  panel.appendChild(sendButton);
+
+  return { chatInput, sendButton };
+}
+
 async function importFreshFeature() {
   return import("./content");
 }
@@ -436,13 +451,7 @@ describe("watch-panel-auto-open feature", () => {
       );
       panel.style.display = "none";
 
-      const chatInput = document.createElement("textarea");
-      chatInput.className = "chatInputViewModelChatInput";
-      panel.appendChild(chatInput);
-
-      const sendButton = document.createElement("button");
-      sendButton.setAttribute("aria-label", "Send");
-      panel.appendChild(sendButton);
+      const { chatInput, sendButton } = appendAskPromptControls(panel);
 
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
@@ -504,6 +513,131 @@ describe("watch-panel-auto-open feature", () => {
       );
 
       panel.remove();
+    });
+
+    it("types prompt when ask is manually opened", async () => {
+      const panel = appendEngagementPanel(
+        "PAyouchat",
+        "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
+      );
+
+      const { chatInput, sendButton } = appendAskPromptControls(panel);
+
+      const { readPlayerSnapshot } = await import("@shared/youtube-player");
+      vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
+
+      const { clickElement, waitFor, isVisible } =
+        await import("@shared/youtube-dom");
+      vi.mocked(isVisible).mockImplementation((el) => el === chatInput);
+      vi.mocked(waitFor).mockImplementation((callback) =>
+        Promise.resolve(callback() as HTMLElement),
+      );
+
+      const feature = await setupWatchPage();
+      feature.activate({ sendMessage: vi.fn() });
+
+      await vi.waitFor(
+        () => {
+          expect(clickElement).toHaveBeenCalledWith(sendButton);
+        },
+        { timeout: 3000 },
+      );
+
+      panel.remove();
+    });
+
+    it("does not re-prompt after ask was already prompted for the current video", async () => {
+      const panel = appendEngagementPanel(
+        "PAyouchat",
+        "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
+      );
+
+      const { chatInput, sendButton } = appendAskPromptControls(panel);
+
+      const { readPlayerSnapshot } = await import("@shared/youtube-player");
+      vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
+
+      const { clickElement, waitFor, isVisible } =
+        await import("@shared/youtube-dom");
+      vi.mocked(isVisible).mockImplementation((el) => el === chatInput);
+      vi.mocked(waitFor).mockImplementation((callback) =>
+        Promise.resolve(callback() as HTMLElement),
+      );
+
+      const feature = await setupWatchPage();
+      feature.activate({ sendMessage: vi.fn() });
+
+      await vi.waitFor(
+        () => {
+          expect(clickElement).toHaveBeenCalledWith(sendButton);
+        },
+        { timeout: 3000 },
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      vi.mocked(clickElement).mockClear();
+      panel.setAttribute("data-test-resync", "1");
+
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      expect(clickElement).not.toHaveBeenCalled();
+
+      panel.remove();
+    });
+
+    it("types prompt when ask is manually opened after chapters completed the video", async () => {
+      const askPanel = appendEngagementPanel(
+        "PAyouchat",
+        "ENGAGEMENT_PANEL_VISIBILITY_HIDDEN",
+      );
+      askPanel.style.display = "none";
+
+      const { chatInput, sendButton } = appendAskPromptControls(askPanel);
+
+      const chaptersPanel = appendEngagementPanel(
+        "engagement-panel-macro-markers",
+        "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
+      );
+      const chapterItem = appendChapterItem(chaptersPanel);
+
+      const { readPlayerSnapshot } = await import("@shared/youtube-player");
+      vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
+
+      const { clickElement, isVisible, waitFor } =
+        await import("@shared/youtube-dom");
+      vi.mocked(isVisible).mockImplementation((el) => {
+        if (el === chapterItem || el === chatInput) return true;
+        return false;
+      });
+      vi.mocked(waitFor).mockImplementation((callback) =>
+        Promise.resolve(callback() as HTMLElement),
+      );
+
+      const feature = await setupWatchPage();
+      feature.activate({ sendMessage: vi.fn() });
+
+      await vi.waitFor(
+        () => {
+          expect(clickElement).not.toHaveBeenCalled();
+        },
+        { timeout: 1000 },
+      );
+
+      askPanel.style.display = "";
+      askPanel.setAttribute(
+        "visibility",
+        "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
+      );
+
+      await vi.waitFor(
+        () => {
+          expect(clickElement).toHaveBeenCalledWith(sendButton);
+        },
+        { timeout: 3000 },
+      );
+
+      chaptersPanel.remove();
+      askPanel.remove();
     });
   });
 });
