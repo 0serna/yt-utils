@@ -1,5 +1,19 @@
 import { createExtensionError } from "./errors";
 
+type WaitOptions = {
+  timeout?: number;
+  interval?: number;
+  errorCode?: string;
+  errorMessage?: string;
+};
+
+const DEFAULT_WAIT_OPTIONS: Required<WaitOptions> = {
+  timeout: 5000,
+  interval: 100,
+  errorCode: "WAIT_FAILED",
+  errorMessage: "Timed out waiting for the next step.",
+};
+
 const LABELS = {
   share: [/\bshare\b/i, /\bcompartir\b/i],
   copy: [/\bcopy\b/i, /\bcopy link\b/i, /\bcopiar\b/i, /\bcopiar enlace\b/i],
@@ -10,15 +24,9 @@ const LABELS = {
 
 export function waitFor<T>(
   getValue: () => T | null | undefined | false,
-  options?: {
-    timeout?: number;
-    interval?: number;
-    errorCode?: string;
-    errorMessage?: string;
-  },
+  options?: WaitOptions,
 ): Promise<NonNullable<T>> {
-  const timeout = options?.timeout ?? 5000;
-  const interval = options?.interval ?? 100;
+  const config = readWaitConfig(options);
 
   return new Promise((resolve, reject) => {
     const startedAt = Date.now();
@@ -31,21 +39,20 @@ export function waitFor<T>(
         return;
       }
 
-      if (Date.now() - startedAt > timeout) {
-        reject(
-          createExtensionError(
-            options?.errorCode || "WAIT_FAILED",
-            options?.errorMessage || "Timed out waiting for the next step.",
-          ),
-        );
+      if (Date.now() - startedAt > config.timeout) {
+        reject(createExtensionError(config.errorCode, config.errorMessage));
         return;
       }
 
-      window.setTimeout(check, interval);
+      window.setTimeout(check, config.interval);
     };
 
     check();
   });
+}
+
+function readWaitConfig(options: WaitOptions = {}): Required<WaitOptions> {
+  return { ...DEFAULT_WAIT_OPTIONS, ...options };
 }
 
 export function delay(ms: number): Promise<void> {
@@ -105,33 +112,88 @@ export function placeWatchActionHost(
     preferredBeforeHostId?: string;
   },
 ): boolean {
-  const actionsContainer = findWatchPageActionsContainer();
-  if (!actionsContainer) {
+  const placement = readWatchActionPlacement(host, options);
+  if (!placement) {
     return false;
   }
 
-  const preferredBeforeHost = options?.preferredBeforeHostId
-    ? document.getElementById(options.preferredBeforeHostId)
+  placeWatchActionHostInContainer(
+    host,
+    placement.actionsContainer,
+    placement.excludedHostIds,
+    placement.preferredBeforeHostId,
+  );
+  return true;
+}
+
+function readWatchActionPlacement(
+  host: HTMLElement,
+  options: {
+    excludedHostIds?: readonly string[];
+    preferredBeforeHostId?: string;
+  } = {},
+): {
+  actionsContainer: HTMLElement;
+  excludedHostIds: readonly string[];
+  preferredBeforeHostId: string | undefined;
+} | null {
+  const actionsContainer = findWatchPageActionsContainer();
+  return actionsContainer
+    ? {
+        actionsContainer,
+        excludedHostIds: options.excludedHostIds || [host.id],
+        preferredBeforeHostId: options.preferredBeforeHostId,
+      }
     : null;
-  if (
-    preferredBeforeHost &&
-    preferredBeforeHost.parentElement === actionsContainer
-  ) {
+}
+
+function placeWatchActionHostInContainer(
+  host: HTMLElement,
+  actionsContainer: HTMLElement,
+  excludedHostIds: readonly string[],
+  preferredBeforeHostId: string | undefined,
+): void {
+  const preferredBeforeHost = readPreferredBeforeHost(
+    actionsContainer,
+    preferredBeforeHostId,
+  );
+  if (preferredBeforeHost) {
     placeHostBefore(host, preferredBeforeHost);
-    return true;
+    return;
   }
 
+  placeWatchActionHostFallback(host, actionsContainer, excludedHostIds);
+}
+
+function placeWatchActionHostFallback(
+  host: HTMLElement,
+  actionsContainer: HTMLElement,
+  excludedHostIds: readonly string[],
+): void {
   const insertionTarget = findWatchActionInsertionTarget(
     actionsContainer,
-    options?.excludedHostIds ?? [host.id],
+    excludedHostIds,
   );
+
   if (insertionTarget) {
     placeHostBefore(host, insertionTarget);
   } else if (host.parentElement !== actionsContainer) {
     actionsContainer.prepend(host);
   }
+}
 
-  return true;
+function readPreferredBeforeHost(
+  actionsContainer: HTMLElement,
+  preferredBeforeHostId: string | undefined,
+): HTMLElement | null {
+  if (!preferredBeforeHostId) {
+    return null;
+  }
+
+  const preferredBeforeHost = document.getElementById(preferredBeforeHostId);
+  return preferredBeforeHost?.parentElement === actionsContainer
+    ? preferredBeforeHost
+    : null;
 }
 
 function findWatchActionInsertionTarget(

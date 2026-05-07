@@ -78,6 +78,7 @@ The project SHALL make the Husky hook setup available from the repository so con
 ### Requirement: Refactors SHALL reduce Fallow debt without suppressions
 
 The project SHALL reduce targeted Fallow health findings through tested code simplification rather than inline suppressions, broad ignores, or weaker configured thresholds.
+When the same structural logic is duplicated across production modules, the project SHALL prefer a shared reusable abstraction or equivalent code simplification over leaving the duplication in place.
 
 #### Scenario: Targeted refactor reduces findings
 
@@ -88,3 +89,8 @@ The project SHALL reduce targeted Fallow health findings through tested code sim
 
 - **WHEN** the Fallow health debt reduction change is complete
 - **THEN** the repository check command passes without unresolved Fallow health findings
+
+#### Scenario: Shared duplication is simplified without weakening the gate
+
+- **WHEN** duplicated production logic is refactored into a shared helper or an equivalent simpler structure
+- **THEN** the repository check command passes without adding broad Fallow ignore rules for those files

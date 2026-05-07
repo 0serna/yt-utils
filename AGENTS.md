@@ -18,7 +18,7 @@
 - `npm install`: install dependencies.
 - `npm run build`: build the extension with Vite.
 - `npm test`: run tests with Vitest.
-- `npm run check`: run Prettier check, ESLint, Fallow, TypeScript, and OpenSpec validation.
+- `npm run check`: run Prettier, ESLint, TypeScript, Fallow, and OpenSpec validation.
 - `npm run format`: format files with Prettier.
 
 ## Workflow

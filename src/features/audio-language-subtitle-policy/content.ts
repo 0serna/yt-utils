@@ -76,28 +76,20 @@ async function syncPolicy(token: number): Promise<void> {
     return;
   }
 
-  const { videoId, snapshot, currentSignature } = ctx;
-  const appliedSignature = appliedStateByVideo.get(videoId);
-
-  if (isPolicyOverridden(videoId, currentSignature, appliedSignature)) {
+  const appliedSignature = appliedStateByVideo.get(ctx.videoId);
+  if (isPolicyOverridden(ctx.videoId, ctx.currentSignature, appliedSignature)) {
     return;
   }
 
-  const desiredSelection = determineSubtitleSelection(snapshot);
-
   if (appliedSignature) {
-    // Already applied for this video; check if it's still valid.
-    if (currentSignature !== appliedSignature) {
-      overriddenVideos.add(videoId);
-    }
     return;
   }
 
   await ensureSubtitleSelection(
-    videoId,
-    snapshot,
-    desiredSelection,
-    currentSignature,
+    ctx.videoId,
+    ctx.snapshot,
+    determineSubtitleSelection(ctx.snapshot),
+    ctx.currentSignature,
     token,
   );
 }
@@ -109,12 +101,19 @@ type PolicyContext = {
 };
 
 async function getPolicyContext(token: number): Promise<PolicyContext | null> {
-  if (token !== sessionToken) {
+  if (shouldAbortPolicySync(token)) {
     return null;
   }
 
   const snapshot = await readPlayerSnapshot();
-  if (token !== sessionToken) {
+  return createPolicyContext(token, snapshot);
+}
+
+function createPolicyContext(
+  token: number,
+  snapshot: PlayerSnapshot | null,
+): PolicyContext | null {
+  if (shouldAbortPolicySync(token)) {
     return null;
   }
 
@@ -127,6 +126,10 @@ async function getPolicyContext(token: number): Promise<PolicyContext | null> {
     snapshot,
     currentSignature: readSubtitleSignature(snapshot),
   };
+}
+
+function shouldAbortPolicySync(token: number): boolean {
+  return token !== sessionToken;
 }
 
 function isPolicyOverridden(
@@ -153,42 +156,99 @@ async function ensureSubtitleSelection(
   currentSignature: string,
   token: number,
 ): Promise<void> {
-  if (matchesSubtitleSelection(snapshot, desiredSelection)) {
-    appliedStateByVideo.set(videoId, currentSignature);
-    return;
-  }
-
-  const started = await applySubtitleSelection(desiredSelection);
-  if (!started) {
-    return;
-  }
-
-  const applied = await waitForSubtitleSelection(
-    readPlayerSnapshot,
-    desiredSelection,
-    { timeoutMs: 1800, intervalMs: 100 },
-  );
-
-  if (!applied || token !== sessionToken) {
-    return;
-  }
-
-  const verifiedSnapshot = await readPlayerSnapshot();
   if (
-    !verifiedSnapshot?.videoId ||
-    verifiedSnapshot.videoId !== snapshot.videoId
+    rememberIfSelectionAlreadyMatches(
+      snapshot,
+      desiredSelection,
+      videoId,
+      currentSignature,
+    )
   ) {
     return;
   }
 
-  if (!matchesSubtitleSelection(verifiedSnapshot, desiredSelection)) {
+  const verifiedSnapshot = await applyAndVerifySubtitleSelection(
+    token,
+    videoId,
+    desiredSelection,
+  );
+  if (!verifiedSnapshot) {
     return;
   }
 
-  appliedStateByVideo.set(
-    verifiedSnapshot.videoId,
-    readSubtitleSignature(verifiedSnapshot),
-  );
+  rememberAppliedSignature(videoId, readSubtitleSignature(verifiedSnapshot));
+}
+
+function rememberIfSelectionAlreadyMatches(
+  snapshot: PlayerSnapshot,
+  desiredSelection: SubtitleSelection,
+  videoId: string,
+  currentSignature: string,
+): boolean {
+  if (!matchesSubtitleSelection(snapshot, desiredSelection)) {
+    return false;
+  }
+
+  rememberAppliedSignature(videoId, currentSignature);
+  return true;
+}
+
+async function applyAndVerifySubtitleSelection(
+  token: number,
+  videoId: string,
+  desiredSelection: SubtitleSelection,
+): Promise<PlayerSnapshot | null> {
+  const started = await applySubtitleSelection(desiredSelection);
+  return started
+    ? waitForVerifiedSnapshot(token, videoId, desiredSelection)
+    : null;
+}
+
+async function waitForVerifiedSnapshot(
+  token: number,
+  videoId: string,
+  desiredSelection: SubtitleSelection,
+): Promise<PlayerSnapshot | null> {
+  if (!(await waitForSelectionApply(desiredSelection))) {
+    return null;
+  }
+
+  if (shouldAbortPolicySync(token)) {
+    return null;
+  }
+
+  return readMatchingVerifiedSnapshot(videoId, desiredSelection);
+}
+
+async function readMatchingVerifiedSnapshot(
+  videoId: string,
+  desiredSelection: SubtitleSelection,
+): Promise<PlayerSnapshot | null> {
+  const verifiedSnapshot = await readVerifiedSnapshot(videoId);
+  return verifiedSnapshot &&
+    matchesSubtitleSelection(verifiedSnapshot, desiredSelection)
+    ? verifiedSnapshot
+    : null;
+}
+
+async function waitForSelectionApply(
+  desiredSelection: SubtitleSelection,
+): Promise<boolean> {
+  return waitForSubtitleSelection(readPlayerSnapshot, desiredSelection, {
+    timeoutMs: 1800,
+    intervalMs: 100,
+  });
+}
+
+async function readVerifiedSnapshot(
+  videoId: string,
+): Promise<PlayerSnapshot | null> {
+  const verifiedSnapshot = await readPlayerSnapshot();
+  return verifiedSnapshot?.videoId === videoId ? verifiedSnapshot : null;
+}
+
+function rememberAppliedSignature(videoId: string, signature: string): void {
+  appliedStateByVideo.set(videoId, signature);
 }
 
 function isSupportedWatchPage(): boolean {

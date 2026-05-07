@@ -1,4 +1,5 @@
 import { getBootstrapIconMarkup } from "@shared/bootstrap-icons";
+import { hasRelevantSelectorMutation } from "@shared/dom-mutations";
 import { applyExtensionButtonStyles } from "@shared/extension-button";
 import type { Feature, FeatureContext } from "@shared/types";
 import {
@@ -216,15 +217,11 @@ function observePage(): void {
 }
 
 function isRelevantHideMutation(mutation: MutationRecord): boolean {
-  return (
-    !isInsideHideButton(mutation.target) &&
-    [...mutation.addedNodes, ...mutation.removedNodes].some(
-      (node) =>
-        node instanceof Element &&
-        isExternalHideNode(node) &&
-        nodeMatchesOrContainsSelector(node, RELEVANT_HIDE_SELECTOR),
-    )
-  );
+  return hasRelevantSelectorMutation([mutation], {
+    isInsideOwnedSurface: isInsideHideButton,
+    isExternalNode: isExternalHideNode,
+    selector: RELEVANT_HIDE_SELECTOR,
+  });
 }
 
 function isExternalHideNode(node: Element): boolean {
@@ -232,13 +229,6 @@ function isExternalHideNode(node: Element): boolean {
     !node.id.startsWith(BUTTON_HOST_ID_PREFIX) &&
     !node.querySelector?.(`[id^="${BUTTON_HOST_ID_PREFIX}"]`)
   );
-}
-
-function nodeMatchesOrContainsSelector(
-  node: Element,
-  selector: string,
-): boolean {
-  return !!(node.matches?.(selector) || node.querySelector?.(selector));
 }
 
 function stopObserving(): void {

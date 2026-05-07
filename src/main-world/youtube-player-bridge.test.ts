@@ -55,6 +55,8 @@ describe("youtube-player-bridge", () => {
 
   function createFakePlayer(options: {
     videoId?: string;
+    responseVideoId?: string;
+    videoDataVideoId?: string;
     captionTracks?: unknown[];
     audioTrack?: unknown;
     subtitlesOn?: boolean;
@@ -73,11 +75,11 @@ describe("youtube-player-bridge", () => {
         },
       },
       videoDetails: {
-        videoId: options.videoId || "test-video-id",
+        videoId: options.responseVideoId ?? options.videoId ?? "test-video-id",
       },
     });
     player.getVideoData = () => ({
-      videoId: options.videoId || "test-video-id",
+      videoId: options.videoDataVideoId ?? options.videoId ?? "test-video-id",
     });
     player.getAudioTrack = () => options.audioTrack || null;
     player.getOption = (namespace: string, key: string) => {
@@ -159,6 +161,10 @@ describe("youtube-player-bridge", () => {
   }
 
   describe("readSnapshot", () => {
+    beforeEach(() => {
+      window.history.replaceState({}, "", "/watch?v=baseline-video");
+    });
+
     it("returns null when no movie_player exists", async () => {
       const response = await sendBridgeRequest({
         id: "test-1",
@@ -247,6 +253,60 @@ describe("youtube-player-bridge", () => {
       expect(snapshot!.translationLanguages).toHaveLength(2);
       expect(snapshot!.translationLanguages[0].languageCode).toBe("en");
       expect(snapshot!.translationLanguages[1].languageCode).toBe("es");
+    });
+
+    it("falls back to the URL video id and filters invalid translation languages", async () => {
+      window.history.replaceState({}, "", "/watch?v=url-video-id");
+
+      const fakePlayer = createFakePlayer({
+        responseVideoId: "   ",
+        videoDataVideoId: "",
+        translationLanguages: [
+          { languageCode: "en", languageName: "English" },
+          { languageName: "Missing code" },
+          null,
+        ],
+        subtitlesOn: false,
+      });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-4b",
+        action: "readSnapshot",
+      });
+
+      const snapshot = response.result as PlayerSnapshot;
+      expect(snapshot).not.toBeNull();
+      expect(snapshot!.videoId).toBe("url-video-id");
+      expect(snapshot!.translationLanguages).toEqual([
+        { languageCode: "en", languageName: "English" },
+      ]);
+    });
+
+    it("infers audio language from the audio track name when ids are not usable", async () => {
+      const fakePlayer = createFakePlayer({
+        videoId: "audio-name-video",
+        audioTrack: {
+          hs: {
+            id: "und",
+            name: "English - Descriptive",
+          },
+        },
+        captionTracks: [{ languageCode: "" }],
+        subtitlesOn: false,
+      });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-4c",
+        action: "readSnapshot",
+      });
+
+      const snapshot = response.result as PlayerSnapshot;
+      expect(snapshot).not.toBeNull();
+      expect(snapshot!.audioLanguage).toBe("en");
     });
   });
 

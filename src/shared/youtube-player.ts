@@ -26,6 +26,10 @@ export type {
 } from "@shared/youtube-player-model";
 
 const BRIDGE_RESPONSE_TIMEOUT_MS = 2000;
+const DEFAULT_SUBTITLE_SELECTION_WAIT = {
+  timeoutMs: 1500,
+  intervalMs: 100,
+};
 
 let requestCounter = 0;
 
@@ -53,20 +57,25 @@ export async function waitForSubtitleSelection(
     intervalMs?: number;
   },
 ): Promise<boolean> {
-  const timeoutMs = options?.timeoutMs ?? 1500;
-  const intervalMs = options?.intervalMs ?? 100;
+  const config = readWaitForSubtitleSelectionConfig(options);
   const startedAt = Date.now();
 
-  while (Date.now() - startedAt <= timeoutMs) {
-    const snapshot = await getSnapshot();
-    if (snapshot && matchesSubtitleSelection(snapshot, selection)) {
+  while (Date.now() - startedAt <= config.timeoutMs) {
+    if (await selectionMatchesSnapshot(getSnapshot, selection)) {
       return true;
     }
 
-    await delay(intervalMs);
+    await delay(config.intervalMs);
   }
 
   return false;
+}
+
+function readWaitForSubtitleSelectionConfig(options?: {
+  timeoutMs?: number;
+  intervalMs?: number;
+}): { timeoutMs: number; intervalMs: number } {
+  return { ...DEFAULT_SUBTITLE_SELECTION_WAIT, ...options };
 }
 
 async function sendBridgeRequest(
@@ -83,12 +92,7 @@ async function sendBridgeRequest(
     }, BRIDGE_RESPONSE_TIMEOUT_MS);
 
     const onMessage = (event: MessageEvent<BridgeResponse>) => {
-      if (
-        event.source !== window ||
-        event.data?.source !== BRIDGE_SOURCE ||
-        event.data?.kind !== "response" ||
-        event.data?.id !== id
-      ) {
+      if (!isMatchingBridgeResponse(event, id)) {
         return;
       }
 
@@ -116,6 +120,34 @@ async function sendBridgeRequest(
     };
     window.postMessage(request, window.location.origin);
   });
+}
+
+async function selectionMatchesSnapshot(
+  getSnapshot: () => Promise<PlayerSnapshot | null>,
+  selection: SubtitleSelection,
+): Promise<boolean> {
+  const snapshot = await getSnapshot();
+  return Boolean(snapshot && matchesSubtitleSelection(snapshot, selection));
+}
+
+function isMatchingBridgeResponse(
+  event: MessageEvent<BridgeResponse>,
+  id: string,
+): boolean {
+  return event.source === window && isBridgeResponseForId(event.data, id);
+}
+
+function isBridgeResponseForId(
+  data: BridgeResponse | undefined,
+  id: string,
+): boolean {
+  return isBridgeResponse(data) && data.id === id;
+}
+
+function isBridgeResponse(
+  data: BridgeResponse | undefined,
+): data is BridgeResponse {
+  return data?.source === BRIDGE_SOURCE && data?.kind === "response";
 }
 
 function delay(ms: number): Promise<void> {

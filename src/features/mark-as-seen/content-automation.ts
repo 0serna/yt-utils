@@ -2,6 +2,7 @@ import { createExtensionError } from "@shared/errors";
 import {
   type ExtensionResult,
   isMarkAsSeenAutomationRequest,
+  makeErrorResultFromUnknown,
   onMessage,
 } from "@shared/messaging";
 import { delay, isDesktopWatchPage, waitFor } from "@shared/youtube-dom";
@@ -90,12 +91,9 @@ async function playVideoBriefly(video: HTMLVideoElement): Promise<void> {
 }
 
 function makeContentErrorResult(error: unknown): ExtensionResult {
-  return {
-    ok: false,
-    code: (error as Error & { code?: string })?.code || "AUTOMATION_FAILED",
-    message:
-      (error as Error)?.message ||
-      "The automation did not complete successfully.",
-    details: (error as Error & { details?: unknown })?.details ?? null,
-  };
+  return makeErrorResultFromUnknown(
+    error,
+    "AUTOMATION_FAILED",
+    "The automation did not complete successfully.",
+  );
 }

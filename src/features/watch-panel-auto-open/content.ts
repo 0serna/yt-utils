@@ -89,27 +89,36 @@ function findAskPanel(): HTMLElement | null {
 }
 
 function findChaptersPanel(): HTMLElement | null {
+  return findChaptersPanelByTargetId() ?? findChaptersPanelByLabel();
+}
+
+function findChaptersPanelByTargetId(): HTMLElement | null {
   for (const targetId of CHAPTERS_PANEL_TARGET_IDS) {
     const panel = document.querySelector<HTMLElement>(
       `ytd-engagement-panel-section-list-renderer[target-id="${targetId}"]`,
     );
-    if (panel) return panel;
-  }
-
-  const panels = document.querySelectorAll<HTMLElement>(
-    "ytd-engagement-panel-section-list-renderer",
-  );
-  for (const panel of panels) {
-    const text = panel.textContent || "";
-    if (
-      CHAPTERS_LABELS.some((re) => re.test(text)) &&
-      panel.querySelector(CHAPTER_ITEM_SELECTOR)
-    ) {
+    if (panel) {
       return panel;
     }
   }
 
   return null;
+}
+
+function findChaptersPanelByLabel(): HTMLElement | null {
+  const panels = document.querySelectorAll<HTMLElement>(
+    "ytd-engagement-panel-section-list-renderer",
+  );
+
+  return (
+    [...panels].find((panel) => {
+      const text = panel.textContent || "";
+      return (
+        CHAPTERS_LABELS.some((re) => re.test(text)) &&
+        Boolean(panel.querySelector(CHAPTER_ITEM_SELECTOR))
+      );
+    }) ?? null
+  );
 }
 
 function isAskPanelExpanded(panel: HTMLElement): boolean {
@@ -171,24 +180,28 @@ async function syncValidatedVideoPanel(
   videoId: string,
   token: number,
 ): Promise<void> {
-  const askPanel = findAskPanel();
-  const askExpanded = askPanel ? isAskPanelExpanded(askPanel) : false;
+  const askState = readAskPanelState();
 
-  if (!prepareVideoState(videoId, askExpanded)) {
+  if (!prepareVideoState(videoId, askState.expanded)) {
     return;
   }
 
-  if (await handleAlreadyExpandedAsk(videoId, askExpanded)) {
+  if (await handleAlreadyExpandedAsk(videoId, askState.expanded)) {
     return;
   }
 
-  syncCollapsedAskPanelScrollContainment(askPanel, askExpanded);
+  syncCollapsedAskPanelScrollContainment(askState.panel, askState.expanded);
 
   if (await handledChaptersOrLostSession(videoId, token)) {
     return;
   }
 
-  await openAskFallbackIfNeeded(videoId, token, askExpanded);
+  await openAskFallbackIfNeeded(videoId, token, askState.expanded);
+}
+
+function readAskPanelState(): { panel: HTMLElement | null; expanded: boolean } {
+  const panel = findAskPanel();
+  return { panel, expanded: panel ? isAskPanelExpanded(panel) : false };
 }
 
 function prepareVideoState(videoId: string, askExpanded: boolean): boolean {
@@ -275,39 +288,56 @@ function shouldDeferInitialExpandedAsk(
 }
 
 async function validateSyncContext(token: number): Promise<string | null> {
-  if (token !== sessionToken || !isDesktopWatchPage()) {
+  if (!canSyncCurrentPage(token)) {
     return null;
   }
 
-  const videoId = getCurrentVideoId();
+  return validateCurrentVideoSnapshot(token, getCurrentVideoId());
+}
+
+async function validateCurrentVideoSnapshot(
+  token: number,
+  videoId: string | null,
+): Promise<string | null> {
   if (!videoId) {
     return null;
   }
 
   const snapshot = await readPlayerSnapshot();
-  if (
-    token !== sessionToken ||
-    !snapshot?.videoId ||
-    snapshot.videoId !== videoId
-  ) {
+  if (!isMatchingVideoSnapshot(token, videoId, snapshot?.videoId)) {
     return null;
   }
 
   return videoId;
 }
 
+function canSyncCurrentPage(token: number): boolean {
+  return !shouldAbortSync(token);
+}
+
+function shouldAbortSync(token: number): boolean {
+  return token !== sessionToken || !isDesktopWatchPage();
+}
+
+function isMatchingVideoSnapshot(
+  token: number,
+  expectedVideoId: string,
+  snapshotVideoId: string | null | undefined,
+): boolean {
+  return token === sessionToken && snapshotVideoId === expectedVideoId;
+}
+
 function resetStaleState(videoId: string): void {
-  if (completedVideoId && completedVideoId !== videoId) {
-    completedVideoId = null;
-  }
+  completedVideoId = resetVideoStateValue(completedVideoId, videoId);
+  promptedVideoId = resetVideoStateValue(promptedVideoId, videoId);
+  expandedVideoId = resetVideoStateValue(expandedVideoId, videoId);
+}
 
-  if (promptedVideoId && promptedVideoId !== videoId) {
-    promptedVideoId = null;
-  }
-
-  if (expandedVideoId && expandedVideoId !== videoId) {
-    expandedVideoId = null;
-  }
+function resetVideoStateValue(
+  stateVideoId: string | null,
+  currentVideoId: string,
+): string | null {
+  return stateVideoId && stateVideoId !== currentVideoId ? null : stateVideoId;
 }
 
 function isContextValid(token: number, videoId: string): boolean {
@@ -327,13 +357,8 @@ async function tryOpenChapters(
   videoId: string,
   token: number,
 ): Promise<boolean> {
-  const chaptersPanel = findChaptersPanel();
-  if (chaptersPanel && isAskPanelExpanded(chaptersPanel)) {
-    const items = findVisibleChapterItems();
-    if (items.length > 0) {
-      completeVideo(videoId);
-      return true;
-    }
+  if (completeIfChaptersAlreadyOpen(videoId)) {
+    return true;
   }
 
   const chaptersButton = findChaptersButton();
@@ -342,7 +367,44 @@ async function tryOpenChapters(
   }
 
   clickElement(chaptersButton);
+  return completeWhenChaptersOpen(videoId, token);
+}
 
+async function completeWhenChaptersOpen(
+  videoId: string,
+  token: number,
+): Promise<boolean> {
+  if (!(await waitForVisibleChapterItems())) {
+    return false;
+  }
+
+  if (token !== sessionToken) {
+    return false;
+  }
+
+  completeVideo(videoId);
+  return true;
+}
+
+function completeIfChaptersAlreadyOpen(videoId: string): boolean {
+  if (!hasExpandedChaptersItems()) {
+    return false;
+  }
+
+  completeVideo(videoId);
+  return true;
+}
+
+function hasExpandedChaptersItems(): boolean {
+  const chaptersPanel = findChaptersPanel();
+  return Boolean(
+    chaptersPanel &&
+    isAskPanelExpanded(chaptersPanel) &&
+    findVisibleChapterItems().length > 0,
+  );
+}
+
+async function waitForVisibleChapterItems(): Promise<boolean> {
   try {
     await waitFor(
       () => {
@@ -356,12 +418,6 @@ async function tryOpenChapters(
         errorMessage: "Timed out waiting for chapters panel to show items.",
       },
     );
-
-    if (token !== sessionToken) {
-      return false;
-    }
-
-    completeVideo(videoId);
     return true;
   } catch {
     return false;
@@ -369,9 +425,7 @@ async function tryOpenChapters(
 }
 
 async function openAskPanel(videoId: string, token: number): Promise<void> {
-  const recheckPanel = findAskPanel();
-  if (recheckPanel && isAskPanelExpanded(recheckPanel)) {
-    completeVideo(videoId);
+  if (completeIfAskAlreadyOpen(videoId)) {
     return;
   }
 
@@ -381,7 +435,51 @@ async function openAskPanel(videoId: string, token: number): Promise<void> {
   }
 
   clickElement(askButton);
+  await completeWhenAskPanelOpen(videoId, token);
+}
 
+async function completeWhenAskPanelOpen(
+  videoId: string,
+  token: number,
+): Promise<void> {
+  if (!(await waitForExpandedAskPanel())) {
+    return;
+  }
+
+  if (!isContextValid(token, videoId)) {
+    return;
+  }
+
+  await promptCurrentVideo(videoId);
+
+  if (!isContextValid(token, videoId)) {
+    return;
+  }
+
+  completeVideo(videoId);
+  syncAskScrollContainment();
+}
+
+function completeIfAskAlreadyOpen(videoId: string): boolean {
+  if (!isAskPanelCurrentlyExpanded()) {
+    return false;
+  }
+
+  completeVideo(videoId);
+  return true;
+}
+
+async function promptCurrentVideo(videoId: string): Promise<void> {
+  promptedVideoId = videoId;
+  await typeAndSendPrompt();
+}
+
+function isAskPanelCurrentlyExpanded(): boolean {
+  const panel = findAskPanel();
+  return Boolean(panel && isAskPanelExpanded(panel));
+}
+
+async function waitForExpandedAskPanel(): Promise<boolean> {
   try {
     await waitFor(
       () => {
@@ -397,23 +495,10 @@ async function openAskPanel(videoId: string, token: number): Promise<void> {
         errorMessage: "Timed out waiting for the Ask panel to open.",
       },
     );
+    return true;
   } catch {
-    return;
+    return false;
   }
-
-  if (!isContextValid(token, videoId)) {
-    return;
-  }
-
-  promptedVideoId = videoId;
-  await typeAndSendPrompt();
-
-  if (!isContextValid(token, videoId)) {
-    return;
-  }
-
-  completeVideo(videoId);
-  syncAskScrollContainment();
 }
 
 function findChatInput(): HTMLElement | null {
@@ -476,35 +561,12 @@ function syncAskScrollContainment(): void {
 
 function typePromptText(input: HTMLElement): void {
   const textInput = getTextInput(input);
-
-  if (textInput) {
-    textInput.value = "";
-  } else {
-    input.textContent = "";
-  }
+  resetPromptInput(input, textInput);
 
   for (const character of SUMMARIZE_PROMPT) {
-    input.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: character,
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
-    input.dispatchEvent(
-      new KeyboardEvent("keypress", {
-        key: character,
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
-
-    if (textInput) {
-      textInput.value += character;
-    } else {
-      input.textContent = `${input.textContent || ""}${character}`;
-    }
-
+    dispatchPromptKeyEvent(input, "keydown", character);
+    dispatchPromptKeyEvent(input, "keypress", character);
+    appendPromptCharacter(input, textInput, character);
     input.dispatchEvent(
       new InputEvent("input", {
         bubbles: true,
@@ -513,14 +575,47 @@ function typePromptText(input: HTMLElement): void {
         data: character,
       }),
     );
-    input.dispatchEvent(
-      new KeyboardEvent("keyup", {
-        key: character,
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
+    dispatchPromptKeyEvent(input, "keyup", character);
   }
+}
+
+function resetPromptInput(
+  input: HTMLElement,
+  textInput: HTMLInputElement | HTMLTextAreaElement | null,
+): void {
+  if (textInput) {
+    textInput.value = "";
+    return;
+  }
+
+  input.textContent = "";
+}
+
+function dispatchPromptKeyEvent(
+  input: HTMLElement,
+  type: "keydown" | "keypress" | "keyup",
+  key: string,
+): void {
+  input.dispatchEvent(
+    new KeyboardEvent(type, {
+      key,
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
+}
+
+function appendPromptCharacter(
+  input: HTMLElement,
+  textInput: HTMLInputElement | HTMLTextAreaElement | null,
+  character: string,
+): void {
+  if (textInput) {
+    textInput.value += character;
+    return;
+  }
+
+  input.textContent = `${input.textContent || ""}${character}`;
 }
 
 function getTextInput(

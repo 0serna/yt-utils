@@ -134,10 +134,29 @@ function getAudioTrackSignature(track: AudioTrack | null): string {
 
   return [
     "audio",
-    signaturePart(normalizeLanguageCode(track.hs?.id || track.id)),
-    signaturePart(normalizeText(track.hs?.name)),
-    track.hs?.isAutoDubbed ? "auto" : "original",
+    readAudioTrackLanguagePart(track),
+    readAudioTrackNamePart(track),
+    readAudioTrackDubPart(track),
   ].join(":");
+}
+
+function readAudioTrackMetadata(
+  track: AudioTrack,
+): NonNullable<AudioTrack["hs"]> | NonNullable<AudioTrack["yG"]> | null {
+  return track.hs || track.yG || null;
+}
+
+function readAudioTrackLanguagePart(track: AudioTrack): string {
+  const metadata = readAudioTrackMetadata(track);
+  return signaturePart(normalizeLanguageCode(metadata?.id || track.id));
+}
+
+function readAudioTrackNamePart(track: AudioTrack): string {
+  return signaturePart(normalizeText(readAudioTrackMetadata(track)?.name));
+}
+
+function readAudioTrackDubPart(track: AudioTrack): string {
+  return readAudioTrackMetadata(track)?.isAutoDubbed ? "auto" : "original";
 }
 
 function signaturePart(value: string | null | undefined): string {

@@ -1,4 +1,5 @@
 import { getBootstrapIconMarkup } from "@shared/bootstrap-icons";
+import { hasRelevantSelectorMutation } from "@shared/dom-mutations";
 import { applyExtensionButtonStyles } from "@shared/extension-button";
 import { MESSAGE_INLINE_TRIGGER, sendMessage } from "@shared/messaging";
 import type { Feature, FeatureContext } from "@shared/types";
@@ -92,29 +93,17 @@ function observePage(): void {
 }
 
 function hasRelevantInlineMutation(mutations: MutationRecord[]): boolean {
-  return mutations.some((mutation) => {
-    if (isInsideInlineButton(mutation.target)) {
-      return false;
-    }
-
-    return [...mutation.addedNodes, ...mutation.removedNodes].some((node) => {
-      if (!(node instanceof Element)) {
-        return false;
-      }
-
-      if (
-        node.id === BUTTON_HOST_ID ||
-        node.querySelector?.(`#${BUTTON_HOST_ID}`)
-      ) {
-        return false;
-      }
-
-      return (
-        node.matches?.(RELEVANT_MUTATION_SELECTORS) ||
-        node.querySelector?.(RELEVANT_MUTATION_SELECTORS)
-      );
-    });
+  return hasRelevantSelectorMutation(mutations, {
+    isInsideOwnedSurface: isInsideInlineButton,
+    isExternalNode: isExternalInlineNode,
+    selector: RELEVANT_MUTATION_SELECTORS,
   });
+}
+
+function isExternalInlineNode(node: Element): boolean {
+  return (
+    node.id !== BUTTON_HOST_ID && !node.querySelector?.(`#${BUTTON_HOST_ID}`)
+  );
 }
 
 function stopObserving(): void {

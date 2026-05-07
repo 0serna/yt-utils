@@ -40,6 +40,11 @@ type SnapshotInputs = {
   translationLanguages: TranslationLanguage[];
 };
 
+type SnapshotSource = {
+  player: YoutubePlayer;
+  response: PlayerResponse | null;
+};
+
 type BridgeResult = PlayerSnapshot | boolean | null;
 
 type BridgeRequestHandler = (request: BridgeRequest) => BridgeResult;
@@ -78,11 +83,11 @@ function handleBridgeMessage(event: MessageEvent<BridgeRequest>): void {
 function isBridgeRequestEvent(
   event: MessageEvent<BridgeRequest>,
 ): event is MessageEvent<BridgeRequest> {
-  return (
-    event.source === window &&
-    event.data?.source === BRIDGE_SOURCE &&
-    event.data?.kind === "request"
-  );
+  return event.source === window && hasBridgeRequestShape(event.data);
+}
+
+function hasBridgeRequestShape(data: BridgeRequest | undefined): boolean {
+  return data?.source === BRIDGE_SOURCE && data?.kind === "request";
 }
 
 function handleBridgeRequest(request: BridgeRequest): BridgeResult {
@@ -112,7 +117,17 @@ function readPlayerSnapshot(): PlayerSnapshot | null {
     return null;
   }
 
-  const inputs = readSnapshotInputs(player);
+  const inputs = readSnapshotInputs({
+    player,
+    response: player.getPlayerResponse?.() || null,
+  });
+  return buildPlayerSnapshot(inputs, player);
+}
+
+function buildPlayerSnapshot(
+  inputs: SnapshotInputs,
+  player: YoutubePlayer,
+): PlayerSnapshot {
   return {
     videoId: readVideoId(inputs.videoData, inputs.response),
     audioTrack: inputs.audioTrack,
@@ -124,27 +139,23 @@ function readPlayerSnapshot(): PlayerSnapshot | null {
   };
 }
 
-function readSnapshotInputs(player: YoutubePlayer): SnapshotInputs {
-  const response = player.getPlayerResponse?.() || null;
-  const captionTracklist =
-    response?.captions?.playerCaptionsTracklistRenderer || null;
-
+function readSnapshotInputs(source: SnapshotSource): SnapshotInputs {
   return {
-    response,
-    videoData: player.getVideoData?.() || response?.videoDetails || null,
-    audioTrack: cloneValue(player.getAudioTrack?.() || null),
-    currentCaptionTrack: cloneValue(readCurrentCaptionTrack(player)),
-    captionTracks: cloneValue(captionTracklist?.captionTracks || []),
-    translationLanguages: cloneValue(readTranslationLanguages(player)),
+    response: source.response,
+    videoData: readVideoData(source),
+    audioTrack: cloneValue(source.player.getAudioTrack?.() || null),
+    currentCaptionTrack: cloneValue(readCurrentCaptionTrack(source.player)),
+    captionTracks: cloneValue(readCaptionTracks(source.response)),
+    translationLanguages: cloneValue(readTranslationLanguages(source.player)),
   };
 }
 
 function applySubtitleSelection(selection: SubtitleSelection | null): boolean {
   const player = getMoviePlayer();
-  if (!player || !selection) {
-    return false;
-  }
+  return Boolean(player && selection && applySelectionToPlayer(player));
+}
 
+function applySelectionToPlayer(player: YoutubePlayer): boolean {
   if (player.isSubtitlesOn?.()) {
     player.toggleSubtitles?.();
   }
@@ -175,17 +186,47 @@ function readTranslationLanguages(
   );
 }
 
+function readVideoData(
+  source: SnapshotSource,
+): PlayerResponse["videoDetails"] | null {
+  return readFirstValue([
+    source.player.getVideoData?.(),
+    source.response?.videoDetails,
+  ]);
+}
+
+function readCaptionTracks(response: PlayerResponse | null): CaptionTrack[] {
+  return (
+    response?.captions?.playerCaptionsTracklistRenderer?.captionTracks || []
+  );
+}
+
 function readVideoId(
   videoData: PlayerResponse["videoDetails"] | null,
   response: PlayerResponse | null,
 ): string | null {
-  return readFirstNormalizedVideoId([
-    videoData?.video_id,
-    videoData?.videoId,
-    response?.videoDetails?.video_id,
-    response?.videoDetails?.videoId,
-    new URLSearchParams(window.location.search).get("v"),
-  ]);
+  return readFirstNormalizedVideoId(readVideoIdCandidates(videoData, response));
+}
+
+function readVideoIdCandidates(
+  videoData: PlayerResponse["videoDetails"] | null,
+  response: PlayerResponse | null,
+): Array<string | null | undefined> {
+  return [
+    ...readVideoDataIdCandidates(videoData),
+    ...readVideoDataIdCandidates(response?.videoDetails || null),
+    readUrlVideoId(),
+  ];
+}
+
+function readVideoDataIdCandidates(
+  videoData: PlayerResponse["videoDetails"] | null,
+): Array<string | null | undefined> {
+  return [videoData?.video_id, videoData?.videoId];
+}
+
+function readUrlVideoId(): string | null {
+  return new URLSearchParams(window.location.search).get("v");
 }
 
 function inferAudioLanguage(
@@ -193,12 +234,41 @@ function inferAudioLanguage(
   captionTracks: CaptionTrack[],
 ): string | null {
   return (
-    readFirstKnownLanguage([
-      audioTrack?.captionTracks?.[0]?.languageCode,
-      audioTrack?.yG?.id || audioTrack?.hs?.id || audioTrack?.id,
-      captionTracks[0]?.languageCode,
-    ]) || inferLanguageFromName(audioTrack?.yG?.name || audioTrack?.hs?.name)
+    readFirstKnownLanguage(
+      readAudioLanguageCandidates(audioTrack, captionTracks),
+    ) || inferLanguageFromName(readAudioTrackName(audioTrack))
   );
+}
+
+function readAudioLanguageCandidates(
+  audioTrack: AudioTrack | null,
+  captionTracks: CaptionTrack[],
+): Array<string | null | undefined> {
+  return [
+    audioTrack?.captionTracks?.[0]?.languageCode,
+    readAudioTrackId(audioTrack),
+    captionTracks[0]?.languageCode,
+  ];
+}
+
+function readAudioTrackId(
+  audioTrack: AudioTrack | null,
+): string | null | undefined {
+  return readFirstValue([
+    audioTrack?.yG?.id,
+    audioTrack?.hs?.id,
+    audioTrack?.id,
+  ]);
+}
+
+function readAudioTrackName(
+  audioTrack: AudioTrack | null,
+): string | null | undefined {
+  return readFirstValue([audioTrack?.yG?.name, audioTrack?.hs?.name]);
+}
+
+function readFirstValue<T>(values: Array<T | null | undefined>): T | null {
+  return values.find((value): value is T => value != null) ?? null;
 }
 
 function readFirstNormalizedVideoId(

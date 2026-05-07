@@ -18,6 +18,18 @@ const DEFAULT_BUTTON_TRANSITION =
   "background-color 120ms ease, color 120ms ease, opacity 120ms ease";
 const BUTTON_SURFACE_HIGHLIGHT =
   "linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 42%, rgba(255, 255, 255, 0) 100%)";
+const DEFAULT_BUTTON_OPTIONS: Required<ExtensionButtonStyleOptions> = {
+  background: DEFAULT_BUTTON_BACKGROUND,
+  hoverBackground: DEFAULT_BUTTON_HOVER_BACKGROUND,
+  activeBackground: "",
+  color: DEFAULT_BUTTON_COLOR,
+  opacity: "1",
+  cursor: "pointer",
+  transition: DEFAULT_BUTTON_TRANSITION,
+  position: "",
+  zIndex: "",
+  pointerEvents: "auto",
+};
 
 const boundButtons = new WeakSet<HTMLButtonElement>();
 const buttonInteractionStyles = new WeakMap<
@@ -33,49 +45,67 @@ export function applyExtensionButtonStyles(
   button: HTMLButtonElement,
   options: ExtensionButtonStyleOptions = {},
 ): void {
-  const background = options.background ?? DEFAULT_BUTTON_BACKGROUND;
-  const hoverBackground =
-    options.hoverBackground ?? DEFAULT_BUTTON_HOVER_BACKGROUND;
-  const activeBackground = options.activeBackground ?? hoverBackground;
+  const styles = readButtonStyleConfig(options);
 
-  button.style.width = "36px";
-  button.style.height = "36px";
-  button.style.border = "none";
-  button.style.borderRadius = "18px";
-  button.style.display = "inline-flex";
-  button.style.alignItems = "center";
-  button.style.justifyContent = "center";
-  button.style.padding = "0";
-  button.style.cursor = options.cursor ?? "pointer";
-  button.style.backgroundColor = background;
-  button.style.backgroundImage = BUTTON_SURFACE_HIGHLIGHT;
-  button.style.backgroundRepeat = "no-repeat";
-  button.style.backgroundOrigin = "border-box";
-  button.style.color = options.color ?? DEFAULT_BUTTON_COLOR;
-  button.style.opacity = options.opacity ?? "1";
-  button.style.fontFamily = "inherit";
-  button.style.fontSize = "18px";
-  button.style.fontWeight = "600";
-  button.style.lineHeight = "1";
-  button.style.pointerEvents = options.pointerEvents ?? "auto";
-  button.style.transition = options.transition ?? DEFAULT_BUTTON_TRANSITION;
-  button.style.boxShadow = "inset 0 1px 0 rgba(255, 255, 255, 0.04)";
-
-  buttonInteractionStyles.set(button, {
-    background,
-    hoverBackground,
-    activeBackground,
+  Object.assign(button.style, {
+    width: "36px",
+    height: "36px",
+    border: "none",
+    borderRadius: "18px",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "0",
+    cursor: styles.cursor,
+    backgroundColor: styles.background,
+    backgroundImage: BUTTON_SURFACE_HIGHLIGHT,
+    backgroundRepeat: "no-repeat",
+    backgroundOrigin: "border-box",
+    color: styles.color,
+    opacity: styles.opacity,
+    fontFamily: "inherit",
+    fontSize: "18px",
+    fontWeight: "600",
+    lineHeight: "1",
+    pointerEvents: styles.pointerEvents,
+    transition: styles.transition,
+    boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.04)",
   });
 
-  if (options.position) {
-    button.style.position = options.position;
-  }
+  buttonInteractionStyles.set(button, {
+    background: styles.background,
+    hoverBackground: styles.hoverBackground,
+    activeBackground: styles.activeBackground,
+  });
 
-  if (options.zIndex) {
-    button.style.zIndex = options.zIndex;
-  }
+  applyOptionalStyle(button.style, "position", options.position);
+  applyOptionalStyle(button.style, "zIndex", options.zIndex);
 
   bindInteractionStyles(button);
+}
+
+function readButtonStyleConfig(
+  options: ExtensionButtonStyleOptions,
+): Required<ExtensionButtonStyleOptions> {
+  const styles = { ...DEFAULT_BUTTON_OPTIONS, ...options };
+  styles.activeBackground = readActiveBackground(styles);
+  return styles;
+}
+
+function readActiveBackground(
+  styles: Required<ExtensionButtonStyleOptions>,
+): string {
+  return styles.activeBackground || styles.hoverBackground;
+}
+
+function applyOptionalStyle(
+  style: CSSStyleDeclaration,
+  property: "position" | "zIndex",
+  value: string | undefined,
+): void {
+  if (value) {
+    style[property] = value;
+  }
 }
 
 function bindInteractionStyles(button: HTMLButtonElement): void {

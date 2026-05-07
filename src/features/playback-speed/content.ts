@@ -1,4 +1,5 @@
 import { getBootstrapIconMarkup } from "@shared/bootstrap-icons";
+import { hasRelevantSelectorMutation } from "@shared/dom-mutations";
 import { applyExtensionButtonStyles } from "@shared/extension-button";
 import {
   formatPlaybackSpeed,
@@ -231,28 +232,17 @@ function observePage(): void {
 }
 
 function isRelevantSpeedMutation(mutation: MutationRecord): boolean {
-  return (
-    !isInsideSpeedControl(mutation.target) &&
-    [...mutation.addedNodes, ...mutation.removedNodes].some(
-      (node) =>
-        node instanceof Element &&
-        isExternalSpeedNode(node) &&
-        nodeMatchesOrContainsSelector(node, RELEVANT_MUTATION_SELECTORS),
-    )
-  );
+  return hasRelevantSelectorMutation([mutation], {
+    isInsideOwnedSurface: isInsideSpeedControl,
+    isExternalNode: isExternalSpeedNode,
+    selector: RELEVANT_MUTATION_SELECTORS,
+  });
 }
 
 function isExternalSpeedNode(node: Element): boolean {
   return (
     node.id !== CONTROL_HOST_ID && !node.querySelector?.(`#${CONTROL_HOST_ID}`)
   );
-}
-
-function nodeMatchesOrContainsSelector(
-  node: Element,
-  selector: string,
-): boolean {
-  return !!(node.matches?.(selector) || node.querySelector?.(selector));
 }
 
 function stopObserving(): void {

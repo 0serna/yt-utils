@@ -30,29 +30,38 @@ export function normalizeExtensionResult(
   response: unknown,
   fallbackMessage: string,
 ): ExtensionResult {
-  if (!isExtensionResult(response)) {
-    return {
-      ok: false,
-      code: "INVALID_RESPONSE",
-      message: fallbackMessage,
-      details: response ?? null,
-    };
+  const extensionResult = readExtensionResult(response);
+  if (!extensionResult) {
+    return makeErrorResult(
+      "INVALID_RESPONSE",
+      fallbackMessage,
+      response ?? null,
+    );
   }
 
+  return normalizeKnownExtensionResult(extensionResult, fallbackMessage);
+}
+
+function normalizeKnownExtensionResult(
+  response: ExtensionResult,
+  fallbackMessage: string,
+): ExtensionResult {
   if (response.ok) {
-    return {
-      ok: true,
-      message: response.message,
-      details: response.details ?? null,
-    };
+    return makeSuccessResult(response);
   }
 
-  return {
-    ok: false,
-    code: response.code || "AUTOMATION_FAILED",
-    message: response.message || fallbackMessage,
-    details: response.details ?? null,
-  };
+  return normalizeErrorExtensionResult(response, fallbackMessage);
+}
+
+function normalizeErrorExtensionResult(
+  response: ExtensionResult,
+  fallbackMessage: string,
+): ExtensionResult {
+  return makeErrorResult(
+    response.code || "AUTOMATION_FAILED",
+    response.message || fallbackMessage,
+    response.details ?? null,
+  );
 }
 
 export function sendMessage(message: unknown): Promise<unknown> {
@@ -83,14 +92,53 @@ export function onMessage(
     handler(message, sender)
       .then(sendResponse)
       .catch((error) => {
-        sendResponse({
-          ok: false,
-          code: (error as Error & { code?: string })?.code || "HANDLER_FAILED",
-          message: (error as Error)?.message || "The message handler failed.",
-          details: (error as Error & { details?: unknown })?.details || null,
-        });
+        sendResponse(
+          makeErrorResultFromUnknown(
+            error,
+            "HANDLER_FAILED",
+            "The message handler failed.",
+          ),
+        );
       });
 
     return true;
   });
+}
+
+export function makeErrorResultFromUnknown(
+  error: unknown,
+  fallbackCode: string,
+  fallbackMessage: string,
+): ExtensionResult {
+  const typedError = error as Error & { code?: string; details?: unknown };
+  return makeErrorResult(
+    typedError.code || fallbackCode,
+    typedError.message || fallbackMessage,
+    typedError.details ?? null,
+  );
+}
+
+function readExtensionResult(response: unknown): ExtensionResult | null {
+  return isExtensionResult(response) ? response : null;
+}
+
+function makeSuccessResult(response: ExtensionResult): ExtensionResult {
+  return {
+    ok: true,
+    message: response.message,
+    details: response.details ?? null,
+  };
+}
+
+function makeErrorResult(
+  code: string,
+  message: string,
+  details: unknown,
+): ExtensionResult {
+  return {
+    ok: false,
+    code,
+    message,
+    details,
+  };
 }

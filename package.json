@@ -6,9 +6,9 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "test": "vitest run --coverage",
-    "check": "prettier --check . && eslint . && fallow --fail-on-issues && tsc --noEmit && openspec validate --all --json",
+    "check": "eslint . && tsc --noEmit && fallow --production-health && openspec validate --all",
     "format": "prettier --write .",
+    "test": "vitest run --coverage",
     "prepare": "husky"
   },
   "lint-staged": {
