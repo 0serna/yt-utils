@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "check": "eslint . && tsc --noEmit && fallow --production-health && openspec validate --all",
+    "check": "bash scripts/check.sh",
     "format": "prettier --write .",
     "test": "vitest run --coverage",
     "prepare": "husky"
