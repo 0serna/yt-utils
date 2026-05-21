@@ -2,51 +2,78 @@
 
 ## Purpose
 
-Define subtitle policy for YouTube watch pages as a universal default-off behavior.
+Define subtitle policy for YouTube watch pages based on the active audio language.
 
 ## Requirements
 
-### Requirement: Watch-page subtitle policy SHALL disable subtitles by default
+### Requirement: Watch-page subtitle policy SHALL use the active audio language
 
-The extension SHALL disable subtitles when a supported YouTube watch page becomes active, regardless of active audio language, available caption tracks, translation availability, or internal refactoring of player snapshot and bridge code.
+The extension SHALL determine subtitle policy for a YouTube watch page from the active player audio language, using the live player state for the current video instead of document language or stale bootstrap data.
 
-#### Scenario: Watch page loads with subtitles on
+#### Scenario: Active audio track reports Spanish
 
-- **WHEN** a supported watch page becomes active for a video whose subtitles are currently enabled
+- **WHEN** the current watch page's active player audio track reports a Spanish language code
+- **THEN** the extension treats the video as Spanish-audio content for subtitle policy decisions
+
+#### Scenario: Active audio track is undefined
+
+- **WHEN** the current watch page's active audio track does not expose a usable language code
+- **THEN** the extension falls back to current-video caption metadata from the live player state before deciding the subtitle policy
+
+### Requirement: Spanish audio SHALL disable subtitles
+
+The extension SHALL turn subtitles off when the active audio language is Spanish.
+
+#### Scenario: Spanish audio video loads with subtitles on
+
+- **WHEN** a watch page becomes active for a video whose active audio language is Spanish and subtitles are currently enabled
 - **THEN** the extension disables subtitles for that video
 
-#### Scenario: Watch page loads with subtitles already off
+#### Scenario: Spanish audio video loads with subtitles off
 
-- **WHEN** a supported watch page becomes active for a video whose subtitles are already disabled
+- **WHEN** a watch page becomes active for a video whose active audio language is Spanish and subtitles are already disabled
 - **THEN** the extension leaves subtitles off without showing any UI
 
-### Requirement: Automatic subtitle policy SHALL not select caption tracks
+### Requirement: Non-Spanish audio SHALL prefer direct English subtitles
 
-The extension SHALL NOT automatically enable subtitles or select a direct or translated caption track during watch-page policy application.
+The extension SHALL enable subtitles for non-Spanish audio and select a direct English subtitle track when one is available.
 
-#### Scenario: Direct English captions are available
+#### Scenario: Direct English track exists
 
-- **WHEN** a supported watch page becomes active for a video that exposes a direct English subtitle track
-- **THEN** the extension leaves subtitles off and does not automatically select that track
+- **WHEN** a watch page becomes active for a video whose active audio language is not Spanish and the player exposes a direct English subtitle track
+- **THEN** the extension enables subtitles and selects the direct English track
 
-#### Scenario: Only translatable captions are available
+### Requirement: Non-Spanish audio SHALL fall back to auto-translated English
 
-- **WHEN** a supported watch page becomes active for a video that lacks a direct English subtitle track but exposes a caption track that can be translated to English
-- **THEN** the extension leaves subtitles off and does not automatically select English auto-translation
+The extension SHALL select auto-translated English subtitles when the audio is not Spanish, no direct English subtitle track is available, and the available subtitle track can be translated to English.
+
+#### Scenario: Direct English track is missing but English translation is available
+
+- **WHEN** a watch page becomes active for a video whose active audio language is not Spanish, no direct English subtitle track exists, and the available subtitle track can be translated to English
+- **THEN** the extension enables subtitles and selects English auto-translation
+
+### Requirement: Unavailable English subtitles SHALL leave subtitles off
+
+The extension SHALL leave subtitles disabled when the active audio language is not Spanish but neither direct English subtitles nor English auto-translation can be selected.
+
+#### Scenario: No route to English subtitles exists
+
+- **WHEN** a watch page becomes active for a video whose active audio language is not Spanish and the player cannot provide either direct English subtitles or English auto-translation
+- **THEN** the extension disables subtitles for that video
 
 ### Requirement: Manual per-video overrides SHALL be respected
 
-After the extension applies its default-off subtitle policy for a video, it SHALL stop reapplying the policy for that same video if the user manually changes subtitle or audio behavior.
+After the extension applies subtitle policy for a video, it SHALL stop reapplying the policy for that same video if the user manually changes subtitle or audio behavior.
 
-#### Scenario: User turns subtitles on after policy disabled them
+#### Scenario: User turns subtitles off after policy enabled them
 
-- **WHEN** the extension has already disabled subtitles for the current video and the user manually enables subtitles
-- **THEN** the extension does not turn subtitles off again for that video
+- **WHEN** the extension has already enabled English subtitles for the current video and the user manually disables subtitles
+- **THEN** the extension does not re-enable subtitles again for that video
 
 #### Scenario: User chooses a different subtitle or audio track
 
 - **WHEN** the extension has already applied subtitle policy for the current video and the user manually selects a different subtitle track or audio track
-- **THEN** the extension does not reapply its default-off selection again for that video
+- **THEN** the extension does not reapply its preferred subtitle selection again for that video
 
 ### Requirement: Subtitle policy SHALL stay silent
 

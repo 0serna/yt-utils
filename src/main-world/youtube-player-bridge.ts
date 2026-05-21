@@ -152,14 +152,33 @@ function readSnapshotInputs(source: SnapshotSource): SnapshotInputs {
 
 function applySubtitleSelection(selection: SubtitleSelection | null): boolean {
   const player = getMoviePlayer();
-  return Boolean(player && selection && applySelectionToPlayer(player));
+  return Boolean(
+    player && selection && applySelectionToPlayer(player, selection),
+  );
 }
 
-function applySelectionToPlayer(player: YoutubePlayer): boolean {
-  if (player.isSubtitlesOn?.()) {
-    player.toggleSubtitles?.();
+function applySelectionToPlayer(
+  player: YoutubePlayer,
+  selection: SubtitleSelection,
+): boolean {
+  if (selection.mode === "off") {
+    if (player.isSubtitlesOn?.()) {
+      player.toggleSubtitles?.();
+    }
+
+    return true;
   }
 
+  if (!player.isSubtitlesOn?.()) {
+    if (player.toggleSubtitlesOn) {
+      player.toggleSubtitlesOn();
+    } else {
+      player.toggleSubtitles?.();
+    }
+  }
+
+  player.setOption?.("captions", "track", selection.track);
+  player.setOption?.("captions", "reload", true);
   return true;
 }
 

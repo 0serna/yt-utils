@@ -86,10 +86,57 @@ describe("youtube-player-model", () => {
   });
 
   describe("determineSubtitleSelection", () => {
-    it("returns { mode: 'off' } for any snapshot", () => {
-      expect(determineSubtitleSelection(defaultSnapshot)).toEqual({
-        mode: "off",
+    it("returns off for Spanish audio", () => {
+      expect(
+        determineSubtitleSelection({ ...defaultSnapshot, audioLanguage: "es" }),
+      ).toEqual({ mode: "off" });
+    });
+
+    it("selects a direct English track for non-Spanish audio", () => {
+      const englishTrack: CaptionTrack = { languageCode: "en", vssId: ".en" };
+
+      expect(
+        determineSubtitleSelection({
+          ...defaultSnapshot,
+          audioLanguage: "fr",
+          captionTracks: [englishTrack],
+        }),
+      ).toEqual({ mode: "track", track: englishTrack });
+    });
+
+    it("falls back to English auto-translation for non-Spanish audio", () => {
+      const spanishTrack: CaptionTrack = {
+        languageCode: "es",
+        isTranslatable: true,
+        vssId: ".es",
+      };
+
+      expect(
+        determineSubtitleSelection({
+          ...defaultSnapshot,
+          audioLanguage: "fr",
+          captionTracks: [spanishTrack],
+          translationLanguages: [
+            { languageCode: "en", languageName: "English" },
+          ],
+        }),
+      ).toEqual({
+        mode: "track",
+        track: {
+          ...spanishTrack,
+          translationLanguage: { languageCode: "en", languageName: "English" },
+        },
       });
+    });
+
+    it("returns off when English cannot be selected", () => {
+      expect(
+        determineSubtitleSelection({
+          ...defaultSnapshot,
+          audioLanguage: "fr",
+          captionTracks: [{ languageCode: "fr", vssId: ".fr" }],
+        }),
+      ).toEqual({ mode: "off" });
     });
   });
 
@@ -107,6 +154,21 @@ describe("youtube-player-model", () => {
           { mode: "off" },
         ),
       ).toBe(false);
+    });
+
+    it("returns true when selected track is active and subtitles are on", () => {
+      const englishTrack: CaptionTrack = { languageCode: "en", vssId: ".en" };
+
+      expect(
+        matchesSubtitleSelection(
+          {
+            ...defaultSnapshot,
+            currentCaptionTrack: englishTrack,
+            subtitlesOn: true,
+          },
+          { mode: "track", track: englishTrack },
+        ),
+      ).toBe(true);
     });
   });
 
