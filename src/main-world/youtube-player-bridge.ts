@@ -184,7 +184,16 @@ function applySelectionToPlayer(
 
 function readCurrentCaptionTrack(player: YoutubePlayer): CaptionTrack | null {
   const raw = player.getOption?.("captions", "track");
-  return isNonEmptyObject(raw) ? (raw as CaptionTrack) : null;
+  if (!isNonEmptyObject(raw)) {
+    return null;
+  }
+
+  const track = raw as Record<string, unknown>;
+  if (track.vssId === undefined && track.vss_id !== undefined) {
+    track.vssId = track.vss_id;
+  }
+
+  return track as CaptionTrack;
 }
 
 function readTranslationLanguages(
