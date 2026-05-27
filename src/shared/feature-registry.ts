@@ -1,9 +1,11 @@
+import { createFeatureLogger } from "./feature-logger";
 import { sendMessage } from "./messaging";
-import type { Feature } from "./types";
+import type { Feature, FeatureLogger } from "./types";
 
 export class FeatureRegistry {
   private features: Feature[] = [];
   private activeFeatures: Set<Feature> = new Set();
+  private featureLoggers: Map<Feature, FeatureLogger> = new Map();
   private lastUrl: string = "";
 
   constructor() {
@@ -41,9 +43,27 @@ export class FeatureRegistry {
     this.activateFeaturesForUrl(new URL(url));
   }
 
+  private getFeatureLogger(feature: Feature): FeatureLogger {
+    const existing = this.featureLoggers.get(feature);
+    if (existing) {
+      return existing;
+    }
+
+    const logger = createFeatureLogger(feature.name);
+    this.featureLoggers.set(feature, logger);
+    return logger;
+  }
+
   private deactivateAll(): void {
     for (const feature of this.activeFeatures) {
-      feature.deactivate();
+      const logger = this.getFeatureLogger(feature);
+
+      try {
+        feature.deactivate();
+        logger.deactivation();
+      } catch (error) {
+        logger.error(error, { phase: "deactivate" });
+      }
     }
 
     this.activeFeatures.clear();
@@ -51,9 +71,18 @@ export class FeatureRegistry {
 
   private activateFeaturesForUrl(url: URL): void {
     for (const feature of this.features) {
-      if (shouldActivateFeature(feature, url)) {
-        feature.activate({ sendMessage });
+      if (!shouldActivateFeature(feature, url)) {
+        continue;
+      }
+
+      const logger = this.getFeatureLogger(feature);
+
+      try {
+        feature.activate({ sendMessage, logger });
+        logger.activation();
         this.activeFeatures.add(feature);
+      } catch (error) {
+        logger.error(error, { phase: "activate" });
       }
     }
   }

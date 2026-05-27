@@ -22,12 +22,14 @@ const markAsSeenFeature: Feature = {
   name: "mark-as-seen",
   isWatchPage: true,
 
-  activate(_context: FeatureContext): void {
+  activate(context: FeatureContext): void {
+    activeContext = context;
     ensureInlineButton();
     observePage();
   },
 
   deactivate(): void {
+    activeContext = null;
     removeInlineButton();
     stopObserving();
     resetButtonState();
@@ -35,6 +37,8 @@ const markAsSeenFeature: Feature = {
 };
 
 export default markAsSeenFeature;
+
+let activeContext: FeatureContext | null = null;
 
 let currentState: ButtonState = "idle";
 let stateResetTimer: number | null = null;
@@ -236,11 +240,13 @@ async function onInlineButtonClick(event: Event): Promise<void> {
   currentState = "running";
   syncButtonState();
 
+  const logger = activeContext?.logger;
+
   try {
     await executeInlineAction();
     transitionToState("success");
   } catch (error) {
-    console.error("[YTUtils:inline]", error);
+    logger?.error(error, { phase: "runtime" });
     transitionToState("error");
     scheduleStateReset();
   }

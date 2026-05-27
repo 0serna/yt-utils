@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { isDesktopWatchPage, placeWatchActionHost } from "@shared/youtube-dom";
 import { sendMessage } from "@shared/messaging";
+import { makeFeatureContext } from "@shared/test-helpers";
 
 vi.mock("@shared/youtube-dom", () => ({
   isDesktopWatchPage: vi.fn(() => true),
@@ -57,7 +58,7 @@ describe("mark-as-seen content feature", () => {
 
   it("activate creates inline button host", async () => {
     const feature = await importFreshFeature();
-    feature.default.activate({ sendMessage: vi.fn() });
+    feature.default.activate(makeFeatureContext());
 
     const host = document.getElementById("yt-utils-inline-host");
     expect(host).not.toBeNull();
@@ -67,7 +68,7 @@ describe("mark-as-seen content feature", () => {
   it("activate does not create button on non-watch page", async () => {
     vi.mocked(isDesktopWatchPage).mockReturnValue(false);
     const feature = await importFreshFeature();
-    feature.default.activate({ sendMessage: vi.fn() });
+    feature.default.activate(makeFeatureContext());
 
     const host = document.getElementById("yt-utils-inline-host");
     expect(host).toBeNull();
@@ -75,7 +76,7 @@ describe("mark-as-seen content feature", () => {
 
   it("deactivate removes inline button", async () => {
     const feature = await importFreshFeature();
-    feature.default.activate({ sendMessage: vi.fn() });
+    feature.default.activate(makeFeatureContext());
 
     const hostBefore = document.getElementById("yt-utils-inline-host");
     expect(hostBefore).not.toBeNull();
@@ -88,7 +89,7 @@ describe("mark-as-seen content feature", () => {
 
   it("inline button has correct initial state", async () => {
     const feature = await importFreshFeature();
-    feature.default.activate({ sendMessage: vi.fn() });
+    feature.default.activate(makeFeatureContext());
 
     const button = document.getElementById(
       "yt-utils-inline-button",
@@ -99,20 +100,20 @@ describe("mark-as-seen content feature", () => {
 
   it("deactivate is idempotent", async () => {
     const feature = await importFreshFeature();
-    feature.default.activate({ sendMessage: vi.fn() });
+    feature.default.activate(makeFeatureContext());
     feature.default.deactivate();
     expect(() => feature.default.deactivate()).not.toThrow();
   });
 
   it("resets success state when deactivated", async () => {
     const feature = await importFreshFeature();
-    feature.default.activate({ sendMessage: vi.fn() });
+    feature.default.activate(makeFeatureContext());
 
     document.getElementById("yt-utils-inline-button")?.click();
     await vi.waitFor(() => expect(sendMessage).toHaveBeenCalled());
 
     feature.default.deactivate();
-    feature.default.activate({ sendMessage: vi.fn() });
+    feature.default.activate(makeFeatureContext());
 
     const button = document.getElementById("yt-utils-inline-button");
     expect(button?.dataset.state).toBe("idle");

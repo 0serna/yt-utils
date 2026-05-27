@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { makeFeatureContext } from "@shared/test-helpers";
 import type { PlayerSnapshot } from "@shared/youtube-player";
 
 vi.mock("@shared/youtube-player", () => ({
@@ -49,14 +50,12 @@ describe("audio-language-subtitle-policy feature", () => {
 
   it("activate returns without error", async () => {
     const feature = await importFreshFeature();
-    expect(() =>
-      feature.default.activate({ sendMessage: vi.fn() }),
-    ).not.toThrow();
+    expect(() => feature.default.activate(makeFeatureContext())).not.toThrow();
   });
 
   it("deactivate returns without error", async () => {
     const feature = await importFreshFeature();
-    feature.default.activate({ sendMessage: vi.fn() });
+    feature.default.activate(makeFeatureContext());
     expect(() => feature.default.deactivate()).not.toThrow();
   });
 
@@ -65,7 +64,7 @@ describe("audio-language-subtitle-policy feature", () => {
     vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
     const feature = await importFreshFeature();
-    feature.default.activate({ sendMessage: vi.fn() });
+    feature.default.activate(makeFeatureContext());
     feature.default.deactivate();
 
     const { determineSubtitleSelection } =
@@ -83,7 +82,7 @@ describe("audio-language-subtitle-policy feature", () => {
     vi.mocked(readPlayerSnapshot).mockResolvedValue(null);
 
     const feature = await importFreshFeature();
-    feature.default.activate({ sendMessage: vi.fn() });
+    feature.default.activate(makeFeatureContext());
 
     await vi.waitFor(
       () => {
@@ -101,7 +100,7 @@ describe("audio-language-subtitle-policy feature", () => {
     } as unknown as PlayerSnapshot);
 
     const feature = await importFreshFeature();
-    feature.default.activate({ sendMessage: vi.fn() });
+    feature.default.activate(makeFeatureContext());
 
     const { determineSubtitleSelection } =
       await import("@shared/youtube-player");
@@ -127,7 +126,7 @@ describe("audio-language-subtitle-policy feature", () => {
     vi.mocked(matchesSubtitleSelection).mockReturnValue(true);
 
     const feature = await importFreshFeature();
-    feature.default.activate({ sendMessage: vi.fn() });
+    feature.default.activate(makeFeatureContext());
 
     await vi.waitFor(
       () => {
@@ -157,7 +156,7 @@ describe("audio-language-subtitle-policy feature", () => {
     vi.mocked(waitForSubtitleSelection).mockResolvedValue(true);
 
     const feature = await importFreshFeature();
-    feature.default.activate({ sendMessage: vi.fn() });
+    feature.default.activate(makeFeatureContext());
 
     await vi.waitFor(
       () => {

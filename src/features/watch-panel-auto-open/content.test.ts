@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { makeFeatureContext } from "@shared/test-helpers";
 import type { PlayerSnapshot } from "@shared/youtube-player";
 
 let mockLocationSearch: string;
@@ -115,9 +116,7 @@ describe("watch-panel-auto-open feature", () => {
 
   it("activate returns without error when not on watch page", async () => {
     const feature = await importFreshFeature();
-    expect(() =>
-      feature.default.activate({ sendMessage: vi.fn() }),
-    ).not.toThrow();
+    expect(() => feature.default.activate(makeFeatureContext())).not.toThrow();
   });
 
   it("sync runs but returns early when not on watch page", async () => {
@@ -125,7 +124,7 @@ describe("watch-panel-auto-open feature", () => {
     vi.mocked(isDesktopWatchPage).mockReturnValue(false);
 
     const feature = await importFreshFeature();
-    feature.default.activate({ sendMessage: vi.fn() });
+    feature.default.activate(makeFeatureContext());
 
     const { readPlayerSnapshot } = await import("@shared/youtube-player");
     await vi.waitFor(
@@ -158,7 +157,7 @@ describe("watch-panel-auto-open feature", () => {
       vi.mocked(readPlayerSnapshot).mockResolvedValue(null);
 
       const feature = await setupWatchPage();
-      feature.activate({ sendMessage: vi.fn() });
+      feature.activate(makeFeatureContext());
 
       await vi.waitFor(
         () => {
@@ -175,7 +174,7 @@ describe("watch-panel-auto-open feature", () => {
       const feature = await setupWatchPage();
 
       const { findButton } = await import("@shared/youtube-dom");
-      feature.activate({ sendMessage: vi.fn() });
+      feature.activate(makeFeatureContext());
       await vi.waitFor(
         () => {
           expect(findButton).not.toHaveBeenCalled();
@@ -194,7 +193,7 @@ describe("watch-panel-auto-open feature", () => {
       const feature = await setupWatchPage();
 
       const { findButton } = await import("@shared/youtube-dom");
-      feature.activate({ sendMessage: vi.fn() });
+      feature.activate(makeFeatureContext());
       await vi.waitFor(
         () => {
           expect(findButton).not.toHaveBeenCalled();
@@ -210,7 +209,7 @@ describe("watch-panel-auto-open feature", () => {
       const feature = await setupWatchPage();
 
       const { findButton } = await import("@shared/youtube-dom");
-      feature.activate({ sendMessage: vi.fn() });
+      feature.activate(makeFeatureContext());
       await vi.waitFor(
         () => {
           expect(findButton).not.toHaveBeenCalled();
@@ -224,7 +223,7 @@ describe("watch-panel-auto-open feature", () => {
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
       const feature = await setupWatchPage();
-      feature.activate({ sendMessage: vi.fn() });
+      feature.activate(makeFeatureContext());
       feature.deactivate();
 
       const { findButton } = await import("@shared/youtube-dom");
@@ -254,7 +253,7 @@ describe("watch-panel-auto-open feature", () => {
       vi.mocked(waitFor).mockResolvedValue(askButton);
 
       const feature = await setupWatchPage();
-      feature.activate({ sendMessage: vi.fn() });
+      feature.activate(makeFeatureContext());
 
       await vi.waitFor(
         () => {
@@ -283,7 +282,7 @@ describe("watch-panel-auto-open feature", () => {
       vi.mocked(waitFor).mockResolvedValue(askButton);
 
       const feature = await setupWatchPage();
-      feature.activate({ sendMessage: vi.fn() });
+      feature.activate(makeFeatureContext());
 
       await vi.waitFor(
         () => {
@@ -307,7 +306,7 @@ describe("watch-panel-auto-open feature", () => {
       const feature = await setupWatchPage();
 
       const { clickElement } = await import("@shared/youtube-dom");
-      feature.activate({ sendMessage: vi.fn() });
+      feature.activate(makeFeatureContext());
       await vi.waitFor(
         () => {
           expect(clickElement).not.toHaveBeenCalled();
@@ -345,7 +344,7 @@ describe("watch-panel-auto-open feature", () => {
       vi.mocked(waitFor).mockResolvedValue([chapterItem]);
 
       const feature = await setupWatchPage();
-      feature.activate({ sendMessage: vi.fn() });
+      feature.activate(makeFeatureContext());
 
       await vi.waitFor(
         () => {
@@ -381,7 +380,7 @@ describe("watch-panel-auto-open feature", () => {
       });
 
       const feature = await setupWatchPage();
-      feature.activate({ sendMessage: vi.fn() });
+      feature.activate(makeFeatureContext());
 
       await vi.waitFor(
         () => {
@@ -413,7 +412,7 @@ describe("watch-panel-auto-open feature", () => {
       vi.mocked(waitFor).mockResolvedValue(askButton);
 
       const feature = await setupWatchPage();
-      feature.activate({ sendMessage: vi.fn() });
+      feature.activate(makeFeatureContext());
 
       await vi.waitFor(
         () => {
@@ -433,7 +432,7 @@ describe("watch-panel-auto-open feature", () => {
       vi.mocked(findButton).mockReturnValue(null as unknown as HTMLElement);
 
       const feature = await setupWatchPage();
-      feature.activate({ sendMessage: vi.fn() });
+      feature.activate(makeFeatureContext());
 
       await vi.waitFor(
         () => {
@@ -479,7 +478,7 @@ describe("watch-panel-auto-open feature", () => {
       );
 
       const feature = await setupWatchPage();
-      feature.activate({ sendMessage: vi.fn() });
+      feature.activate(makeFeatureContext());
 
       await vi.waitFor(
         () => {
@@ -503,7 +502,7 @@ describe("watch-panel-auto-open feature", () => {
       const { clickElement } = await import("@shared/youtube-dom");
 
       const feature = await setupWatchPage();
-      feature.activate({ sendMessage: vi.fn() });
+      feature.activate(makeFeatureContext());
 
       await vi.waitFor(
         () => {
@@ -534,7 +533,7 @@ describe("watch-panel-auto-open feature", () => {
       );
 
       const feature = await setupWatchPage();
-      feature.activate({ sendMessage: vi.fn() });
+      feature.activate(makeFeatureContext());
 
       await vi.waitFor(
         () => {
@@ -565,7 +564,7 @@ describe("watch-panel-auto-open feature", () => {
       );
 
       const feature = await setupWatchPage();
-      feature.activate({ sendMessage: vi.fn() });
+      feature.activate(makeFeatureContext());
 
       await vi.waitFor(
         () => {
@@ -614,7 +613,7 @@ describe("watch-panel-auto-open feature", () => {
       );
 
       const feature = await setupWatchPage();
-      feature.activate({ sendMessage: vi.fn() });
+      feature.activate(makeFeatureContext());
 
       await vi.waitFor(
         () => {

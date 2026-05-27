@@ -30,12 +30,14 @@ const subscriptionsFeedControlsFeature: Feature = {
     return isDesktopSubscriptionsFeedPage(url);
   },
 
-  activate(_context: FeatureContext): void {
+  activate(context: FeatureContext): void {
+    activeContext = context;
     ensureHideButtons();
     observePage();
   },
 
   deactivate(): void {
+    activeContext = null;
     pendingCardKeys.clear();
     removeHideButtons();
     stopObserving();
@@ -43,6 +45,8 @@ const subscriptionsFeedControlsFeature: Feature = {
 };
 
 export default subscriptionsFeedControlsFeature;
+
+let activeContext: FeatureContext | null = null;
 
 function ensureHideButtons(): void {
   if (!isDesktopSubscriptionsFeedPage()) {
@@ -171,10 +175,12 @@ async function onHideButtonClick(cardKey: string, event: Event): Promise<void> {
   pendingCardKeys.add(cardKey);
   syncHideButtonState(cardKey);
 
+  const logger = activeContext?.logger;
+
   try {
     await executeHideAction(card);
   } catch (error) {
-    console.error("[YTUtils:subscriptions-feed-controls]", error);
+    logger?.error(error, { phase: "runtime" });
   } finally {
     pendingCardKeys.delete(cardKey);
     syncHideButtonState(cardKey);
