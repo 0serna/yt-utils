@@ -2,6 +2,7 @@ import type { Feature, FeatureContext } from "@shared/types";
 import {
   applySubtitleSelection,
   determineSubtitleSelection,
+  isSpanishLanguage,
   matchesSubtitleSelection,
   readPlayerSnapshot,
   readSubtitleSignature,
@@ -189,7 +190,14 @@ function rememberIfSelectionAlreadyMatches(
     return false;
   }
 
-  rememberAppliedSignature(videoId, currentSignature);
+  // Don't cache "off" while captions are still loading — tracks may appear on the next poll.
+  if (
+    desiredSelection.mode !== "off" ||
+    isSpanishLanguage(snapshot.audioLanguage) ||
+    snapshot.captionTracks.length > 0
+  ) {
+    rememberAppliedSignature(videoId, currentSignature);
+  }
   return true;
 }
 

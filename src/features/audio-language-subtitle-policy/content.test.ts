@@ -5,6 +5,9 @@ import type { PlayerSnapshot } from "@shared/youtube-player";
 vi.mock("@shared/youtube-player", () => ({
   applySubtitleSelection: vi.fn(),
   determineSubtitleSelection: vi.fn(),
+  isSpanishLanguage: vi.fn(
+    (value: string | null | undefined) => value?.startsWith("es") ?? false,
+  ),
   matchesSubtitleSelection: vi.fn(),
   readPlayerSnapshot: vi.fn(),
   readSubtitleSignature: vi.fn(),
@@ -136,6 +139,53 @@ describe("audio-language-subtitle-policy feature", () => {
     );
 
     expect(applySubtitleSelection).not.toHaveBeenCalled();
+  });
+
+  it("retries matching off state while captions are still unavailable", async () => {
+    const initialSnapshot = snapshot("test-video");
+    const captionSnapshot: PlayerSnapshot = {
+      ...snapshot("test-video"),
+      audioLanguage: "en",
+      captionTracks: [{ languageCode: "en", vssId: "a.en" }],
+    };
+
+    const { readPlayerSnapshot } = await import("@shared/youtube-player");
+    vi.mocked(readPlayerSnapshot)
+      .mockResolvedValueOnce(initialSnapshot)
+      .mockResolvedValue(captionSnapshot);
+
+    const { readSubtitleSignature, determineSubtitleSelection } =
+      await import("@shared/youtube-player");
+    vi.mocked(readSubtitleSignature).mockReturnValue("sig");
+    vi.mocked(determineSubtitleSelection)
+      .mockReturnValueOnce({ mode: "off" })
+      .mockReturnValue({
+        mode: "track",
+        track: captionSnapshot.captionTracks[0],
+      });
+
+    const { matchesSubtitleSelection, applySubtitleSelection } =
+      await import("@shared/youtube-player");
+    vi.mocked(matchesSubtitleSelection)
+      .mockReturnValueOnce(true)
+      .mockReturnValue(false);
+    vi.mocked(applySubtitleSelection).mockResolvedValue(true);
+
+    const { waitForSubtitleSelection } = await import("@shared/youtube-player");
+    vi.mocked(waitForSubtitleSelection).mockResolvedValue(true);
+
+    const feature = await importFreshFeature();
+    feature.default.activate(makeFeatureContext());
+
+    await vi.waitFor(
+      () => {
+        expect(applySubtitleSelection).toHaveBeenCalledWith({
+          mode: "track",
+          track: captionSnapshot.captionTracks[0],
+        });
+      },
+      { timeout: 3000 },
+    );
   });
 
   it("applies subtitle selection when current state does not match", async () => {
