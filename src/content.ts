@@ -7,6 +7,7 @@ import playbackSpeedFeature from "./features/playback-speed/content";
 import seenCardDimmingFeature from "./features/seen-card-dimming/content";
 import subscriptionsFeedControlsFeature from "./features/subscriptions-feed-controls/content";
 import subscriptionsShortsRemovalFeature from "./features/subscriptions-shorts-removal/content";
+import searchDateFilterFeature from "./features/search-date-filter/content";
 import { FeatureRegistry } from "./shared/feature-registry";
 
 const registry = new FeatureRegistry();
@@ -19,3 +20,4 @@ registry.register(subscriptionsFeedControlsFeature);
 registry.register(seenCardDimmingFeature);
 registry.register(subscriptionsShortsRemovalFeature);
 registry.register(autoSwitchToVideosTabFeature);
+registry.register(searchDateFilterFeature);
