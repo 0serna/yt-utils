@@ -4,7 +4,6 @@ import autoSwitchToVideosTabFeature from "./features/auto-switch-to-videos-tab/c
 import engagementPanelScrollContainmentFeature from "./features/engagement-panel-scroll-containment/content";
 import markAsSeenFeature from "./features/mark-as-seen/content";
 import playbackSpeedFeature from "./features/playback-speed/content";
-import subscriptionsGridDensityFeature from "./features/subscriptions-grid-density/content";
 import seenCardDimmingFeature from "./features/seen-card-dimming/content";
 import subscriptionsFeedControlsFeature from "./features/subscriptions-feed-controls/content";
 import subscriptionsShortsRemovalFeature from "./features/subscriptions-shorts-removal/content";
@@ -19,5 +18,4 @@ registry.register(watchPanelAutoOpenFeature);
 registry.register(subscriptionsFeedControlsFeature);
 registry.register(seenCardDimmingFeature);
 registry.register(subscriptionsShortsRemovalFeature);
-registry.register(subscriptionsGridDensityFeature);
 registry.register(autoSwitchToVideosTabFeature);
