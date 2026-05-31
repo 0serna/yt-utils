@@ -2,7 +2,7 @@ import type { Feature, FeatureContext } from "@shared/types";
 import {
   applySubtitleSelection,
   determineSubtitleSelection,
-  isSpanishLanguage,
+  isEnglishLanguage,
   matchesSubtitleSelection,
   readPlayerSnapshot,
   readSubtitleSignature,
@@ -197,15 +197,29 @@ function rememberIfSelectionAlreadyMatches(
     return false;
   }
 
-  // Don't cache "off" while captions are still loading — tracks may appear on the next poll.
-  if (
-    desiredSelection.mode !== "off" ||
-    isSpanishLanguage(snapshot.audioLanguage) ||
-    snapshot.captionTracks.length > 0
-  ) {
+  if (shouldRememberMatchingSelection(snapshot, desiredSelection)) {
     rememberAppliedSignature(videoId, currentSignature);
   }
   return true;
+}
+
+function shouldRememberMatchingSelection(
+  snapshot: PlayerSnapshot,
+  desiredSelection: SubtitleSelection,
+): boolean {
+  if (desiredSelection.mode !== "off") {
+    return true;
+  }
+
+  if (!snapshot.audioLanguage?.trim()) {
+    return false;
+  }
+
+  // Don't cache English "off" while captions are still loading — tracks may appear on the next poll.
+  return (
+    !isEnglishLanguage(snapshot.audioLanguage) ||
+    snapshot.captionTracks.length > 0
+  );
 }
 
 async function applyAndVerifySubtitleSelection(

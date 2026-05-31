@@ -1,10 +1,4 @@
-# audio-language-subtitle-policy Specification
-
-## Purpose
-
-Define subtitle policy for YouTube watch pages based on the active audio language.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Watch-page subtitle policy SHALL use the active audio language
 
@@ -31,7 +25,7 @@ The extension SHALL determine subtitle policy for a YouTube watch page from the 
 - **AND** the live player or bridge reports a different video ID
 - **THEN** the extension does not apply subtitle policy until the live player confirms the current URL video ID
 
-### Requirement: English audio SHALL prefer direct English subtitles
+### Requirement: Non-Spanish audio SHALL prefer direct English subtitles
 
 The extension SHALL enable subtitles only for English audio and select a direct English subtitle track when one is available.
 
@@ -57,6 +51,8 @@ The extension SHALL leave subtitles disabled when the active audio language is E
 - **AND** the player does not expose a direct English subtitle track
 - **THEN** the extension disables subtitles for that video
 
+## ADDED Requirements
+
 ### Requirement: Non-English and unknown audio SHALL disable subtitles
 
 The extension SHALL turn subtitles off when the active audio language is not English or cannot be determined.
@@ -81,36 +77,10 @@ The extension SHALL turn subtitles off when the active audio language is not Eng
 - **WHEN** a watch page becomes active for a video whose active audio language cannot be determined and subtitles are already disabled
 - **THEN** the extension leaves subtitles off without showing any UI
 
-### Requirement: Manual per-video overrides SHALL be respected
+## REMOVED Requirements
 
-After the extension applies subtitle policy for a video, it SHALL stop reapplying the policy for that same video if the user manually changes subtitle or audio behavior. Manual override state and policy application state SHALL be scoped to the current confirmed video and SHALL NOT carry over to another watch video reached through SPA navigation.
+### Requirement: Non-Spanish audio SHALL fall back to auto-translated English
 
-#### Scenario: User turns subtitles off after policy enabled them
+**Reason**: Subtitle activation is now restricted to confirmed English audio with a direct English subtitle track. Auto-translation is no longer part of the automatic subtitle policy.
 
-- **WHEN** the extension has already enabled English subtitles for the current confirmed video and the user manually disables subtitles
-- **THEN** the extension does not re-enable subtitles again for that video
-
-#### Scenario: User chooses a different subtitle or audio track
-
-- **WHEN** the extension has already applied subtitle policy for the current confirmed video and the user manually selects a different subtitle track or audio track
-- **THEN** the extension does not reapply its preferred subtitle selection again for that video
-
-#### Scenario: New video after manual override
-
-- **WHEN** the user manually overrides subtitle behavior on one video
-- **AND** then navigates to another supported watch video without a full page reload
-- **THEN** the extension evaluates subtitle policy for the new confirmed video without treating the prior video's manual override as applying to the new video
-
-#### Scenario: Previous video subtitle work completes after navigation
-
-- **WHEN** subtitle policy work that started for a previous video completes after SPA navigation to a new video
-- **THEN** that stale work does not change subtitle state or record applied policy state for the new video
-
-### Requirement: Subtitle policy SHALL stay silent
-
-The extension SHALL apply subtitle policy without adding visible controls, prompts, notifications, or other new user-facing UI.
-
-#### Scenario: Policy runs on watch page activation
-
-- **WHEN** the extension evaluates subtitle policy for a watch page
-- **THEN** it applies the result without adding any new visible interface elements
+**Migration**: Videos that previously received English auto-translation automatically will now have subtitles disabled unless the user manually enables subtitles for that video.

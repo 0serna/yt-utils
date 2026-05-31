@@ -92,49 +92,49 @@ describe("youtube-player-model", () => {
       ).toEqual({ mode: "off" });
     });
 
-    it("selects a direct English track for non-Spanish audio", () => {
+    it("selects a direct English track for English audio", () => {
       const englishTrack: CaptionTrack = { languageCode: "en", vssId: ".en" };
 
       expect(
         determineSubtitleSelection({
           ...defaultSnapshot,
-          audioLanguage: "fr",
+          audioLanguage: "en-US",
           captionTracks: [englishTrack],
         }),
       ).toEqual({ mode: "track", track: englishTrack });
     });
 
-    it("falls back to English auto-translation for non-Spanish audio", () => {
-      const spanishTrack: CaptionTrack = {
-        languageCode: "es",
-        isTranslatable: true,
-        vssId: ".es",
-      };
-
+    it("returns off for non-English audio even when a direct English track exists", () => {
       expect(
         determineSubtitleSelection({
           ...defaultSnapshot,
           audioLanguage: "fr",
-          captionTracks: [spanishTrack],
+          captionTracks: [{ languageCode: "en", vssId: ".en" }],
+        }),
+      ).toEqual({ mode: "off" });
+    });
+
+    it("returns off for unknown audio even when a direct English track exists", () => {
+      expect(
+        determineSubtitleSelection({
+          ...defaultSnapshot,
+          audioLanguage: null,
+          captionTracks: [{ languageCode: "en", vssId: ".en" }],
+        }),
+      ).toEqual({ mode: "off" });
+    });
+
+    it("does not fall back to English auto-translation for English audio", () => {
+      expect(
+        determineSubtitleSelection({
+          ...defaultSnapshot,
+          audioLanguage: "en",
+          captionTracks: [
+            { languageCode: "es", isTranslatable: true, vssId: ".es" },
+          ],
           translationLanguages: [
             { languageCode: "en", languageName: "English" },
           ],
-        }),
-      ).toEqual({
-        mode: "track",
-        track: {
-          ...spanishTrack,
-          translationLanguage: { languageCode: "en", languageName: "English" },
-        },
-      });
-    });
-
-    it("returns off when English cannot be selected", () => {
-      expect(
-        determineSubtitleSelection({
-          ...defaultSnapshot,
-          audioLanguage: "fr",
-          captionTracks: [{ languageCode: "fr", vssId: ".fr" }],
         }),
       ).toEqual({ mode: "off" });
     });

@@ -80,32 +80,16 @@ export function isEnglishLanguage(value: string | null | undefined): boolean {
 export function determineSubtitleSelection(
   snapshot: PlayerSnapshot,
 ): SubtitleSelection {
-  if (isSpanishLanguage(snapshot.audioLanguage)) {
+  if (!isEnglishLanguage(snapshot.audioLanguage)) {
     return { mode: "off" };
   }
 
   const directEnglishTrack = snapshot.captionTracks.find((track) =>
     isEnglishLanguage(track.languageCode),
   );
-  if (directEnglishTrack) {
-    return { mode: "track", track: directEnglishTrack };
-  }
-
-  const englishTranslation = snapshot.translationLanguages.find((language) =>
-    isEnglishLanguage(language.languageCode),
-  );
-  const translatableTrack = snapshot.captionTracks.find(isTranslatableTrack);
-  if (englishTranslation && translatableTrack) {
-    return {
-      mode: "track",
-      track: {
-        ...translatableTrack,
-        translationLanguage: englishTranslation,
-      },
-    };
-  }
-
-  return { mode: "off" };
+  return directEnglishTrack
+    ? { mode: "track", track: directEnglishTrack }
+    : { mode: "off" };
 }
 
 export function readSubtitleSignature(snapshot: PlayerSnapshot): string {
@@ -129,10 +113,6 @@ export function matchesSubtitleSelection(
     getCaptionTrackSignature(snapshot.currentCaptionTrack) ===
       getCaptionTrackSignature(selection.track)
   );
-}
-
-function isTranslatableTrack(track: CaptionTrack): boolean {
-  return track.isTranslatable === true || track.isTranslateable === true;
 }
 
 function normalizeLanguageCode(

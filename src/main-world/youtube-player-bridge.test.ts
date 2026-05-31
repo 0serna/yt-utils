@@ -231,6 +231,41 @@ describe("youtube-player-bridge", () => {
       expect(snapshot!.audioLanguage).toBe("es");
     });
 
+    it("prefers caption tracks from the active audio track", async () => {
+      const audioCaptionTrack = {
+        languageCode: "en",
+        kind: "asr",
+        vssId: "a.en",
+        url: "https://www.youtube.com/api/timedtext?pot=token",
+      };
+      const fakePlayer = createFakePlayer({
+        videoId: "audio-caption-video",
+        captionTracks: [
+          {
+            languageCode: "en",
+            kind: "asr",
+            vssId: "a.en",
+            baseUrl: "https://www.youtube.com/api/timedtext",
+          },
+        ],
+        audioTrack: {
+          captionTracks: [audioCaptionTrack],
+        },
+        subtitlesOn: false,
+      });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-3b",
+        action: "readSnapshot",
+      });
+
+      const snapshot = response.result as PlayerSnapshot;
+      expect(snapshot!.captionTracks).toEqual([audioCaptionTrack]);
+      expect(snapshot!.audioLanguage).toBe("en");
+    });
+
     it("returns snapshot with translation languages", async () => {
       const fakePlayer = createFakePlayer({
         videoId: "test-video",

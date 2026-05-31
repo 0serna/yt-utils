@@ -5,8 +5,8 @@ import type { PlayerSnapshot } from "@shared/youtube-player";
 vi.mock("@shared/youtube-player", () => ({
   applySubtitleSelection: vi.fn(),
   determineSubtitleSelection: vi.fn(),
-  isSpanishLanguage: vi.fn(
-    (value: string | null | undefined) => value?.startsWith("es") ?? false,
+  isEnglishLanguage: vi.fn(
+    (value: string | null | undefined) => value?.startsWith("en") ?? false,
   ),
   matchesSubtitleSelection: vi.fn(),
   readPlayerSnapshot: vi.fn(),
@@ -168,7 +168,7 @@ describe("audio-language-subtitle-policy feature", () => {
     expect(applySubtitleSelection).not.toHaveBeenCalled();
   });
 
-  it("retries matching off state while captions are still unavailable", async () => {
+  it("retries matching off state while audio language is still unavailable", async () => {
     const initialSnapshot = snapshot("test-video");
     const captionSnapshot: PlayerSnapshot = {
       ...snapshot("test-video"),

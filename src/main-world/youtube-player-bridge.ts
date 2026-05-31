@@ -140,12 +140,14 @@ function buildPlayerSnapshot(
 }
 
 function readSnapshotInputs(source: SnapshotSource): SnapshotInputs {
+  const audioTrack = source.player.getAudioTrack?.() || null;
+
   return {
     response: source.response,
     videoData: readVideoData(source),
-    audioTrack: cloneValue(source.player.getAudioTrack?.() || null),
+    audioTrack: cloneValue(audioTrack),
     currentCaptionTrack: cloneValue(readCurrentCaptionTrack(source.player)),
-    captionTracks: cloneValue(readCaptionTracks(source.response)),
+    captionTracks: cloneValue(readCaptionTracks(audioTrack, source.response)),
     translationLanguages: cloneValue(readTranslationLanguages(source.player)),
   };
 }
@@ -223,9 +225,14 @@ function readVideoData(
   ]);
 }
 
-function readCaptionTracks(response: PlayerResponse | null): CaptionTrack[] {
+function readCaptionTracks(
+  audioTrack: AudioTrack | null,
+  response: PlayerResponse | null,
+): CaptionTrack[] {
   return (
-    response?.captions?.playerCaptionsTracklistRenderer?.captionTracks || []
+    audioTrack?.captionTracks ||
+    response?.captions?.playerCaptionsTracklistRenderer?.captionTracks ||
+    []
   );
 }
 
