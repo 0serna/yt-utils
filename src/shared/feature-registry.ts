@@ -1,12 +1,20 @@
 import { createFeatureLogger } from "./feature-logger";
 import { sendMessage } from "./messaging";
 import type { Feature, FeatureLogger } from "./types";
+import { getCurrentWatchSessionKey } from "./youtube-session";
+
+const NAVIGATION_SYNC_DELAYS_MS = [0, 250, 1000, 2500] as const;
+const YOUTUBE_NAVIGATION_EVENTS = [
+  "yt-navigate-start",
+  "yt-navigate-finish",
+  "yt-page-data-updated",
+] as const;
 
 export class FeatureRegistry {
   private features: Feature[] = [];
   private activeFeatures: Set<Feature> = new Set();
   private featureLoggers: Map<Feature, FeatureLogger> = new Map();
-  private lastUrl: string = "";
+  private lastSessionKey: string = "";
 
   constructor() {
     this.listenForNavigation();
@@ -18,29 +26,38 @@ export class FeatureRegistry {
   }
 
   private listenForNavigation(): void {
-    window.addEventListener("yt-navigate-finish", () => this.syncFeatures());
-    window.addEventListener("popstate", () => this.syncFeatures());
+    for (const eventName of YOUTUBE_NAVIGATION_EVENTS) {
+      window.addEventListener(eventName, () => this.scheduleSyncFeatures());
+    }
+    window.addEventListener("popstate", () => this.scheduleSyncFeatures());
 
     setInterval(() => {
       this.syncFeatures();
     }, 500);
   }
 
+  private scheduleSyncFeatures(): void {
+    for (const delay of NAVIGATION_SYNC_DELAYS_MS) {
+      window.setTimeout(() => this.syncFeatures(), delay);
+    }
+  }
+
   private forceSync(): void {
-    this.lastUrl = "";
+    this.lastSessionKey = "";
     this.syncFeatures();
   }
 
   private syncFeatures(): void {
-    const url = window.location.href;
+    const url = new URL(window.location.href);
+    const sessionKey = getCurrentWatchSessionKey(url);
 
-    if (url === this.lastUrl) {
+    if (sessionKey === this.lastSessionKey) {
       return;
     }
 
-    this.lastUrl = url;
+    this.lastSessionKey = sessionKey;
     this.deactivateAll();
-    this.activateFeaturesForUrl(new URL(url));
+    this.activateFeaturesForUrl(url);
   }
 
   private getFeatureLogger(feature: Feature): FeatureLogger {

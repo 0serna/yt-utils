@@ -34,6 +34,16 @@ describe("audio-language-subtitle-policy feature", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    Object.defineProperty(window, "location", {
+      value: {
+        href: "https://www.youtube.com/watch?v=test-video",
+        hostname: "www.youtube.com",
+        pathname: "/watch",
+        search: "?v=test-video",
+      },
+      writable: true,
+      configurable: true,
+    });
   });
 
   afterEach(() => {
@@ -101,6 +111,23 @@ describe("audio-language-subtitle-policy feature", () => {
       ...snapshot(""),
       videoId: null,
     } as unknown as PlayerSnapshot);
+
+    const feature = await importFreshFeature();
+    feature.default.activate(makeFeatureContext());
+
+    const { determineSubtitleSelection } =
+      await import("@shared/youtube-player");
+    await vi.waitFor(
+      () => {
+        expect(determineSubtitleSelection).not.toHaveBeenCalled();
+      },
+      { timeout: 1000 },
+    );
+  });
+
+  it("returns early when snapshot videoId differs from URL", async () => {
+    const { readPlayerSnapshot } = await import("@shared/youtube-player");
+    vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("previous-video"));
 
     const feature = await importFreshFeature();
     feature.default.activate(makeFeatureContext());

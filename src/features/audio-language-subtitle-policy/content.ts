@@ -9,6 +9,11 @@ import {
   waitForSubtitleSelection,
 } from "@shared/youtube-player";
 import type { PlayerSnapshot, SubtitleSelection } from "@shared/youtube-player";
+import {
+  getCurrentWatchVideoId,
+  isCurrentWatchVideo,
+  readConfirmedCurrentVideoSnapshot,
+} from "@shared/youtube-session";
 
 const POLL_INTERVAL_MS = 500;
 
@@ -24,6 +29,7 @@ const audioLanguageSubtitlePolicyFeature: Feature = {
 
   activate(_context: FeatureContext): void {
     sessionToken += 1;
+    syncQueued = false;
     appliedStateByVideo = new Map();
     overriddenVideos = new Set();
     startPolling();
@@ -32,6 +38,7 @@ const audioLanguageSubtitlePolicyFeature: Feature = {
 
   deactivate(): void {
     sessionToken += 1;
+    syncQueued = false;
     stopPolling();
     appliedStateByVideo.clear();
     overriddenVideos.clear();
@@ -106,7 +113,7 @@ async function getPolicyContext(token: number): Promise<PolicyContext | null> {
     return null;
   }
 
-  const snapshot = await readPlayerSnapshot();
+  const snapshot = await readConfirmedCurrentVideoSnapshot();
   return createPolicyContext(token, snapshot);
 }
 
@@ -221,7 +228,7 @@ async function waitForVerifiedSnapshot(
     return null;
   }
 
-  if (shouldAbortPolicySync(token)) {
+  if (shouldAbortPolicySync(token) || !isCurrentWatchVideo(videoId)) {
     return null;
   }
 
@@ -251,7 +258,11 @@ async function waitForSelectionApply(
 async function readVerifiedSnapshot(
   videoId: string,
 ): Promise<PlayerSnapshot | null> {
-  const verifiedSnapshot = await readPlayerSnapshot();
+  if (!isCurrentWatchVideo(videoId)) {
+    return null;
+  }
+
+  const verifiedSnapshot = await readConfirmedCurrentVideoSnapshot();
   return verifiedSnapshot?.videoId === videoId ? verifiedSnapshot : null;
 }
 
@@ -259,14 +270,6 @@ function rememberAppliedSignature(videoId: string, signature: string): void {
   appliedStateByVideo.set(videoId, signature);
 }
 
-function isSupportedWatchPage(): boolean {
-  return (
-    window.location.hostname === "www.youtube.com" &&
-    window.location.pathname === "/watch" &&
-    new URLSearchParams(window.location.search).has("v")
-  );
-}
-
-if (!isSupportedWatchPage()) {
+if (!getCurrentWatchVideoId()) {
   stopPolling();
 }

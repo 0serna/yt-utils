@@ -99,5 +99,62 @@ describe("FeatureRegistry logging", () => {
 
       expect(active.has(broken)).toBe(false);
     });
+
+    it("does not reset watch features for same-video URL parameter changes", () => {
+      const registry = new FeatureRegistry();
+      const feature = makeFeature("watch-feature");
+      registry["register"](feature);
+      vi.mocked(feature.activate).mockClear();
+      vi.mocked(feature.deactivate).mockClear();
+
+      Object.defineProperty(window, "location", {
+        value: {
+          href: "https://www.youtube.com/watch?v=abc123&t=42&feature=share",
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      registry["syncFeatures"]();
+
+      expect(feature.deactivate).not.toHaveBeenCalled();
+      expect(feature.activate).not.toHaveBeenCalled();
+    });
+
+    it("schedules repeated syncs for YouTube navigation events", () => {
+      vi.useFakeTimers();
+      const registry = new FeatureRegistry();
+      const syncFeatures = vi.spyOn(
+        registry as unknown as { syncFeatures: () => void },
+        "syncFeatures",
+      );
+
+      window.dispatchEvent(new Event("yt-page-data-updated"));
+      vi.runOnlyPendingTimers();
+
+      expect(syncFeatures.mock.calls.length).toBeGreaterThanOrEqual(4);
+      vi.useRealTimers();
+    });
+
+    it("resets watch features when the URL video ID changes", () => {
+      const registry = new FeatureRegistry();
+      const feature = makeFeature("watch-feature");
+      registry["register"](feature);
+      vi.mocked(feature.activate).mockClear();
+      vi.mocked(feature.deactivate).mockClear();
+
+      Object.defineProperty(window, "location", {
+        value: {
+          href: "https://www.youtube.com/watch?v=next456",
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      registry["syncFeatures"]();
+
+      expect(feature.deactivate).toHaveBeenCalledOnce();
+      expect(feature.activate).toHaveBeenCalledOnce();
+    });
   });
 });

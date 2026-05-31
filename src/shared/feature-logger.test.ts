@@ -163,7 +163,7 @@ describe("createFeatureLogger", () => {
 
 describe("appendAndTrim", () => {
   const mockGet = vi.fn<() => Promise<Record<string, unknown>>>();
-  const mockSet = vi.fn<() => Promise<void>>();
+  const mockSet = vi.fn<(value?: unknown) => Promise<void>>();
 
   beforeEach(() => {
     vi.stubGlobal("chrome", {
@@ -220,5 +220,40 @@ describe("appendAndTrim", () => {
     expect(logs).toHaveLength(1000);
     expect(logs![0].feature).toBe("old-1");
     expect(logs![999].feature).toBe("new-feature");
+  });
+
+  it("preserves concurrent append bursts in order", async () => {
+    let stored: LogEntry[] = [];
+    mockGet.mockImplementation(async () => ({ "yt-utils:logs": stored }));
+    mockSet.mockImplementation(async (value?: unknown) => {
+      stored = (value as Record<string, LogEntry[]>)["yt-utils:logs"];
+    });
+
+    await Promise.all([
+      appendAndTrim({
+        timestamp: new Date().toISOString(),
+        feature: "first",
+        event: "activation",
+        url: "https://example.com",
+      }),
+      appendAndTrim({
+        timestamp: new Date().toISOString(),
+        feature: "second",
+        event: "deactivation",
+        url: "https://example.com",
+      }),
+      appendAndTrim({
+        timestamp: new Date().toISOString(),
+        feature: "third",
+        event: "activation",
+        url: "https://example.com",
+      }),
+    ]);
+
+    expect(stored.map((entry) => entry.feature)).toEqual([
+      "first",
+      "second",
+      "third",
+    ]);
   });
 });

@@ -5,6 +5,8 @@ const STORAGE_KEY = "yt-utils:logs";
 
 const MAX_ENTRIES = 1000;
 
+let appendQueue: Promise<void> = Promise.resolve();
+
 export interface LogEntry {
   timestamp: string;
   feature: string;
@@ -106,6 +108,13 @@ function enqueueWrite(entry: LogEntry): void {
 }
 
 export async function appendAndTrim(entry: LogEntry): Promise<void> {
+  appendQueue = appendQueue
+    .catch(() => undefined)
+    .then(() => appendAndTrimNow(entry));
+  return appendQueue;
+}
+
+async function appendAndTrimNow(entry: LogEntry): Promise<void> {
   const raw = await chrome.storage.local.get(STORAGE_KEY);
   const stored: LogEntry[] = Array.isArray(raw[STORAGE_KEY])
     ? raw[STORAGE_KEY]

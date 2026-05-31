@@ -1,24 +1,4 @@
-# feature-registry Specification
-
-## Purpose
-
-Define the feature lifecycle registry that activates and deactivates features during YouTube navigation.
-
-## Requirements
-
-### Requirement: Feature interface defines lifecycle
-
-Every feature SHALL implement a `Feature` interface with a `name` string, an optional `isWatchPage` boolean predicate, an `activate(context)` method, and a `deactivate()` method. The activation context SHALL include `sendMessage` and a feature-scoped logger.
-
-#### Scenario: Feature implements the interface
-
-- **WHEN** a new feature module is created under `src/features/<name>/content.ts`
-- **THEN** it exports an object satisfying the `Feature` interface with `name`, `activate`, and `deactivate` methods
-
-#### Scenario: Feature receives logger context
-
-- **WHEN** the registry activates a feature
-- **THEN** it passes a `FeatureContext` containing `sendMessage` and a logger scoped to that feature name
+## MODIFIED Requirements
 
 ### Requirement: FeatureRegistry coordinates feature lifecycle on navigation
 
@@ -65,12 +45,3 @@ The content script SHALL use a `FeatureRegistry` that listens to YouTube SPA nav
 
 - **WHEN** an active feature's `deactivate()` method throws an error
 - **THEN** the registry records an error log entry with phase `deactivate`, removes the feature from the active set, does not record a successful deactivation log entry, and continues deactivating remaining features
-
-### Requirement: Content script barrel registers all features
-
-The `src/content.ts` barrel file SHALL import all feature modules and register them with the `FeatureRegistry` before any navigation events are processed.
-
-#### Scenario: All features available at startup
-
-- **WHEN** the content script loads on a YouTube page
-- **THEN** all feature modules are imported and registered with the `FeatureRegistry` before the first navigation event is handled

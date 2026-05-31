@@ -15,12 +15,12 @@ import {
   placeWatchActionHost,
   RELEVANT_MUTATION_SELECTORS,
 } from "@shared/youtube-dom";
-import {
-  isEnglishLanguage,
-  isSpanishLanguage,
-  readPlayerSnapshot,
-} from "@shared/youtube-player";
+import { isEnglishLanguage, isSpanishLanguage } from "@shared/youtube-player";
 import type { PlayerSnapshot } from "@shared/youtube-player";
+import {
+  getCurrentWatchVideoId,
+  readConfirmedCurrentVideoSnapshot,
+} from "@shared/youtube-session";
 
 const CONTROL_HOST_ID = "yt-utils-speed-host";
 const SPEED_DECREMENT_ID = "yt-utils-speed-decrement";
@@ -35,6 +35,7 @@ let userInteracted = false;
 let pollTimer: number | null = null;
 let sessionToken = 0;
 let syncQueued = false;
+let initializedVideoId: string | null = null;
 
 const playbackSpeedFeature: Feature = {
   name: "playback-speed",
@@ -44,6 +45,8 @@ const playbackSpeedFeature: Feature = {
     sessionToken += 1;
     localSpeed = PLAYBACK_SPEED_DEFAULT;
     userInteracted = false;
+    syncQueued = false;
+    initializedVideoId = null;
     ensureSpeedControl();
     applySpeedToVideo();
     observePage();
@@ -54,6 +57,8 @@ const playbackSpeedFeature: Feature = {
   deactivate(): void {
     sessionToken += 1;
     removeSpeedControl();
+    syncQueued = false;
+    initializedVideoId = null;
     stopPolling();
     stopObserving();
   },
@@ -284,12 +289,12 @@ async function syncSpeedForCurrentVideo(token: number): Promise<void> {
     return;
   }
 
-  const snapshot = await readPlayerSnapshot();
+  const snapshot = await readConfirmedCurrentVideoSnapshot();
   if (!snapshot) {
     return;
   }
 
-  if (shouldSkipSync(token)) {
+  if (shouldSkipSync(token) || getCurrentWatchVideoId() !== snapshot.videoId) {
     return;
   }
 
@@ -301,7 +306,16 @@ function shouldSkipSync(token: number): boolean {
 }
 
 function applySpeedForLanguage(snapshot: PlayerSnapshot): void {
+  if (initializedVideoId === snapshot.videoId) {
+    return;
+  }
+
+  if (!snapshot.audioLanguage) {
+    return;
+  }
+
   const nextSpeed = getSpeedForLanguage(snapshot.audioLanguage);
+  initializedVideoId = snapshot.videoId;
 
   if (localSpeed === nextSpeed) {
     return;

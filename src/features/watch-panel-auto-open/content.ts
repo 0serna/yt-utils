@@ -5,12 +5,17 @@ import {
 import type { Feature, FeatureContext } from "@shared/types";
 import {
   clickElement,
+  delay,
   findButton,
   isDesktopWatchPage,
   isVisible,
   waitFor,
 } from "@shared/youtube-dom";
-import { readPlayerSnapshot } from "@shared/youtube-player";
+import {
+  getCurrentWatchVideoId,
+  isCurrentWatchVideo,
+  readConfirmedCurrentVideoSnapshot,
+} from "@shared/youtube-session";
 
 const PANEL_TARGET_ID = "PAyouchat";
 const CHAPTERS_PANEL_TARGET_IDS = [
@@ -25,6 +30,7 @@ const ASK_SCROLL_CONTAINER_SELECTOR =
 const POLL_INTERVAL_MS = 500;
 const SYNC_TIMEOUT_MS = 5000;
 const PANEL_SETTLE_DELAY_MS = 1500;
+const VIDEO_WATCH_INTERVAL_MS = 500;
 const ASK_LABELS = [/\bask\b/i, /\bpreguntar\b/i];
 const CHAPTERS_LABELS = [/\bchapters\b/i, /\bcapítulos\b/i];
 const CHAPTER_ITEM_SELECTOR = "ytd-macro-markers-list-item-renderer";
@@ -38,8 +44,11 @@ const ASK_SCROLL_OVERSCROLL_BEHAVIOR = "contain";
 let sessionToken = 0;
 let completedVideoId: string | null = null;
 let promptedVideoId: string | null = null;
+let promptingVideoId: string | null = null;
 let expandedVideoId: string | null = null;
 let activatedAt = 0;
+let observedVideoId: string | null = null;
+let videoWatchTimer: number | null = null;
 
 const domSyncController = createDomSyncController({
   pollIntervalMs: POLL_INTERVAL_MS,
@@ -59,27 +68,57 @@ const watchPanelAutoOpenFeature: Feature = {
   isWatchPage: true,
 
   activate(_context: FeatureContext): void {
-    activatedAt = Date.now();
-    completedVideoId = null;
-    promptedVideoId = null;
-    expandedVideoId = null;
+    resetSessionState();
+    observedVideoId = getCurrentWatchVideoId();
     syncAskScrollContainment();
     sessionToken = domSyncController.activate();
+    startVideoWatch();
   },
 
   deactivate(): void {
     sessionToken = domSyncController.deactivate();
-    activatedAt = 0;
-    completedVideoId = null;
-    promptedVideoId = null;
-    expandedVideoId = null;
+    resetSessionState();
+    observedVideoId = null;
+    stopVideoWatch();
   },
 };
 
 export default watchPanelAutoOpenFeature;
 
-function getCurrentVideoId(): string | null {
-  return new URLSearchParams(window.location.search).get("v");
+function startVideoWatch(): void {
+  if (videoWatchTimer !== null) {
+    return;
+  }
+
+  videoWatchTimer = window.setInterval(() => {
+    syncObservedVideoId();
+  }, VIDEO_WATCH_INTERVAL_MS);
+}
+
+function stopVideoWatch(): void {
+  if (videoWatchTimer !== null) {
+    window.clearInterval(videoWatchTimer);
+    videoWatchTimer = null;
+  }
+}
+
+function syncObservedVideoId(): void {
+  const currentVideoId = getCurrentWatchVideoId();
+  if (currentVideoId === observedVideoId) {
+    return;
+  }
+
+  observedVideoId = currentVideoId;
+  resetSessionState();
+  sessionToken = domSyncController.activate();
+}
+
+function resetSessionState(): void {
+  activatedAt = Date.now();
+  completedVideoId = null;
+  promptedVideoId = null;
+  promptingVideoId = null;
+  expandedVideoId = null;
 }
 
 function findAskPanel(): HTMLElement | null {
@@ -186,7 +225,7 @@ async function syncValidatedVideoPanel(
     return;
   }
 
-  if (await handleAlreadyExpandedAsk(videoId, askState.expanded)) {
+  if (await handleAlreadyExpandedAsk(videoId, token, askState.expanded)) {
     return;
   }
 
@@ -214,6 +253,7 @@ function prepareVideoState(videoId: string, askExpanded: boolean): boolean {
 
 async function handleAlreadyExpandedAsk(
   videoId: string,
+  token: number,
   askExpanded: boolean,
 ): Promise<boolean> {
   if (shouldDeferInitialExpandedAsk(videoId, askExpanded)) {
@@ -221,8 +261,10 @@ async function handleAlreadyExpandedAsk(
   }
 
   if (shouldPromptExpandedAsk(videoId, askExpanded)) {
-    promptedVideoId = videoId;
-    await typeAndSendPrompt();
+    await promptCurrentVideo(videoId, token);
+    if (!isContextValid(token, videoId)) {
+      return true;
+    }
     completeVideo(videoId);
     return true;
   }
@@ -260,7 +302,9 @@ function shouldPromptExpandedAsk(
   videoId: string,
   askExpanded: boolean,
 ): boolean {
-  return askExpanded && promptedVideoId !== videoId;
+  return (
+    askExpanded && promptedVideoId !== videoId && promptingVideoId !== videoId
+  );
 }
 
 function syncCollapsedAskPanelScrollContainment(
@@ -292,7 +336,7 @@ async function validateSyncContext(token: number): Promise<string | null> {
     return null;
   }
 
-  return validateCurrentVideoSnapshot(token, getCurrentVideoId());
+  return validateCurrentVideoSnapshot(token, getCurrentWatchVideoId());
 }
 
 async function validateCurrentVideoSnapshot(
@@ -303,7 +347,7 @@ async function validateCurrentVideoSnapshot(
     return null;
   }
 
-  const snapshot = await readPlayerSnapshot();
+  const snapshot = await readConfirmedCurrentVideoSnapshot();
   if (!isMatchingVideoSnapshot(token, videoId, snapshot?.videoId)) {
     return null;
   }
@@ -330,6 +374,7 @@ function isMatchingVideoSnapshot(
 function resetStaleState(videoId: string): void {
   completedVideoId = resetVideoStateValue(completedVideoId, videoId);
   promptedVideoId = resetVideoStateValue(promptedVideoId, videoId);
+  promptingVideoId = resetVideoStateValue(promptingVideoId, videoId);
   expandedVideoId = resetVideoStateValue(expandedVideoId, videoId);
 }
 
@@ -343,7 +388,7 @@ function resetVideoStateValue(
 function isContextValid(token: number, videoId: string): boolean {
   return (
     token === sessionToken &&
-    getCurrentVideoId() === videoId &&
+    isCurrentWatchVideo(videoId) &&
     isDesktopWatchPage()
   );
 }
@@ -378,7 +423,7 @@ async function completeWhenChaptersOpen(
     return false;
   }
 
-  if (token !== sessionToken) {
+  if (!isContextValid(token, videoId)) {
     return false;
   }
 
@@ -450,9 +495,12 @@ async function completeWhenAskPanelOpen(
     return;
   }
 
-  await promptCurrentVideo(videoId);
+  await promptCurrentVideo(videoId, token);
 
-  if (!isContextValid(token, videoId)) {
+  await delay(PANEL_SETTLE_DELAY_MS);
+
+  if (!isContextValid(token, videoId) || !isAskPanelCurrentlyExpanded()) {
+    domSyncController.queueSync();
     return;
   }
 
@@ -469,9 +517,20 @@ function completeIfAskAlreadyOpen(videoId: string): boolean {
   return true;
 }
 
-async function promptCurrentVideo(videoId: string): Promise<void> {
-  promptedVideoId = videoId;
-  await typeAndSendPrompt();
+async function promptCurrentVideo(
+  videoId: string,
+  token: number,
+): Promise<void> {
+  if (promptedVideoId === videoId || promptingVideoId === videoId) {
+    return;
+  }
+
+  promptingVideoId = videoId;
+  await typeAndSendPrompt(videoId, token);
+  if (isContextValid(token, videoId)) {
+    promptedVideoId = videoId;
+  }
+  promptingVideoId = resetVideoStateValue(promptingVideoId, videoId);
 }
 
 function isAskPanelCurrentlyExpanded(): boolean {
@@ -513,7 +572,10 @@ function findSendButton(): HTMLElement | null {
   return askPanel.querySelector<HTMLElement>(SEND_BUTTON_SELECTOR);
 }
 
-async function typeAndSendPrompt(): Promise<void> {
+async function typeAndSendPrompt(
+  videoId: string,
+  token: number,
+): Promise<void> {
   try {
     const input = await waitFor(
       () => {
@@ -529,13 +591,17 @@ async function typeAndSendPrompt(): Promise<void> {
     );
 
     const sendButton = findSendButton();
-    if (!sendButton) {
+    if (!sendButton || !isContextValid(token, videoId)) {
       return;
     }
 
     input.focus();
 
     typePromptText(input);
+
+    if (!isContextValid(token, videoId)) {
+      return;
+    }
 
     clickElement(sendButton);
   } catch {

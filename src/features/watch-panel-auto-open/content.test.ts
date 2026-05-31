@@ -6,6 +6,7 @@ let mockLocationSearch: string;
 
 vi.mock("@shared/youtube-dom", () => ({
   clickElement: vi.fn(),
+  delay: vi.fn(() => Promise.resolve()),
   findButton: vi.fn(),
   isDesktopWatchPage: vi.fn(),
   isVisible: vi.fn(),
@@ -69,9 +70,17 @@ async function importFreshFeature() {
 }
 
 async function resetMocks() {
-  const { findButton, clickElement, isDesktopWatchPage, isVisible, waitFor } =
-    await import("@shared/youtube-dom");
+  const {
+    delay,
+    findButton,
+    clickElement,
+    isDesktopWatchPage,
+    isVisible,
+    waitFor,
+  } = await import("@shared/youtube-dom");
   vi.mocked(clickElement).mockReset();
+  vi.mocked(delay).mockReset();
+  vi.mocked(delay).mockResolvedValue(undefined);
   vi.mocked(findButton).mockReset();
   vi.mocked(isDesktopWatchPage).mockReset();
   vi.mocked(isVisible).mockReset();
@@ -101,6 +110,7 @@ describe("watch-panel-auto-open feature", () => {
   });
 
   afterEach(async () => {
+    vi.useRealTimers();
     await resetMocks();
   });
 
@@ -424,6 +434,73 @@ describe("watch-panel-auto-open feature", () => {
       panel.remove();
     });
 
+    it("retries when Ask opens transiently and closes during SPA settle", async () => {
+      vi.useFakeTimers();
+      const panel = appendEngagementPanel(
+        "PAyouchat",
+        "ENGAGEMENT_PANEL_VISIBILITY_HIDDEN",
+      );
+      panel.style.display = "none";
+
+      const askButton = document.createElement("button");
+      let clickCount = 0;
+
+      const { readPlayerSnapshot } = await import("@shared/youtube-player");
+      vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
+
+      const { delay, findButton, clickElement, waitFor } =
+        await import("@shared/youtube-dom");
+      vi.mocked(findButton).mockImplementation((_root, matchers) =>
+        matchers.some((matcher) => matcher.test("Ask")) ? askButton : null,
+      );
+      vi.mocked(clickElement).mockImplementation((element) => {
+        if (element === askButton) {
+          clickCount++;
+          panel.style.display = "";
+          panel.setAttribute(
+            "visibility",
+            "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
+          );
+        }
+      });
+      vi.mocked(delay).mockImplementation(async () => {
+        if (clickCount === 1) {
+          panel.setAttribute(
+            "visibility",
+            "ENGAGEMENT_PANEL_VISIBILITY_HIDDEN",
+          );
+        }
+      });
+      vi.mocked(waitFor).mockImplementation((callback) =>
+        Promise.resolve(callback() as HTMLElement),
+      );
+
+      const feature = await setupWatchPage();
+      feature.activate(makeFeatureContext());
+
+      await vi.waitFor(
+        () => {
+          expect(clickElement).toHaveBeenCalledWith(askButton);
+        },
+        { timeout: 2000 },
+      );
+
+      await vi.advanceTimersByTimeAsync(1000);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      await vi.waitFor(
+        () => {
+          expect(clickElement).toHaveBeenCalledTimes(2);
+        },
+        { timeout: 2000 },
+      );
+
+      feature.deactivate();
+      vi.useRealTimers();
+      panel.remove();
+    });
+
     it("does not interact when neither chapters nor ask is available", async () => {
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
@@ -573,7 +650,9 @@ describe("watch-panel-auto-open feature", () => {
         { timeout: 3000 },
       );
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await Promise.resolve();
+      await Promise.resolve();
       vi.mocked(clickElement).mockClear();
       panel.setAttribute("data-test-resync", "1");
 
@@ -581,6 +660,54 @@ describe("watch-panel-auto-open feature", () => {
 
       expect(clickElement).not.toHaveBeenCalled();
 
+      panel.remove();
+    });
+
+    it("resets and syncs when the URL video changes without registry reactivation", async () => {
+      vi.useFakeTimers();
+      const panel = appendEngagementPanel(
+        "PAyouchat",
+        "ENGAGEMENT_PANEL_VISIBILITY_HIDDEN",
+      );
+      panel.style.display = "none";
+
+      const askButton = document.createElement("button");
+
+      const { readPlayerSnapshot } = await import("@shared/youtube-player");
+      vi.mocked(readPlayerSnapshot).mockImplementation(() =>
+        Promise.resolve(
+          snapshot(new URLSearchParams(mockLocationSearch).get("v")!),
+        ),
+      );
+
+      const { findButton, clickElement, waitFor } =
+        await import("@shared/youtube-dom");
+      vi.mocked(findButton).mockReturnValue(askButton);
+      vi.mocked(waitFor).mockResolvedValue(askButton);
+
+      const feature = await setupWatchPage();
+      feature.activate(makeFeatureContext());
+
+      await vi.waitFor(
+        () => {
+          expect(clickElement).toHaveBeenCalledWith(askButton);
+        },
+        { timeout: 2000 },
+      );
+
+      vi.mocked(clickElement).mockClear();
+      mockLocationSearch = "?v=next-video";
+      await vi.advanceTimersByTimeAsync(500);
+
+      await vi.waitFor(
+        () => {
+          expect(clickElement).toHaveBeenCalledWith(askButton);
+        },
+        { timeout: 2000 },
+      );
+
+      feature.deactivate();
+      vi.useRealTimers();
       panel.remove();
     });
 

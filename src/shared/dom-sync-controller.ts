@@ -41,11 +41,14 @@ export function createDomSyncController(
   let pollTimer: number | null = null;
   let frameQueued = false;
   let syncInProgress = false;
+  let syncQueuedWhileInProgress = false;
   let sessionToken = 0;
   let active = false;
 
   function activate(): number {
     sessionToken += 1;
+    syncInProgress = false;
+    syncQueuedWhileInProgress = false;
     active = true;
     startPolling();
     observePage();
@@ -55,6 +58,8 @@ export function createDomSyncController(
 
   function deactivate(): number {
     sessionToken += 1;
+    syncInProgress = false;
+    syncQueuedWhileInProgress = false;
     active = false;
     stopPolling();
     stopObserving();
@@ -115,14 +120,27 @@ export function createDomSyncController(
   }
 
   function queueSync(): void {
-    if (!active || syncInProgress) {
+    if (!active) {
+      return;
+    }
+
+    if (syncInProgress) {
+      syncQueuedWhileInProgress = true;
       return;
     }
 
     const token = sessionToken;
     syncInProgress = true;
+    syncQueuedWhileInProgress = false;
     void Promise.resolve(options.sync(token)).finally(() => {
+      if (token !== sessionToken) {
+        return;
+      }
+
       syncInProgress = false;
+      if (active && syncQueuedWhileInProgress) {
+        queueSync();
+      }
     });
   }
 
