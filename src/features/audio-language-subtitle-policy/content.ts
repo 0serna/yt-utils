@@ -16,12 +16,15 @@ import {
 } from "@shared/youtube-session";
 
 const POLL_INTERVAL_MS = 500;
+const RENDERER_FALLBACK_GRACE_MS = 2000;
+const UI_TOGGLE_DELAY_MS = 200;
 
 let pollTimer: number | null = null;
 let syncQueued = false;
 let sessionToken = 0;
 let appliedStateByVideo = new Map<string, string>();
 let overriddenVideos = new Set<string>();
+let rendererFallbackAttempted = new Set<string>();
 
 const audioLanguageSubtitlePolicyFeature: Feature = {
   name: "audio-language-subtitle-policy",
@@ -32,6 +35,7 @@ const audioLanguageSubtitlePolicyFeature: Feature = {
     syncQueued = false;
     appliedStateByVideo = new Map();
     overriddenVideos = new Set();
+    rendererFallbackAttempted = new Set();
     startPolling();
     void queueSync();
   },
@@ -42,6 +46,7 @@ const audioLanguageSubtitlePolicyFeature: Feature = {
     stopPolling();
     appliedStateByVideo.clear();
     overriddenVideos.clear();
+    rendererFallbackAttempted.clear();
   },
 };
 
@@ -185,6 +190,10 @@ async function ensureSubtitleSelection(
   }
 
   rememberAppliedSignature(videoId, readSubtitleSignature(verifiedSnapshot));
+
+  if (desiredSelection.mode === "track") {
+    void scheduleRendererFallback(videoId, desiredSelection, token);
+  }
 }
 
 function rememberIfSelectionAlreadyMatches(
@@ -282,6 +291,63 @@ async function readVerifiedSnapshot(
 
 function rememberAppliedSignature(videoId: string, signature: string): void {
   appliedStateByVideo.set(videoId, signature);
+}
+
+function hasRenderedCaptionText(): boolean {
+  const segments = document.querySelectorAll(".ytp-caption-segment");
+  return [...segments].some(
+    (segment) => (segment.textContent ?? "").trim().length > 0,
+  );
+}
+
+async function refreshCaptionsUI(): Promise<void> {
+  const button = document.querySelector<HTMLElement>(".ytp-subtitles-button");
+  if (!button) {
+    return;
+  }
+  button.click();
+  await delay(UI_TOGGLE_DELAY_MS);
+  button.click();
+}
+
+async function scheduleRendererFallback(
+  videoId: string,
+  desiredSelection: SubtitleSelection,
+  token: number,
+): Promise<void> {
+  if (rendererFallbackAttempted.has(videoId)) {
+    return;
+  }
+
+  await delay(RENDERER_FALLBACK_GRACE_MS);
+
+  if (shouldAbortPolicySync(token) || !isCurrentWatchVideo(videoId)) {
+    return;
+  }
+
+  if (overriddenVideos.has(videoId)) {
+    return;
+  }
+
+  const snapshot = await readConfirmedCurrentVideoSnapshot();
+  if (!snapshot || snapshot.videoId !== videoId) {
+    return;
+  }
+
+  if (!matchesSubtitleSelection(snapshot, desiredSelection)) {
+    return;
+  }
+
+  if (hasRenderedCaptionText()) {
+    return;
+  }
+
+  rendererFallbackAttempted.add(videoId);
+  await refreshCaptionsUI();
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 if (!getCurrentWatchVideoId()) {

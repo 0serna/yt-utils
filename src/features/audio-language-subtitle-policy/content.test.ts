@@ -242,4 +242,162 @@ describe("audio-language-subtitle-policy feature", () => {
       { timeout: 3000 },
     );
   });
+
+  describe("renderer fallback", () => {
+    let captionContainer: HTMLDivElement;
+    let buttonContainer: HTMLDivElement;
+
+    beforeEach(() => {
+      captionContainer = document.createElement("div");
+      buttonContainer = document.createElement("div");
+      document.body.appendChild(captionContainer);
+      document.body.appendChild(buttonContainer);
+    });
+
+    afterEach(() => {
+      captionContainer.remove();
+      buttonContainer.remove();
+    });
+
+    function createCaptionButton(): ReturnType<typeof vi.fn> {
+      const clickSpy = vi.fn();
+      const button = document.createElement("button");
+      button.className = "ytp-subtitles-button";
+      button.addEventListener("click", clickSpy);
+      buttonContainer.appendChild(button);
+      return clickSpy;
+    }
+
+    function addCaptionSegment(text: string): void {
+      const segment = document.createElement("span");
+      segment.className = "ytp-caption-segment";
+      segment.textContent = text;
+      captionContainer.appendChild(segment);
+    }
+
+    async function setupEnglishTrackMocks(
+      subtitleSignatures = ["sig-applied"],
+    ) {
+      const { readPlayerSnapshot } = await import("@shared/youtube-player");
+      vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
+
+      const { readSubtitleSignature, determineSubtitleSelection } =
+        await import("@shared/youtube-player");
+      const readSubtitleSignatureMock = vi.mocked(readSubtitleSignature);
+      const defaultSignature =
+        subtitleSignatures[subtitleSignatures.length - 1] ?? "sig-applied";
+      for (const signature of subtitleSignatures.slice(0, -1)) {
+        readSubtitleSignatureMock.mockReturnValueOnce(signature);
+      }
+      readSubtitleSignatureMock.mockReturnValue(defaultSignature);
+      vi.mocked(determineSubtitleSelection).mockReturnValue({
+        mode: "track",
+        track: { languageCode: "en", vssId: "a.en" },
+      });
+
+      const { matchesSubtitleSelection, applySubtitleSelection } =
+        await import("@shared/youtube-player");
+      vi.mocked(matchesSubtitleSelection)
+        .mockReturnValueOnce(false)
+        .mockReturnValue(true);
+      vi.mocked(applySubtitleSelection).mockResolvedValue(true);
+
+      const { waitForSubtitleSelection } =
+        await import("@shared/youtube-player");
+      vi.mocked(waitForSubtitleSelection).mockResolvedValue(true);
+    }
+
+    it("attempts one caption button fallback when no caption text appears", async () => {
+      await setupEnglishTrackMocks();
+      const clickSpy = createCaptionButton();
+
+      const feature = await importFreshFeature();
+      feature.default.activate(makeFeatureContext());
+
+      await vi.waitFor(
+        () => {
+          expect(clickSpy).toHaveBeenCalledTimes(2);
+        },
+        { timeout: 5000 },
+      );
+    });
+
+    it("does not attempt caption button fallback when caption text is present", async () => {
+      await setupEnglishTrackMocks();
+      addCaptionSegment("Hello world");
+      const clickSpy = createCaptionButton();
+
+      const feature = await importFreshFeature();
+      feature.default.activate(makeFeatureContext());
+
+      await new Promise((resolve) => window.setTimeout(resolve, 3000));
+      expect(clickSpy).not.toHaveBeenCalled();
+    });
+
+    it("attempts caption button fallback at most once per video", async () => {
+      await setupEnglishTrackMocks();
+      const clickSpy = createCaptionButton();
+
+      const feature = await importFreshFeature();
+      feature.default.activate(makeFeatureContext());
+
+      await vi.waitFor(
+        () => {
+          expect(clickSpy).toHaveBeenCalledTimes(2);
+        },
+        { timeout: 5000 },
+      );
+
+      await new Promise((resolve) => window.setTimeout(resolve, 1000));
+      expect(clickSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not attempt caption button fallback when user overrides during grace period", async () => {
+      await setupEnglishTrackMocks([
+        "sig-applied",
+        "sig-applied",
+        "user-override-sig",
+      ]);
+      const clickSpy = createCaptionButton();
+
+      const feature = await importFreshFeature();
+      feature.default.activate(makeFeatureContext());
+
+      await new Promise((resolve) => window.setTimeout(resolve, 3000));
+      expect(clickSpy).not.toHaveBeenCalled();
+    });
+
+    it("does not attempt caption button fallback when navigation occurs before fallback", async () => {
+      await setupEnglishTrackMocks();
+      const clickSpy = createCaptionButton();
+
+      const feature = await importFreshFeature();
+      feature.default.activate(makeFeatureContext());
+
+      await new Promise((resolve) => window.setTimeout(resolve, 1000));
+
+      Object.defineProperty(window, "location", {
+        value: {
+          href: "https://www.youtube.com/watch?v=other-video",
+          hostname: "www.youtube.com",
+          pathname: "/watch",
+          search: "?v=other-video",
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      await new Promise((resolve) => window.setTimeout(resolve, 3000));
+      expect(clickSpy).not.toHaveBeenCalled();
+    });
+
+    it("does not attempt caption button fallback when subtitle button is missing", async () => {
+      await setupEnglishTrackMocks();
+
+      const feature = await importFreshFeature();
+      feature.default.activate(makeFeatureContext());
+
+      await new Promise((resolve) => window.setTimeout(resolve, 3000));
+    });
+  });
 });
