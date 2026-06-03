@@ -235,13 +235,13 @@ async function syncValidatedVideoPanel(
 
   syncCollapsedAskPanelScrollContainment(askState.panel, askState.expanded);
 
-  if (await handledChaptersOrLostSession(videoId, token)) {
+  if (await handledAskOrLostSession(videoId, token)) {
     return;
   }
 
   closeNoisyPanels(videoId, token);
 
-  await openAskFallbackIfNeeded(videoId, token, askState.expanded);
+  await tryOpenChapters(videoId, token);
 }
 
 function readAskPanelState(): { panel: HTMLElement | null; expanded: boolean } {
@@ -283,25 +283,12 @@ async function handleAlreadyExpandedAsk(
   return true;
 }
 
-async function handledChaptersOrLostSession(
+async function handledAskOrLostSession(
   videoId: string,
   token: number,
 ): Promise<boolean> {
-  const chaptersHandled = await tryOpenChapters(videoId, token);
-  return token !== sessionToken || chaptersHandled;
-}
-
-async function openAskFallbackIfNeeded(
-  videoId: string,
-  token: number,
-  askExpanded: boolean,
-): Promise<void> {
-  if (askExpanded) {
-    completeVideo(videoId);
-    return;
-  }
-
-  await openAskPanel(videoId, token);
+  const askHandled = await tryOpenAsk(videoId, token);
+  return token !== sessionToken || askHandled;
 }
 
 function shouldPromptExpandedAsk(
@@ -623,30 +610,56 @@ async function waitForVisibleChapterItems(): Promise<boolean> {
   }
 }
 
-async function openAskPanel(videoId: string, token: number): Promise<void> {
-  if (completeIfAskAlreadyOpen(videoId)) {
-    return;
+async function tryOpenAsk(videoId: string, token: number): Promise<boolean> {
+  if (await completeExpandedAskIfOpen(videoId, token)) {
+    return true;
   }
 
-  const askButton = findAskButton();
-  if (!askButton) {
-    return;
+  const askControl = await waitForAskButtonOrExpandedPanel();
+  if (!askControl) {
+    return false;
   }
 
-  clickElement(askButton);
-  await completeWhenAskPanelOpen(videoId, token);
+  if (await completeExpandedAskIfOpen(videoId, token)) {
+    return true;
+  }
+
+  if (!isContextValid(token, videoId)) {
+    return false;
+  }
+
+  clickElement(askControl);
+  return completeWhenAskPanelOpen(videoId, token);
 }
 
 async function completeWhenAskPanelOpen(
   videoId: string,
   token: number,
-): Promise<void> {
+): Promise<boolean> {
   if (!(await waitForExpandedAskPanel())) {
-    return;
+    return false;
   }
 
+  return completeExpandedAsk(videoId, token);
+}
+
+async function completeExpandedAskIfOpen(
+  videoId: string,
+  token: number,
+): Promise<boolean> {
+  if (!isAskPanelCurrentlyExpanded()) {
+    return false;
+  }
+
+  return completeExpandedAsk(videoId, token);
+}
+
+async function completeExpandedAsk(
+  videoId: string,
+  token: number,
+): Promise<boolean> {
   if (!isContextValid(token, videoId)) {
-    return;
+    return false;
   }
 
   await promptCurrentVideo(videoId, token);
@@ -655,20 +668,39 @@ async function completeWhenAskPanelOpen(
 
   if (!isContextValid(token, videoId) || !isAskPanelCurrentlyExpanded()) {
     domSyncController.queueSync();
-    return;
-  }
-
-  completeVideo(videoId);
-  syncAskScrollContainment();
-}
-
-function completeIfAskAlreadyOpen(videoId: string): boolean {
-  if (!isAskPanelCurrentlyExpanded()) {
     return false;
   }
 
   completeVideo(videoId);
+  syncAskScrollContainment();
   return true;
+}
+
+async function waitForAskButtonOrExpandedPanel(): Promise<HTMLElement | null> {
+  const immediateAskButton = findAskButton();
+  if (immediateAskButton) {
+    return immediateAskButton;
+  }
+
+  try {
+    return await waitFor(
+      () => {
+        if (isAskPanelCurrentlyExpanded()) {
+          return findAskPanel();
+        }
+
+        return findAskButton();
+      },
+      {
+        timeout: SYNC_TIMEOUT_MS,
+        interval: 100,
+        errorCode: "ASK_NOT_AVAILABLE",
+        errorMessage: "Timed out waiting for Ask to become available.",
+      },
+    );
+  } catch {
+    return null;
+  }
 }
 
 async function promptCurrentVideo(

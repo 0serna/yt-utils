@@ -1,8 +1,4 @@
-## Purpose
-
-Automatically open the most useful YouTube engagement panel on supported watch pages: prioritize Ask/Preguntar when available within the configured wait window, falling back to Chapters/Capítulos when Ask is not available. Close noisy panels that interfere with the initial auto-open decision.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Auto-open prioritized engagement panel on the current watch page
 
@@ -70,6 +66,13 @@ The system MUST automatically decide and open the best available YouTube engagem
 - **THEN** the system MUST NOT automatically switch from Chapters to Ask
 - **AND** the system MUST NOT type or send the Ask summary prompt from that late availability alone
 
+#### Scenario: User closes automatically opened Ask panel
+
+- **WHEN** the system opens Ask for the current confirmed video and marks the current video complete
+- **AND** the user closes the Ask panel during the same video session
+- **THEN** the system MUST NOT open Chapters as a follow-up automatic action
+- **AND** the system MUST NOT reopen Ask for the same video session
+
 #### Scenario: User manually opens Ask panel during session
 
 - **WHEN** the user manually opens the `Ask` panel on a supported YouTube watch page
@@ -85,7 +88,7 @@ The system MUST automatically decide and open the best available YouTube engagem
 - **AND** an expanded `In this video`, `Timeline`, or `Transcript` composite panel is present
 - **AND** the panel exposes a visible close control
 - **THEN** the system MUST close that noisy panel
-- **AND** the system MUST continue evaluating the current video's valid Chapters or Ask panels
+- **AND** the system MUST continue evaluating the current video's valid Ask or Chapters panels
 
 #### Scenario: Opened Live chat replay panel is present during initial auto-open
 
@@ -93,7 +96,7 @@ The system MUST automatically decide and open the best available YouTube engagem
 - **AND** an expanded `Live chat replay` panel is present
 - **AND** the panel exposes a visible close control
 - **THEN** the system MUST close that noisy panel
-- **AND** the system MUST continue evaluating the current video's valid Chapters or Ask panels
+- **AND** the system MUST continue evaluating the current video's valid Ask or Chapters panels
 
 #### Scenario: Live chat replay teaser is present
 
@@ -110,7 +113,7 @@ The system MUST automatically decide and open the best available YouTube engagem
 #### Scenario: No available panel for the current video
 
 - **WHEN** a supported YouTube watch page for the current confirmed video loads
-- **AND** neither a chapters panel nor an Ask panel is available for the current video
+- **AND** neither an Ask panel nor a chapters panel is available for the current video
 - **THEN** the system MUST NOT click any allowed panel control
 - **AND** the system MUST continue silently
 
@@ -127,28 +130,12 @@ The system MUST automatically decide and open the best available YouTube engagem
 - **AND** an expanded `In this video`, `Timeline`, `Transcript`, or `Live chat replay` panel from the previous video remains in the DOM during the new video's initial panel-auto-open attempt
 - **AND** the stale noisy panel exposes a visible close control
 - **THEN** the system MUST close that noisy panel
-- **AND** the system MUST continue evaluating the current video's valid Chapters or Ask panels
+- **AND** the system MUST continue evaluating the current video's valid Ask or Chapters panels
 
 #### Scenario: Previous video's pending panel wait completes after SPA navigation
 
-- **WHEN** a Chapters or Ask wait that started for a previous video completes after the URL `v` parameter changed
+- **WHEN** an Ask or Chapters wait that started for a previous video completes after the URL `v` parameter changed
 - **THEN** the system MUST NOT click controls, type a prompt, send a prompt, or mark the new video complete from that stale wait
-
-#### Scenario: User closes automatically opened Ask panel
-
-- **WHEN** the system opens Ask for the current confirmed video and marks the current video complete
-- **AND** the user closes the Ask panel during the same video session
-- **THEN** the system MUST NOT open Chapters as a follow-up automatic action
-- **AND** the system MUST NOT reopen Ask for the same video session
-
-#### Scenario: User manually opens Ask panel during session
-
-- **WHEN** the user manually opens the `Ask` panel on a supported YouTube watch page
-- **AND** the live player confirms the page's current video ID
-- **AND** the summary prompt has not yet been typed for the current video
-- **THEN** the system MUST type the summary prompt into the chat input textbox
-- **AND** the system MUST click the Send button once
-- **AND** the system MUST mark the current video complete
 
 #### Scenario: Chat input is unavailable within the wait window
 

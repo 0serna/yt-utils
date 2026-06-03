@@ -65,6 +65,19 @@ function appendAskPromptControls(panel: HTMLElement): {
   return { chatInput, sendButton };
 }
 
+function matchesButtonLabel(
+  matchers: readonly RegExp[],
+  label: string,
+): boolean {
+  return matchers.some((matcher) => matcher.test(label));
+}
+
+function clickedElements(clickElement: {
+  mock: { calls: unknown[][] };
+}): unknown[] {
+  return clickElement.mock.calls.flat();
+}
+
 function appendNoisyPanel(text: string): {
   panel: HTMLElement;
   closeButton: HTMLButtonElement;
@@ -398,11 +411,12 @@ describe("watch-panel-auto-open feature", () => {
       panel.remove();
     });
 
-    it("opens chapters panel when both chapters and ask are available", async () => {
+    it("opens ask panel when both chapters and ask are available", async () => {
       const askPanel = appendEngagementPanel(
         "PAyouchat",
         "ENGAGEMENT_PANEL_VISIBILITY_HIDDEN",
       );
+      const { chatInput, sendButton } = appendAskPromptControls(askPanel);
 
       const chaptersPanel = appendEngagementPanel(
         "engagement-panel-macro-markers",
@@ -410,6 +424,7 @@ describe("watch-panel-auto-open feature", () => {
       );
       const chapterItem = appendChapterItem(chaptersPanel);
 
+      const askButton = document.createElement("button");
       const chaptersButton = document.createElement("button");
 
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
@@ -417,12 +432,129 @@ describe("watch-panel-auto-open feature", () => {
 
       const { findButton, isVisible, clickElement, waitFor } =
         await import("@shared/youtube-dom");
-      vi.mocked(findButton).mockReturnValue(chaptersButton);
+      vi.mocked(findButton).mockImplementation((_root, matchers) => {
+        if (matchesButtonLabel(matchers, "Ask")) return askButton;
+        if (matchesButtonLabel(matchers, "Chapters")) {
+          return chaptersButton;
+        }
+        return null;
+      });
+      vi.mocked(isVisible).mockImplementation((el) => {
+        if (el === chapterItem || el === chatInput) return true;
+        return false;
+      });
+      vi.mocked(clickElement).mockImplementation((element) => {
+        if (element === askButton) {
+          askPanel.setAttribute(
+            "visibility",
+            "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
+          );
+        }
+      });
+      vi.mocked(waitFor).mockImplementation((callback) =>
+        Promise.resolve(callback() as HTMLElement),
+      );
+
+      const feature = await setupWatchPage();
+      feature.activate(makeFeatureContext());
+
+      await vi.waitFor(
+        () => {
+          expect(clickElement).toHaveBeenCalledWith(askButton);
+          expect(clickElement).toHaveBeenCalledWith(sendButton);
+        },
+        { timeout: 2000 },
+      );
+      expect(clickedElements(vi.mocked(clickElement))).not.toContain(
+        chaptersButton,
+      );
+
+      chaptersPanel.remove();
+      askPanel.remove();
+    });
+
+    it("opens ask when chapters panel is already expanded with items", async () => {
+      const askPanel = appendEngagementPanel(
+        "PAyouchat",
+        "ENGAGEMENT_PANEL_VISIBILITY_HIDDEN",
+      );
+      const askButton = document.createElement("button");
+
+      const chaptersPanel = appendEngagementPanel(
+        "engagement-panel-macro-markers",
+        "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
+      );
+      const chapterItem = appendChapterItem(chaptersPanel);
+
+      const { readPlayerSnapshot } = await import("@shared/youtube-player");
+      vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
+
+      const { isVisible, clickElement, findButton, waitFor } =
+        await import("@shared/youtube-dom");
+      vi.mocked(findButton).mockImplementation((_root, matchers) =>
+        matchesButtonLabel(matchers, "Ask") ? askButton : null,
+      );
       vi.mocked(isVisible).mockImplementation((el) => {
         if (el === chapterItem) return true;
         return false;
       });
-      vi.mocked(waitFor).mockResolvedValue([chapterItem]);
+      vi.mocked(clickElement).mockImplementation((element) => {
+        if (element === askButton) {
+          askPanel.setAttribute(
+            "visibility",
+            "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
+          );
+        }
+      });
+      vi.mocked(waitFor).mockImplementation((callback) =>
+        Promise.resolve(callback() as HTMLElement),
+      );
+
+      const feature = await setupWatchPage();
+      feature.activate(makeFeatureContext());
+
+      await vi.waitFor(
+        () => {
+          expect(clickElement).toHaveBeenCalledWith(askButton);
+        },
+        { timeout: 2000 },
+      );
+
+      chaptersPanel.remove();
+      askPanel.remove();
+    });
+
+    it("falls back to chapters when ask is not available within the wait window", async () => {
+      const chaptersPanel = appendEngagementPanel(
+        "engagement-panel-macro-markers",
+        "ENGAGEMENT_PANEL_VISIBILITY_HIDDEN",
+      );
+      const chapterItem = appendChapterItem(chaptersPanel);
+      const chaptersButton = document.createElement("button");
+
+      const { readPlayerSnapshot } = await import("@shared/youtube-player");
+      vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
+
+      const { findButton, clickElement, waitFor, isVisible } =
+        await import("@shared/youtube-dom");
+      vi.mocked(findButton).mockImplementation((_root, matchers) =>
+        matchesButtonLabel(matchers, "Chapters") ? chaptersButton : null,
+      );
+      vi.mocked(clickElement).mockImplementation((element) => {
+        if (element === chaptersButton) {
+          chaptersPanel.setAttribute(
+            "visibility",
+            "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
+          );
+        }
+      });
+      vi.mocked(isVisible).mockImplementation((el) => el === chapterItem);
+      vi.mocked(waitFor).mockImplementation((callback, options) => {
+        if (options?.errorCode === "ASK_NOT_AVAILABLE") {
+          return Promise.reject(new Error("ask timeout"));
+        }
+        return Promise.resolve(callback() as HTMLElement);
+      });
 
       const feature = await setupWatchPage();
       feature.activate(makeFeatureContext());
@@ -435,85 +567,6 @@ describe("watch-panel-auto-open feature", () => {
       );
 
       chaptersPanel.remove();
-      askPanel.remove();
-    });
-
-    it("opens chapters panel when chapters panel is already expanded with items", async () => {
-      const askPanel = appendEngagementPanel(
-        "PAyouchat",
-        "ENGAGEMENT_PANEL_VISIBILITY_HIDDEN",
-      );
-
-      const chaptersPanel = appendEngagementPanel(
-        "engagement-panel-macro-markers",
-        "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
-      );
-      const chapterItem = appendChapterItem(chaptersPanel);
-
-      const { readPlayerSnapshot } = await import("@shared/youtube-player");
-      vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
-
-      const { isVisible, clickElement, findButton } =
-        await import("@shared/youtube-dom");
-      vi.mocked(isVisible).mockImplementation((el) => {
-        if (el === chapterItem) return true;
-        return false;
-      });
-
-      const feature = await setupWatchPage();
-      feature.activate(makeFeatureContext());
-
-      await vi.waitFor(
-        () => {
-          expect(findButton).not.toHaveBeenCalled();
-          expect(clickElement).not.toHaveBeenCalled();
-        },
-        { timeout: 1000 },
-      );
-
-      chaptersPanel.remove();
-      askPanel.remove();
-    });
-
-    it("falls back to ask when chapters are not available", async () => {
-      const panel = appendEngagementPanel(
-        "PAyouchat",
-        "ENGAGEMENT_PANEL_VISIBILITY_HIDDEN",
-      );
-      panel.style.display = "none";
-
-      const askButton = document.createElement("button");
-
-      const { readPlayerSnapshot } = await import("@shared/youtube-player");
-      vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
-
-      const { findButton, clickElement, waitFor } =
-        await import("@shared/youtube-dom");
-      vi.mocked(findButton).mockImplementation((_root, matchers) =>
-        matchers.some((matcher) => matcher.test("Ask")) ? askButton : null,
-      );
-      vi.mocked(clickElement).mockImplementation((element) => {
-        if (element === askButton) {
-          panel.style.display = "";
-          panel.setAttribute(
-            "visibility",
-            "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
-          );
-        }
-      });
-      vi.mocked(waitFor).mockResolvedValue(askButton);
-
-      const feature = await setupWatchPage();
-      feature.activate(makeFeatureContext());
-
-      await vi.waitFor(
-        () => {
-          expect(clickElement).toHaveBeenCalledWith(askButton);
-        },
-        { timeout: 2000 },
-      );
-
-      panel.remove();
     });
 
     it("falls back to ask when only an ambiguous In this video entrypoint is available", async () => {
@@ -536,7 +589,7 @@ describe("watch-panel-auto-open feature", () => {
       const { findButton, clickElement, waitFor, isVisible } =
         await import("@shared/youtube-dom");
       vi.mocked(findButton).mockImplementation((_root, matchers) =>
-        matchers.some((matcher) => matcher.test("Ask")) ? askButton : null,
+        matchesButtonLabel(matchers, "Ask") ? askButton : null,
       );
       vi.mocked(clickElement).mockImplementation((element) => {
         if (element === askButton) {
@@ -582,7 +635,7 @@ describe("watch-panel-auto-open feature", () => {
       const { delay, findButton, clickElement, waitFor } =
         await import("@shared/youtube-dom");
       vi.mocked(findButton).mockImplementation((_root, matchers) =>
-        matchers.some((matcher) => matcher.test("Ask")) ? askButton : null,
+        matchesButtonLabel(matchers, "Ask") ? askButton : null,
       );
       vi.mocked(clickElement).mockImplementation((element) => {
         if (element === askButton) {
@@ -743,7 +796,7 @@ describe("watch-panel-auto-open feature", () => {
       collapsedFrame.frame.remove();
     });
 
-    it("types prompt and clicks Send when chat input is available after ask fallback opens", async () => {
+    it("types prompt and clicks Send when chat input is available after ask opens", async () => {
       const panel = appendEngagementPanel(
         "PAyouchat",
         "ENGAGEMENT_PANEL_VISIBILITY_HIDDEN",
@@ -760,21 +813,21 @@ describe("watch-panel-auto-open feature", () => {
 
       const askButton = document.createElement("button");
       vi.mocked(findButton).mockReturnValue(askButton);
+      vi.mocked(clickElement).mockImplementation((element) => {
+        if (element === askButton) {
+          panel.style.display = "";
+          panel.setAttribute(
+            "visibility",
+            "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
+          );
+        }
+      });
       vi.mocked(isVisible).mockImplementation((el) => {
         if (el === chatInput) return true;
         return false;
       });
-      vi.mocked(waitFor).mockImplementation(
-        (() => {
-          let callIndex = 0;
-          return () => {
-            callIndex++;
-            if (callIndex === 1)
-              return Promise.reject(new Error("chapters timeout"));
-            if (callIndex === 2) return Promise.resolve(askButton);
-            return Promise.resolve(chatInput);
-          };
-        })(),
+      vi.mocked(waitFor).mockImplementation((callback) =>
+        Promise.resolve(callback() as HTMLElement),
       );
 
       const feature = await setupWatchPage();
@@ -788,6 +841,67 @@ describe("watch-panel-auto-open feature", () => {
       );
 
       panel.remove();
+    });
+
+    it("leaves ask open without falling back to chapters when chat input is missing", async () => {
+      const askPanel = appendEngagementPanel(
+        "PAyouchat",
+        "ENGAGEMENT_PANEL_VISIBILITY_HIDDEN",
+      );
+      const chaptersPanel = appendEngagementPanel(
+        "engagement-panel-macro-markers",
+        "ENGAGEMENT_PANEL_VISIBILITY_HIDDEN",
+      );
+      const chapterItem = appendChapterItem(chaptersPanel);
+      const askButton = document.createElement("button");
+      const chaptersButton = document.createElement("button");
+
+      const { readPlayerSnapshot } = await import("@shared/youtube-player");
+      vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
+
+      const { findButton, clickElement, waitFor, isVisible } =
+        await import("@shared/youtube-dom");
+      vi.mocked(findButton).mockImplementation((_root, matchers) => {
+        if (matchesButtonLabel(matchers, "Ask")) return askButton;
+        if (matchesButtonLabel(matchers, "Chapters")) {
+          return chaptersButton;
+        }
+        return null;
+      });
+      vi.mocked(clickElement).mockImplementation((element) => {
+        if (element === askButton) {
+          askPanel.setAttribute(
+            "visibility",
+            "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
+          );
+        }
+      });
+      vi.mocked(isVisible).mockImplementation((el) => el === chapterItem);
+      vi.mocked(waitFor).mockImplementation((callback, options) => {
+        if (options?.errorCode === "CHAT_INPUT_NOT_FOUND") {
+          return Promise.reject(new Error("chat input timeout"));
+        }
+        return Promise.resolve(callback() as HTMLElement);
+      });
+
+      const feature = await setupWatchPage();
+      feature.activate(makeFeatureContext());
+
+      await vi.waitFor(
+        () => {
+          expect(clickElement).toHaveBeenCalledWith(askButton);
+        },
+        { timeout: 2000 },
+      );
+      expect(clickedElements(vi.mocked(clickElement))).not.toContain(
+        chaptersButton,
+      );
+      expect(askPanel.getAttribute("visibility")).toBe(
+        "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
+      );
+
+      chaptersPanel.remove();
+      askPanel.remove();
     });
 
     it("does not interact when ask was already expanded before fallback", async () => {
@@ -934,12 +1048,14 @@ describe("watch-panel-auto-open feature", () => {
       panel.remove();
     });
 
-    it("types prompt when ask is manually opened after chapters completed the video", async () => {
+    it("does not auto-switch to late ask after chapters fallback, but prompts after manual ask open", async () => {
       const askPanel = appendEngagementPanel(
         "PAyouchat",
         "ENGAGEMENT_PANEL_VISIBILITY_HIDDEN",
       );
       askPanel.style.display = "none";
+      const askButton = document.createElement("button");
+      let askAvailable = false;
 
       const { chatInput, sendButton } = appendAskPromptControls(askPanel);
 
@@ -952,25 +1068,37 @@ describe("watch-panel-auto-open feature", () => {
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
-      const { clickElement, isVisible, waitFor } =
+      const { clickElement, findButton, isVisible, waitFor } =
         await import("@shared/youtube-dom");
+      vi.mocked(findButton).mockImplementation((_root, matchers) =>
+        askAvailable && matchesButtonLabel(matchers, "Ask") ? askButton : null,
+      );
       vi.mocked(isVisible).mockImplementation((el) => {
         if (el === chapterItem || el === chatInput) return true;
         return false;
       });
-      vi.mocked(waitFor).mockImplementation((callback) =>
-        Promise.resolve(callback() as HTMLElement),
-      );
+      vi.mocked(waitFor).mockImplementation((callback, options) => {
+        if (options?.errorCode === "ASK_NOT_AVAILABLE") {
+          return Promise.reject(new Error("ask timeout"));
+        }
+        return Promise.resolve(callback() as HTMLElement);
+      });
 
       const feature = await setupWatchPage();
       feature.activate(makeFeatureContext());
 
       await vi.waitFor(
         () => {
+          expect(findButton).toHaveBeenCalled();
           expect(clickElement).not.toHaveBeenCalled();
         },
         { timeout: 1000 },
       );
+
+      askAvailable = true;
+      askPanel.setAttribute("data-late-ask", "1");
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      expect(clickElement).not.toHaveBeenCalledWith(askButton);
 
       askPanel.style.display = "";
       askPanel.setAttribute(
