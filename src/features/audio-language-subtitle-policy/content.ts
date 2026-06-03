@@ -16,7 +16,7 @@ import {
 } from "@shared/youtube-session";
 
 const POLL_INTERVAL_MS = 500;
-const RENDERER_FALLBACK_GRACE_MS = 2000;
+const RENDERER_FALLBACK_GRACE_MS = 3000;
 const UI_TOGGLE_DELAY_MS = 200;
 
 let pollTimer: number | null = null;
@@ -273,7 +273,7 @@ async function waitForSelectionApply(
   desiredSelection: SubtitleSelection,
 ): Promise<boolean> {
   return waitForSubtitleSelection(readPlayerSnapshot, desiredSelection, {
-    timeoutMs: 1800,
+    timeoutMs: 2500,
     intervalMs: 100,
   });
 }
