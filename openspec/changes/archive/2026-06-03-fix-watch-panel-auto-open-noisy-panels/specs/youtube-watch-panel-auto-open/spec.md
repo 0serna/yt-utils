@@ -1,8 +1,4 @@
-## Purpose
-
-Automatically open the most useful YouTube engagement panel on supported watch pages: Chapters/Capítulos when a valid chapter list exists, falling back to Ask/Preguntar with a typed summary prompt. Close noisy panels that interfere with the initial auto-open decision.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Auto-open prioritized engagement panel on the current watch page
 

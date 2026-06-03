@@ -22,9 +22,6 @@ const CHAPTERS_PANEL_TARGET_IDS = [
   "engagement-panel-macro-markers",
   "engagement-panel-macro-markers-description-chapters",
 ];
-const CHAPTERS_PANEL_SELECTOR = CHAPTERS_PANEL_TARGET_IDS.map(
-  (id) => `ytd-engagement-panel-section-list-renderer[target-id="${id}"]`,
-).join(", ");
 const ASK_SCROLL_CONTAINER_SELECTOR =
   'ytd-engagement-panel-section-list-renderer[target-id="PAyouchat"] yt-section-list-renderer';
 const POLL_INTERVAL_MS = 500;
@@ -33,6 +30,16 @@ const PANEL_SETTLE_DELAY_MS = 1500;
 const VIDEO_WATCH_INTERVAL_MS = 500;
 const ASK_LABELS = [/\bask\b/i, /\bpreguntar\b/i];
 const CHAPTERS_LABELS = [/\bchapters\b/i, /\bcapítulos\b/i];
+const NOISY_COMPOSITE_PANEL_LABELS = [/\bin this video\b/i, /\btimeline\b/i];
+const NOISY_TRANSCRIPT_LABEL = /\btranscript\b/i;
+const LIVE_CHAT_REPLAY_LABEL = /\blive chat replay\b/i;
+const CLOSE_LABELS = [
+  /^close$/i,
+  /\bclose panel\b/i,
+  /^cerrar$/i,
+  /^hide chat replay$/i,
+  /\bocultar\b.*\bchat\b/i,
+];
 const CHAPTER_ITEM_SELECTOR = "ytd-macro-markers-list-item-renderer";
 const CHAT_INPUT_SELECTOR =
   'textarea.chatInputViewModelChatInput, textarea[placeholder="Ask a question..."], textarea[placeholder="Haz una pregunta..."]';
@@ -46,6 +53,7 @@ let completedVideoId: string | null = null;
 let promptedVideoId: string | null = null;
 let promptingVideoId: string | null = null;
 let expandedVideoId: string | null = null;
+let closedNoisyPanels = new WeakSet<HTMLElement>();
 let activatedAt = 0;
 let observedVideoId: string | null = null;
 let videoWatchTimer: number | null = null;
@@ -119,6 +127,7 @@ function resetSessionState(): void {
   promptedVideoId = null;
   promptingVideoId = null;
   expandedVideoId = null;
+  closedNoisyPanels = new WeakSet<HTMLElement>();
 }
 
 function findAskPanel(): HTMLElement | null {
@@ -184,13 +193,6 @@ function findVisibleChapterItems(): HTMLElement[] {
 }
 
 function findChaptersButton(): HTMLElement | null {
-  const playerButton = document.querySelector<HTMLElement>(
-    "button.ytp-chapter-title",
-  );
-  if (playerButton && isVisible(playerButton)) {
-    return playerButton;
-  }
-
   return findButton(document, CHAPTERS_LABELS);
 }
 
@@ -229,11 +231,15 @@ async function syncValidatedVideoPanel(
     return;
   }
 
+  closeNoisyPanels(videoId, token);
+
   syncCollapsedAskPanelScrollContainment(askState.panel, askState.expanded);
 
   if (await handledChaptersOrLostSession(videoId, token)) {
     return;
   }
+
+  closeNoisyPanels(videoId, token);
 
   await openAskFallbackIfNeeded(videoId, token, askState.expanded);
 }
@@ -314,6 +320,154 @@ function syncCollapsedAskPanelScrollContainment(
   if (panel && !askExpanded) {
     syncAskScrollContainment();
   }
+}
+
+function closeNoisyPanels(videoId: string, token: number): void {
+  if (!isContextValid(token, videoId) || completedVideoId === videoId) {
+    return;
+  }
+
+  for (const panel of findNoisyExpandedPanels()) {
+    if (!isContextValid(token, videoId) || completedVideoId === videoId) {
+      return;
+    }
+
+    const closeControl = findVisibleCloseControl(panel);
+    if (closeControl) {
+      closedNoisyPanels.add(panel);
+      clickElement(closeControl);
+    }
+  }
+
+  for (const iframe of findNoisyLiveChatReplayIframes()) {
+    if (!isContextValid(token, videoId) || completedVideoId === videoId) {
+      return;
+    }
+
+    const closeControl = findVisibleLiveChatReplayIframeCloseControl(iframe);
+    if (closeControl) {
+      closedNoisyPanels.add(iframe);
+      clickElement(closeControl);
+    }
+  }
+}
+
+function findNoisyExpandedPanels(): HTMLElement[] {
+  return [
+    ...findNoisyExpandedEngagementPanels(),
+    ...findNoisyLiveChatReplayFrames(),
+    ...findNoisyLiveChatHeaders(),
+  ];
+}
+
+function findNoisyExpandedEngagementPanels(): HTMLElement[] {
+  const panels = document.querySelectorAll<HTMLElement>(
+    "ytd-engagement-panel-section-list-renderer",
+  );
+
+  return [...panels].filter(
+    (panel) =>
+      !closedNoisyPanels.has(panel) &&
+      isAskPanelExpanded(panel) &&
+      hasNoisyPanelLabel(panel),
+  );
+}
+
+function findNoisyLiveChatReplayFrames(): HTMLElement[] {
+  const frames = document.querySelectorAll<HTMLElement>("ytd-live-chat-frame");
+
+  return [...frames].filter(
+    (frame) =>
+      !closedNoisyPanels.has(frame) && Boolean(findVisibleCloseControl(frame)),
+  );
+}
+
+function findNoisyLiveChatHeaders(): HTMLElement[] {
+  const headers = document.querySelectorAll<HTMLElement>(
+    "yt-live-chat-header-renderer",
+  );
+
+  return [...headers].filter(
+    (header) =>
+      !closedNoisyPanels.has(header) &&
+      Boolean(findVisibleCloseControl(header)),
+  );
+}
+
+function findNoisyLiveChatReplayIframes(): HTMLIFrameElement[] {
+  const iframes = document.querySelectorAll<HTMLIFrameElement>(
+    "iframe#chatframe, iframe[name='chatframe']",
+  );
+
+  return [...iframes].filter(
+    (iframe) =>
+      !closedNoisyPanels.has(iframe) &&
+      isLiveChatReplayIframe(iframe) &&
+      Boolean(findVisibleLiveChatReplayIframeCloseControl(iframe)),
+  );
+}
+
+function isLiveChatReplayIframe(iframe: HTMLIFrameElement): boolean {
+  return (
+    /\/live_chat_replay\b/.test(iframe.src) ||
+    /\/live_chat_replay\b/.test(readIframeLocationHref(iframe) || "") ||
+    iframe.id === "chatframe" ||
+    iframe.name === "chatframe"
+  );
+}
+
+function readIframeLocationHref(iframe: HTMLIFrameElement): string | null {
+  try {
+    return iframe.contentWindow?.location.href || null;
+  } catch {
+    return null;
+  }
+}
+
+function findVisibleLiveChatReplayIframeCloseControl(
+  iframe: HTMLIFrameElement,
+): HTMLElement | null {
+  const iframeDocument = readIframeDocument(iframe);
+  if (!iframeDocument) {
+    return null;
+  }
+
+  const closeButton = findButton(iframeDocument, CLOSE_LABELS);
+  if (closeButton && isVisible(closeButton)) {
+    return closeButton;
+  }
+
+  return null;
+}
+
+function readIframeDocument(iframe: HTMLIFrameElement): Document | null {
+  try {
+    return iframe.contentDocument;
+  } catch {
+    return null;
+  }
+}
+
+function hasNoisyPanelLabel(panel: HTMLElement): boolean {
+  const text = panel.textContent || "";
+  const hasCompositeLabel = NOISY_COMPOSITE_PANEL_LABELS.some((re) =>
+    re.test(text),
+  );
+
+  return (
+    LIVE_CHAT_REPLAY_LABEL.test(text) ||
+    hasCompositeLabel ||
+    (NOISY_TRANSCRIPT_LABEL.test(text) && hasCompositeLabel)
+  );
+}
+
+function findVisibleCloseControl(panel: HTMLElement): HTMLElement | null {
+  const closeButton = findButton(panel, CLOSE_LABELS);
+  if (closeButton && isVisible(closeButton)) {
+    return closeButton;
+  }
+
+  return null;
 }
 
 function shouldDeferInitialExpandedAsk(
@@ -704,7 +858,7 @@ function isInsidePanelSurface(node: Node): boolean {
 
   return Boolean(
     node.closest(
-      `ytd-watch-metadata, #actions-inner, #top-level-buttons-computed, ytd-menu-renderer, ytd-engagement-panel-section-list-renderer[target-id="${PANEL_TARGET_ID}"], ${CHAPTERS_PANEL_SELECTOR}`,
+      `ytd-watch-metadata, #actions-inner, #top-level-buttons-computed, ytd-menu-renderer, ytd-engagement-panel-section-list-renderer, ytd-live-chat-frame, yt-live-chat-header-renderer`,
     ),
   );
 }

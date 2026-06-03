@@ -65,6 +65,77 @@ function appendAskPromptControls(panel: HTMLElement): {
   return { chatInput, sendButton };
 }
 
+function appendNoisyPanel(text: string): {
+  panel: HTMLElement;
+  closeButton: HTMLButtonElement;
+} {
+  const panel = appendEngagementPanel(
+    "engagement-panel-noisy-test",
+    "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
+  );
+  panel.textContent = text;
+
+  const closeButton = document.createElement("button");
+  closeButton.setAttribute("aria-label", "Close");
+  panel.appendChild(closeButton);
+
+  return { panel, closeButton };
+}
+
+function appendLiveChatReplayFrame(buttonLabel: string): {
+  frame: HTMLElement;
+  button: HTMLButtonElement;
+} {
+  const frame = document.createElement("ytd-live-chat-frame");
+  frame.id = "chat";
+  frame.textContent = buttonLabel;
+
+  const button = document.createElement("button");
+  button.setAttribute("aria-label", buttonLabel);
+  button.textContent = buttonLabel;
+  frame.appendChild(button);
+  document.body.appendChild(frame);
+
+  return { frame, button };
+}
+
+function appendLiveChatHeader(): {
+  header: HTMLElement;
+  closeButton: HTMLButtonElement;
+} {
+  const header = document.createElement("yt-live-chat-header-renderer");
+  const closeHost = document.createElement("div");
+  closeHost.id = "close-button";
+
+  const closeButton = document.createElement("button");
+  closeButton.setAttribute("aria-label", "Close");
+  closeHost.appendChild(closeButton);
+  header.appendChild(closeHost);
+  document.body.appendChild(header);
+
+  return { header, closeButton };
+}
+
+function appendLiveChatReplayIframe(): {
+  iframe: HTMLIFrameElement;
+  closeButton: HTMLButtonElement;
+} {
+  const iframe = document.createElement("iframe");
+  iframe.id = "chatframe";
+  iframe.src = "https://www.youtube.com/live_chat_replay";
+  document.body.appendChild(iframe);
+
+  iframe.contentDocument!.open();
+  iframe.contentDocument!.write("<body></body>");
+  iframe.contentDocument!.close();
+
+  const closeButton = iframe.contentDocument!.createElement("button");
+  closeButton.setAttribute("aria-label", "Close");
+  iframe.contentDocument!.body.appendChild(closeButton);
+
+  return { iframe, closeButton };
+}
+
 async function importFreshFeature() {
   return import("./content");
 }
@@ -418,7 +489,18 @@ describe("watch-panel-auto-open feature", () => {
 
       const { findButton, clickElement, waitFor } =
         await import("@shared/youtube-dom");
-      vi.mocked(findButton).mockReturnValue(askButton);
+      vi.mocked(findButton).mockImplementation((_root, matchers) =>
+        matchers.some((matcher) => matcher.test("Ask")) ? askButton : null,
+      );
+      vi.mocked(clickElement).mockImplementation((element) => {
+        if (element === askButton) {
+          panel.style.display = "";
+          panel.setAttribute(
+            "visibility",
+            "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
+          );
+        }
+      });
       vi.mocked(waitFor).mockResolvedValue(askButton);
 
       const feature = await setupWatchPage();
@@ -431,6 +513,55 @@ describe("watch-panel-auto-open feature", () => {
         { timeout: 2000 },
       );
 
+      panel.remove();
+    });
+
+    it("falls back to ask when only an ambiguous In this video entrypoint is available", async () => {
+      const panel = appendEngagementPanel(
+        "PAyouchat",
+        "ENGAGEMENT_PANEL_VISIBILITY_HIDDEN",
+      );
+      panel.style.display = "none";
+
+      const ambiguousButton = document.createElement("button");
+      ambiguousButton.className = "ytp-chapter-title";
+      ambiguousButton.textContent = "In this video";
+      document.body.appendChild(ambiguousButton);
+
+      const askButton = document.createElement("button");
+
+      const { readPlayerSnapshot } = await import("@shared/youtube-player");
+      vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
+
+      const { findButton, clickElement, waitFor, isVisible } =
+        await import("@shared/youtube-dom");
+      vi.mocked(findButton).mockImplementation((_root, matchers) =>
+        matchers.some((matcher) => matcher.test("Ask")) ? askButton : null,
+      );
+      vi.mocked(clickElement).mockImplementation((element) => {
+        if (element === askButton) {
+          panel.style.display = "";
+          panel.setAttribute(
+            "visibility",
+            "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
+          );
+        }
+      });
+      vi.mocked(isVisible).mockImplementation((el) => el === ambiguousButton);
+      vi.mocked(waitFor).mockResolvedValue(askButton);
+
+      const feature = await setupWatchPage();
+      feature.activate(makeFeatureContext());
+
+      await vi.waitFor(
+        () => {
+          expect(clickElement).toHaveBeenCalledWith(askButton);
+        },
+        { timeout: 2000 },
+      );
+      expect(clickElement).not.toHaveBeenCalledWith(ambiguousButton);
+
+      ambiguousButton.remove();
       panel.remove();
     });
 
@@ -518,6 +649,98 @@ describe("watch-panel-auto-open feature", () => {
         },
         { timeout: 1000 },
       );
+    });
+
+    it("closes noisy In this video and opened Live chat replay panels during initial auto-open", async () => {
+      const inThisVideo = appendNoisyPanel("In this video Timeline Transcript");
+      const liveChatReplay = appendLiveChatReplayFrame("Hide chat replay");
+      const liveChatHeader = appendLiveChatHeader();
+      const liveChatIframe = appendLiveChatReplayIframe();
+
+      const { readPlayerSnapshot } = await import("@shared/youtube-player");
+      vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
+
+      const { clickElement, findButton, isVisible } =
+        await import("@shared/youtube-dom");
+      vi.mocked(findButton).mockImplementation((root, matchers) => {
+        if (root === inThisVideo.panel) return inThisVideo.closeButton;
+        if (root === liveChatReplay.frame) {
+          return matchers.some((matcher) => matcher.test("Hide chat replay"))
+            ? liveChatReplay.button
+            : null;
+        }
+        if (root === liveChatHeader.header) return liveChatHeader.closeButton;
+        if (root === liveChatIframe.iframe.contentDocument) {
+          return liveChatIframe.closeButton;
+        }
+        return null;
+      });
+      vi.mocked(isVisible).mockImplementation(
+        (el) =>
+          el === inThisVideo.closeButton ||
+          el === liveChatReplay.button ||
+          el === liveChatHeader.closeButton ||
+          el === liveChatIframe.closeButton,
+      );
+
+      const feature = await setupWatchPage();
+      feature.activate(makeFeatureContext());
+
+      await vi.waitFor(
+        () => {
+          expect(clickElement).toHaveBeenCalledWith(inThisVideo.closeButton);
+          expect(clickElement).toHaveBeenCalledWith(liveChatReplay.button);
+          expect(clickElement).toHaveBeenCalledWith(liveChatHeader.closeButton);
+          expect(clickElement).toHaveBeenCalledWith(liveChatIframe.closeButton);
+        },
+        { timeout: 2000 },
+      );
+
+      inThisVideo.panel.remove();
+      liveChatReplay.frame.remove();
+      liveChatHeader.header.remove();
+      liveChatIframe.iframe.remove();
+    });
+
+    it("preserves passive Live chat replay teasers and collapsed frames", async () => {
+      const teaser = document.createElement("div");
+      teaser.textContent = "Live chat replay Open panel";
+      const openButton = document.createElement("button");
+      openButton.textContent = "Open panel";
+      teaser.appendChild(openButton);
+      document.body.appendChild(teaser);
+      const collapsedFrame = appendLiveChatReplayFrame("Show chat replay");
+
+      const { readPlayerSnapshot } = await import("@shared/youtube-player");
+      vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
+
+      const { clickElement, findButton, isVisible } =
+        await import("@shared/youtube-dom");
+      vi.mocked(findButton).mockImplementation((root, matchers) => {
+        if (root === collapsedFrame.frame) {
+          return matchers.some((matcher) => matcher.test("Show chat replay"))
+            ? collapsedFrame.button
+            : null;
+        }
+        return null;
+      });
+      vi.mocked(isVisible).mockImplementation(
+        (el) => el === collapsedFrame.button,
+      );
+
+      const feature = await setupWatchPage();
+      feature.activate(makeFeatureContext());
+
+      await vi.waitFor(
+        () => {
+          expect(findButton).toHaveBeenCalled();
+          expect(clickElement).not.toHaveBeenCalled();
+        },
+        { timeout: 1000 },
+      );
+
+      teaser.remove();
+      collapsedFrame.frame.remove();
     });
 
     it("types prompt and clicks Send when chat input is available after ask fallback opens", async () => {
@@ -764,6 +987,52 @@ describe("watch-panel-auto-open feature", () => {
 
       chaptersPanel.remove();
       askPanel.remove();
+    });
+
+    it("does not close manually opened noisy panels after auto-open completes", async () => {
+      const chaptersPanel = appendEngagementPanel(
+        "engagement-panel-macro-markers",
+        "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
+      );
+      const chapterItem = appendChapterItem(chaptersPanel);
+
+      const { readPlayerSnapshot } = await import("@shared/youtube-player");
+      vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
+
+      const { clickElement, findButton, isVisible } =
+        await import("@shared/youtube-dom");
+      vi.mocked(isVisible).mockImplementation((el) => el === chapterItem);
+
+      const feature = await setupWatchPage();
+      feature.activate(makeFeatureContext());
+
+      await vi.waitFor(
+        () => {
+          expect(
+            vi.mocked(isVisible).mock.calls.some(([el]) => el === chapterItem),
+          ).toBe(true);
+          expect(clickElement).not.toHaveBeenCalled();
+        },
+        { timeout: 1000 },
+      );
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      vi.mocked(clickElement).mockClear();
+
+      const noisyPanel = appendNoisyPanel("In this video Timeline Transcript");
+      vi.mocked(findButton).mockImplementation((root) =>
+        root === noisyPanel.panel ? noisyPanel.closeButton : null,
+      );
+      vi.mocked(isVisible).mockImplementation(
+        (el) => el === chapterItem || el === noisyPanel.closeButton,
+      );
+
+      noisyPanel.panel.setAttribute("data-test-resync", "1");
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      expect(clickElement).not.toHaveBeenCalledWith(noisyPanel.closeButton);
+
+      noisyPanel.panel.remove();
+      chaptersPanel.remove();
     });
   });
 });
