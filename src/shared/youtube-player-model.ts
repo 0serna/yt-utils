@@ -23,20 +23,18 @@ export type CaptionTrack = {
   vssId?: string;
 };
 
+type AudioTrackMetadata = {
+  id?: string;
+  name?: string;
+  isDefault?: boolean;
+  isAutoDubbed?: boolean;
+};
+
 export type AudioTrack = {
   id?: string;
-  hs?: {
-    id?: string;
-    name?: string;
-    isDefault?: boolean;
-    isAutoDubbed?: boolean;
-  };
-  yG?: {
-    id?: string;
-    name?: string;
-    isDefault?: boolean;
-    isAutoDubbed?: boolean;
-  };
+  C_?: AudioTrackMetadata;
+  hs?: AudioTrackMetadata;
+  yG?: AudioTrackMetadata;
   captionTracks?: CaptionTrack[];
 };
 
@@ -159,10 +157,8 @@ function getAudioTrackSignature(track: AudioTrack | null): string {
   ].join(":");
 }
 
-function readAudioTrackMetadata(
-  track: AudioTrack,
-): NonNullable<AudioTrack["hs"]> | NonNullable<AudioTrack["yG"]> | null {
-  return track.hs || track.yG || null;
+function readAudioTrackMetadata(track: AudioTrack): AudioTrackMetadata | null {
+  return track.C_ || track.hs || track.yG || null;
 }
 
 function readAudioTrackLanguagePart(track: AudioTrack): string {

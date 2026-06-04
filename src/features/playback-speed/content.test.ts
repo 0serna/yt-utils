@@ -21,12 +21,13 @@ vi.mock("@shared/youtube-player", () => ({
 function snapshot(
   videoId: string,
   audioLanguage: string | null,
+  captionTracks: PlayerSnapshot["captionTracks"] = [],
 ): PlayerSnapshot {
   return {
     videoId,
     audioTrack: null,
     audioLanguage,
-    captionTracks: [],
+    captionTracks,
     translationLanguages: [],
     currentCaptionTrack: null,
     subtitlesOn: false,
@@ -124,6 +125,21 @@ describe("playback-speed feature", () => {
     await vi.waitFor(() => expect(video.playbackRate).toBe(1.1), {
       timeout: 2000,
     });
+  });
+
+  it("does not infer Spanish speed from caption metadata alone", async () => {
+    const { readPlayerSnapshot } = await import("@shared/youtube-player");
+    vi.mocked(readPlayerSnapshot).mockResolvedValue(
+      snapshot("test-video", null, [{ languageCode: "es", vssId: ".es" }]),
+    );
+
+    const feature = await importFreshFeature();
+    activeFeature = feature.default;
+    feature.default.activate(makeFeatureContext());
+
+    const video = document.querySelector("video")!;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(video.playbackRate).toBe(1);
   });
 
   it("reinitializes defaults for a new SPA video session", async () => {

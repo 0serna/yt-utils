@@ -131,7 +131,7 @@ function buildPlayerSnapshot(
   return {
     videoId: readVideoId(inputs.videoData, inputs.response),
     audioTrack: inputs.audioTrack,
-    audioLanguage: inferAudioLanguage(inputs.audioTrack, inputs.captionTracks),
+    audioLanguage: inferAudioLanguage(inputs.audioTrack),
     captionTracks: inputs.captionTracks,
     translationLanguages: inputs.translationLanguages,
     currentCaptionTrack: inputs.currentCaptionTrack,
@@ -264,32 +264,19 @@ function readUrlVideoId(): string | null {
   return new URLSearchParams(window.location.search).get("v");
 }
 
-function inferAudioLanguage(
-  audioTrack: AudioTrack | null,
-  captionTracks: CaptionTrack[],
-): string | null {
-  return (
-    readFirstKnownLanguage(
-      readAudioLanguageCandidates(audioTrack, captionTracks),
-    ) || inferLanguageFromName(readAudioTrackName(audioTrack))
-  );
-}
-
-function readAudioLanguageCandidates(
-  audioTrack: AudioTrack | null,
-  captionTracks: CaptionTrack[],
-): Array<string | null | undefined> {
-  return [
-    audioTrack?.captionTracks?.[0]?.languageCode,
-    readAudioTrackId(audioTrack),
-    captionTracks[0]?.languageCode,
-  ];
+function inferAudioLanguage(audioTrack: AudioTrack | null): string | null {
+  const id = readAudioTrackId(audioTrack);
+  const normalized = normalizeLanguageCode(id);
+  return isKnownLanguageCode(normalized)
+    ? normalized
+    : inferLanguageFromName(readAudioTrackName(audioTrack));
 }
 
 function readAudioTrackId(
   audioTrack: AudioTrack | null,
 ): string | null | undefined {
   return readFirstValue([
+    audioTrack?.C_?.id,
     audioTrack?.yG?.id,
     audioTrack?.hs?.id,
     audioTrack?.id,
@@ -299,7 +286,11 @@ function readAudioTrackId(
 function readAudioTrackName(
   audioTrack: AudioTrack | null,
 ): string | null | undefined {
-  return readFirstValue([audioTrack?.yG?.name, audioTrack?.hs?.name]);
+  return readFirstValue([
+    audioTrack?.C_?.name,
+    audioTrack?.yG?.name,
+    audioTrack?.hs?.name,
+  ]);
 }
 
 function readFirstValue<T>(values: Array<T | null | undefined>): T | null {
@@ -310,12 +301,6 @@ function readFirstNormalizedVideoId(
   values: Array<string | null | undefined>,
 ): string | null {
   return values.map(normalizeVideoId).find(Boolean) ?? null;
-}
-
-function readFirstKnownLanguage(
-  values: Array<string | null | undefined>,
-): string | null {
-  return values.map(normalizeLanguageCode).find(isKnownLanguageCode) ?? null;
 }
 
 function inferLanguageFromName(

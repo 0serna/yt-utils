@@ -221,6 +221,25 @@ describe("youtube-player-model", () => {
       );
     });
 
+    it("generates signature with current YouTube audio metadata shape", () => {
+      const audioTrack: AudioTrack = {
+        C_: {
+          id: "en-US.4",
+          name: "English (US) original",
+          isDefault: true,
+          isAutoDubbed: false,
+        },
+      };
+      const snapshot: PlayerSnapshot = {
+        ...defaultSnapshot,
+        audioTrack,
+        audioLanguage: "en-US",
+      };
+      expect(readSubtitleSignature(snapshot)).toBe(
+        "off|caption:none|audio:en-us:english (us) original:original",
+      );
+    });
+
     it("generates signature with auto-dubbed audio track", () => {
       const audioTrack: AudioTrack = {
         hs: {

@@ -215,6 +215,52 @@ describe("audio-language-subtitle-policy feature", () => {
     );
   });
 
+  it("applies direct English captions for English audio", async () => {
+    const englishTrack = { languageCode: "en", vssId: "a.en" };
+    const englishSnapshot: PlayerSnapshot = {
+      ...snapshot("test-video"),
+      audioLanguage: "en-US",
+      captionTracks: [englishTrack],
+    };
+
+    const { readPlayerSnapshot } = await import("@shared/youtube-player");
+    vi.mocked(readPlayerSnapshot).mockResolvedValue(englishSnapshot);
+
+    const { readSubtitleSignature, determineSubtitleSelection } =
+      await import("@shared/youtube-player");
+    vi.mocked(readSubtitleSignature).mockReturnValue("sig-english");
+    vi.mocked(determineSubtitleSelection).mockReturnValue({
+      mode: "track",
+      track: englishTrack,
+    });
+
+    const { matchesSubtitleSelection, applySubtitleSelection } =
+      await import("@shared/youtube-player");
+    vi.mocked(matchesSubtitleSelection).mockReturnValue(false);
+    vi.mocked(applySubtitleSelection).mockResolvedValue(true);
+
+    const { waitForSubtitleSelection } = await import("@shared/youtube-player");
+    vi.mocked(waitForSubtitleSelection).mockResolvedValue(true);
+
+    const feature = await importFreshFeature();
+    feature.default.activate(makeFeatureContext());
+
+    await vi.waitFor(
+      () => {
+        expect(determineSubtitleSelection).toHaveBeenCalledWith(
+          englishSnapshot,
+        );
+        expect(applySubtitleSelection).toHaveBeenCalledWith({
+          mode: "track",
+          track: englishTrack,
+        });
+      },
+      { timeout: 3000 },
+    );
+
+    feature.default.deactivate();
+  });
+
   it("applies subtitle selection when current state does not match", async () => {
     const { readPlayerSnapshot } = await import("@shared/youtube-player");
     vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));

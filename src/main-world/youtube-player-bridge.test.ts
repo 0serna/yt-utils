@@ -231,7 +231,7 @@ describe("youtube-player-bridge", () => {
       expect(snapshot!.audioLanguage).toBe("es");
     });
 
-    it("prefers caption tracks from the active audio track", async () => {
+    it("prefers caption tracks from the active audio track without inferring audio language from them", async () => {
       const audioCaptionTrack = {
         languageCode: "en",
         kind: "asr",
@@ -263,7 +263,57 @@ describe("youtube-player-bridge", () => {
 
       const snapshot = response.result as PlayerSnapshot;
       expect(snapshot!.captionTracks).toEqual([audioCaptionTrack]);
-      expect(snapshot!.audioLanguage).toBe("en");
+      expect(snapshot!.audioLanguage).toBeNull();
+    });
+
+    it("infers English audio language from the current YouTube metadata shape", async () => {
+      const fakePlayer = createFakePlayer({
+        videoId: "current-shape-english-video",
+        audioTrack: {
+          C_: {
+            id: "en-US.4",
+            name: "English (US) original",
+          },
+        },
+        captionTracks: [{ languageCode: "es" }],
+        subtitlesOn: false,
+      });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-3c",
+        action: "readSnapshot",
+      });
+
+      const snapshot = response.result as PlayerSnapshot;
+      expect(snapshot).not.toBeNull();
+      expect(snapshot!.audioLanguage).toBe("en-us");
+    });
+
+    it("infers Spanish audio language from the current YouTube metadata shape", async () => {
+      const fakePlayer = createFakePlayer({
+        videoId: "current-shape-spanish-video",
+        audioTrack: {
+          C_: {
+            id: "es-MX.4",
+            name: "Spanish (Mexico)",
+          },
+        },
+        captionTracks: [{ languageCode: "en" }],
+        subtitlesOn: false,
+      });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-3d",
+        action: "readSnapshot",
+      });
+
+      const snapshot = response.result as PlayerSnapshot;
+      expect(snapshot).not.toBeNull();
+      expect(snapshot!.audioLanguage).toBe("es-mx");
     });
 
     it("returns snapshot with translation languages", async () => {
