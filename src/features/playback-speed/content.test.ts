@@ -96,6 +96,22 @@ describe("playback-speed feature", () => {
     });
   });
 
+  it("initializes English videos at 0.90x after player confirmation", async () => {
+    const { readPlayerSnapshot } = await import("@shared/youtube-player");
+    vi.mocked(readPlayerSnapshot).mockResolvedValue(
+      snapshot("test-video", "en-US"),
+    );
+
+    const feature = await importFreshFeature();
+    activeFeature = feature.default;
+    feature.default.activate(makeFeatureContext());
+
+    const video = document.querySelector("video")!;
+    await vi.waitFor(() => expect(video.playbackRate).toBe(0.9), {
+      timeout: 2000,
+    });
+  });
+
   it("does not initialize speed while URL and player video IDs differ", async () => {
     const { readPlayerSnapshot } = await import("@shared/youtube-player");
     vi.mocked(readPlayerSnapshot).mockResolvedValue(
@@ -142,7 +158,7 @@ describe("playback-speed feature", () => {
     expect(video.playbackRate).toBe(1);
   });
 
-  it("reinitializes defaults for a new SPA video session", async () => {
+  it("reinitializes language speed for a new SPA video session", async () => {
     const { readPlayerSnapshot } = await import("@shared/youtube-player");
     vi.mocked(readPlayerSnapshot).mockResolvedValue(
       snapshot("test-video", "es"),
@@ -164,7 +180,7 @@ describe("playback-speed feature", () => {
     );
     feature.default.activate(makeFeatureContext());
 
-    await vi.waitFor(() => expect(video.playbackRate).toBe(1), {
+    await vi.waitFor(() => expect(video.playbackRate).toBe(0.9), {
       timeout: 2000,
     });
   });

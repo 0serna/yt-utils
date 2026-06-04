@@ -316,6 +316,32 @@ describe("youtube-player-bridge", () => {
       expect(snapshot!.audioLanguage).toBe("es-mx");
     });
 
+    it("infers Spanish audio language from the Iw YouTube metadata shape", async () => {
+      const fakePlayer = createFakePlayer({
+        videoId: "iw-shape-spanish-video",
+        audioTrack: {
+          id: "251;ChEKBWFjb250EghvcmlnaW5hbAoICgNkcmMSATEKDQoEbGFuZxIFZXMtVVM",
+          Iw: {
+            id: "es-US.4",
+            name: "Spanish (US) original",
+          },
+        },
+        captionTracks: [{ languageCode: "en" }],
+        subtitlesOn: false,
+      });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-3e",
+        action: "readSnapshot",
+      });
+
+      const snapshot = response.result as PlayerSnapshot;
+      expect(snapshot).not.toBeNull();
+      expect(snapshot!.audioLanguage).toBe("es-us");
+    });
+
     it("returns snapshot with translation languages", async () => {
       const fakePlayer = createFakePlayer({
         videoId: "test-video",

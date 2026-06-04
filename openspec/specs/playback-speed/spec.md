@@ -42,18 +42,18 @@ The current speed text SHALL be clickable and SHALL reset playback speed to `1.0
 
 ### Requirement: Extension applies and persists a per-video playback speed preference
 
-The extension SHALL apply playback-speed changes immediately to the current confirmed watch page by setting the active `HTMLVideoElement.playbackRate` directly. Each supported watch page video session SHALL initialize playback speed independently for the current confirmed video instead of loading a saved global default or reusing state from a prior SPA video. The initial speed SHALL be `1.00x`, the extension SHALL keep it at `1.00x` when the current video's inferred audio language is English, and it SHALL change it to `1.10x` when the inferred audio language is Spanish. Language-aware initialization SHALL infer audio language from the current player's active audio-track metadata, including current YouTube metadata shapes exposed by `getAudioTrack()`, and SHALL NOT infer audio language from caption-track metadata alone. Manual changes made with the inline playback-speed control SHALL apply only to the current video and SHALL NOT become the default for future videos, future tabs, or later watch-page navigations.
+The extension SHALL apply playback-speed changes immediately to the current confirmed watch page by setting the active `HTMLVideoElement.playbackRate` directly. Each supported watch page video session SHALL initialize playback speed independently for the current confirmed video instead of loading a saved global default or reusing state from a prior SPA video. The initial speed SHALL be `1.00x`, the extension SHALL change it to `0.90x` when the current video's inferred audio language is English, and it SHALL change it to `1.10x` when the inferred audio language is Spanish. Language-aware initialization SHALL infer audio language from the current player's active audio-track metadata, including current YouTube metadata shapes exposed by `getAudioTrack()`, and SHALL NOT infer audio language from caption-track metadata alone. Manual changes made with the inline playback-speed control SHALL apply only to the current video and SHALL NOT become the default for future videos, future tabs, or later watch-page navigations.
 
 #### Scenario: English audio video loads
 
 - **WHEN** a supported watch page becomes active for a confirmed video whose inferred audio language is English and the user has not changed the playback speed yet
-- **THEN** the extension applies `1.00x` to that video's player and reflects `1.00x` in the inline control
+- **THEN** the extension applies `0.90x` to that video's player and reflects `0.90x` in the inline control
 
 #### Scenario: English audio video reports current YouTube metadata shape
 
 - **WHEN** a supported watch page becomes active for a confirmed video whose active audio track reports English metadata through the current YouTube audio-track metadata shape
 - **AND** the user has not changed the playback speed yet
-- **THEN** the extension applies `1.00x` to that video's player and reflects `1.00x` in the inline control
+- **THEN** the extension applies `0.90x` to that video's player and reflects `0.90x` in the inline control
 
 #### Scenario: Spanish audio video loads
 

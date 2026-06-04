@@ -332,7 +332,7 @@ function getSpeedForLanguage(audioLanguage: string | null | undefined): number {
   }
 
   if (isEnglishLanguage(audioLanguage)) {
-    return normalizePlaybackSpeed(1.0);
+    return normalizePlaybackSpeed(0.9);
   }
 
   return PLAYBACK_SPEED_DEFAULT;

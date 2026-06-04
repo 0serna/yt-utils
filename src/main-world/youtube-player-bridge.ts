@@ -277,6 +277,7 @@ function readAudioTrackId(
 ): string | null | undefined {
   return readFirstValue([
     audioTrack?.C_?.id,
+    audioTrack?.Iw?.id,
     audioTrack?.yG?.id,
     audioTrack?.hs?.id,
     audioTrack?.id,
@@ -288,6 +289,7 @@ function readAudioTrackName(
 ): string | null | undefined {
   return readFirstValue([
     audioTrack?.C_?.name,
+    audioTrack?.Iw?.name,
     audioTrack?.yG?.name,
     audioTrack?.hs?.name,
   ]);

@@ -33,6 +33,7 @@ type AudioTrackMetadata = {
 export type AudioTrack = {
   id?: string;
   C_?: AudioTrackMetadata;
+  Iw?: AudioTrackMetadata;
   hs?: AudioTrackMetadata;
   yG?: AudioTrackMetadata;
   captionTracks?: CaptionTrack[];
