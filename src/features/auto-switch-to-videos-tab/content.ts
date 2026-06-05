@@ -1,8 +1,6 @@
 import type { Feature, FeatureContext } from "@shared/types";
-import { clickElement, waitFor } from "@shared/youtube-dom";
 
 const SESSION_STORAGE_KEY_PREFIX = "yt-utils:auto-switch-to-videos-tab:";
-const WAIT_TIMEOUT_MS = 2000;
 
 const CHANNEL_PATH_PREFIXES = ["/@", "/c/", "/user/", "/channel/"];
 
@@ -51,40 +49,18 @@ function getSessionStorageKey(): string {
   return `${SESSION_STORAGE_KEY_PREFIX}${getChannelBasePath()}`;
 }
 
-function getVideosTabIfHomeSelected(): HTMLElement | null {
-  const tabs = [...document.querySelectorAll<HTMLElement>('[role="tab"]')];
-  const homeSelected = tabs.some(
-    (tab) =>
-      tab.textContent?.trim() === "Home" &&
-      tab.getAttribute("aria-selected") === "true",
-  );
-
-  if (!homeSelected) {
-    return null;
-  }
-
-  return tabs.find((tab) => tab.textContent?.trim() === "Videos") ?? null;
+function isChannelHomePath(): boolean {
+  return window.location.pathname === getChannelBasePath();
 }
 
 async function trySwitchToVideosTab(): Promise<void> {
   const sessionKey = getSessionStorageKey();
-  if (sessionStorage.getItem(sessionKey)) {
+  if (sessionStorage.getItem(sessionKey) || !isChannelHomePath()) {
     return;
   }
 
-  try {
-    const videosTab = await waitFor(() => getVideosTabIfHomeSelected(), {
-      timeout: WAIT_TIMEOUT_MS,
-      interval: 100,
-    });
-
-    if (sessionStorage.getItem(sessionKey)) {
-      return;
-    }
-
-    clickElement(videosTab);
-    sessionStorage.setItem(sessionKey, "1");
-  } catch {
-    // Intentionally silent: tablist may not appear or Home isn't selected
-  }
+  window.location.assign(
+    `${window.location.origin}${getChannelBasePath()}/videos`,
+  );
+  sessionStorage.setItem(sessionKey, "1");
 }
