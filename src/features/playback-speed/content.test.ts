@@ -143,7 +143,7 @@ describe("playback-speed feature", () => {
     });
   });
 
-  it("does not infer Spanish speed from caption metadata alone", async () => {
+  it("falls back to Spanish caption metadata when audio language is unavailable", async () => {
     const { readPlayerSnapshot } = await import("@shared/youtube-player");
     vi.mocked(readPlayerSnapshot).mockResolvedValue(
       snapshot("test-video", null, [{ languageCode: "es", vssId: ".es" }]),
@@ -154,8 +154,25 @@ describe("playback-speed feature", () => {
     feature.default.activate(makeFeatureContext());
 
     const video = document.querySelector("video")!;
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    expect(video.playbackRate).toBe(1);
+    await vi.waitFor(() => expect(video.playbackRate).toBe(1.1), {
+      timeout: 2000,
+    });
+  });
+
+  it("falls back to English caption metadata when audio language is unavailable", async () => {
+    const { readPlayerSnapshot } = await import("@shared/youtube-player");
+    vi.mocked(readPlayerSnapshot).mockResolvedValue(
+      snapshot("test-video", null, [{ languageCode: "en", vssId: ".en" }]),
+    );
+
+    const feature = await importFreshFeature();
+    activeFeature = feature.default;
+    feature.default.activate(makeFeatureContext());
+
+    const video = document.querySelector("video")!;
+    await vi.waitFor(() => expect(video.playbackRate).toBe(0.9), {
+      timeout: 2000,
+    });
   });
 
   it("reinitializes language speed for a new SPA video session", async () => {

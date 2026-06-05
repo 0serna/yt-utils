@@ -310,11 +310,12 @@ function applySpeedForLanguage(snapshot: PlayerSnapshot): void {
     return;
   }
 
-  if (!snapshot.audioLanguage) {
+  const speedLanguage = readSpeedLanguage(snapshot);
+  if (!speedLanguage) {
     return;
   }
 
-  const nextSpeed = getSpeedForLanguage(snapshot.audioLanguage);
+  const nextSpeed = getSpeedForLanguage(speedLanguage);
   initializedVideoId = snapshot.videoId;
 
   if (localSpeed === nextSpeed) {
@@ -324,6 +325,19 @@ function applySpeedForLanguage(snapshot: PlayerSnapshot): void {
   localSpeed = nextSpeed;
   syncControlState();
   applySpeedToVideo();
+}
+
+function readSpeedLanguage(snapshot: PlayerSnapshot): string | null {
+  return (
+    snapshot.audioLanguage ||
+    snapshot.captionTracks.find((track) =>
+      isSpanishLanguage(track.languageCode),
+    )?.languageCode ||
+    snapshot.captionTracks.find((track) =>
+      isEnglishLanguage(track.languageCode),
+    )?.languageCode ||
+    null
+  );
 }
 
 function getSpeedForLanguage(audioLanguage: string | null | undefined): number {
