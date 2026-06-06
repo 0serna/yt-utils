@@ -114,7 +114,48 @@ describe("youtube-player-model", () => {
       ).toEqual({ mode: "off" });
     });
 
-    it("returns off for unknown audio even when a direct English track exists", () => {
+    it("returns off for non-English audio even when an English ASR track exists", () => {
+      expect(
+        determineSubtitleSelection({
+          ...defaultSnapshot,
+          audioLanguage: "fr",
+          captionTracks: [{ languageCode: "en", kind: "asr", vssId: "a.en" }],
+        }),
+      ).toEqual({ mode: "off" });
+    });
+
+    it("selects an English ASR track for unknown audio", () => {
+      const englishAsrTrack: CaptionTrack = {
+        languageCode: "en",
+        kind: "asr",
+        vssId: "a.en",
+      };
+
+      expect(
+        determineSubtitleSelection({
+          ...defaultSnapshot,
+          audioLanguage: null,
+          captionTracks: [englishAsrTrack],
+        }),
+      ).toEqual({ mode: "track", track: englishAsrTrack });
+    });
+
+    it("selects an English ASR vssId track for unknown audio", () => {
+      const englishAsrTrack: CaptionTrack = {
+        languageCode: "en",
+        vssId: "a.en",
+      };
+
+      expect(
+        determineSubtitleSelection({
+          ...defaultSnapshot,
+          audioLanguage: null,
+          captionTracks: [englishAsrTrack],
+        }),
+      ).toEqual({ mode: "track", track: englishAsrTrack });
+    });
+
+    it("returns off for unknown audio when the English track is not auto-generated", () => {
       expect(
         determineSubtitleSelection({
           ...defaultSnapshot,
