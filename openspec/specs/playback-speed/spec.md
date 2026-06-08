@@ -60,6 +60,12 @@ The extension SHALL apply playback-speed changes immediately to the current conf
 - **WHEN** a supported watch page becomes active for a confirmed video whose inferred audio language is Spanish and the user has not changed the playback speed yet
 - **THEN** the extension applies `1.10x` to that video's player and reflects `1.10x` in the inline control
 
+#### Scenario: Spanish audio video reports current YouTube metadata shape
+
+- **WHEN** a supported watch page becomes active for a confirmed video whose active audio track reports Spanish metadata through the current YouTube audio-track metadata shape
+- **AND** the user has not changed the playback speed yet
+- **THEN** the extension applies `1.10x` to that video's player and reflects `1.10x` in the inline control
+
 #### Scenario: Other language video loads
 
 - **WHEN** a supported watch page becomes active for a confirmed video whose inferred audio language is neither English nor Spanish and the user has not changed the playback speed yet

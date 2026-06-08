@@ -281,6 +281,26 @@ describe("youtube-player-model", () => {
       );
     });
 
+    it("generates signature with Z1 YouTube audio metadata shape", () => {
+      const audioTrack: AudioTrack = {
+        id: "251;ChEKBWFjb250EghvcmlnaW5hbAoNCgRsYW5nEgVlcy1VUwoHCgJ2YhIBMQ",
+        Z1: {
+          id: "es-US.4",
+          name: "Spanish (US) original",
+          isDefault: true,
+          isAutoDubbed: false,
+        },
+      };
+      const snapshot: PlayerSnapshot = {
+        ...defaultSnapshot,
+        audioTrack,
+        audioLanguage: "es-US",
+      };
+      expect(readSubtitleSignature(snapshot)).toBe(
+        "off|caption:none|audio:es-us:spanish (us) original:original",
+      );
+    });
+
     it("generates signature with auto-dubbed audio track", () => {
       const audioTrack: AudioTrack = {
         hs: {

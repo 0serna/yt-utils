@@ -278,6 +278,7 @@ function readAudioTrackId(
   return readFirstValue([
     audioTrack?.C_?.id,
     audioTrack?.Iw?.id,
+    audioTrack?.Z1?.id,
     audioTrack?.yG?.id,
     audioTrack?.hs?.id,
     audioTrack?.id,
@@ -290,6 +291,7 @@ function readAudioTrackName(
   return readFirstValue([
     audioTrack?.C_?.name,
     audioTrack?.Iw?.name,
+    audioTrack?.Z1?.name,
     audioTrack?.yG?.name,
     audioTrack?.hs?.name,
   ]);

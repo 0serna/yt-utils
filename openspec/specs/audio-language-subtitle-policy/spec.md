@@ -25,6 +25,11 @@ The extension SHALL determine subtitle policy for a YouTube watch page from the 
 - **WHEN** the current confirmed watch page's active player audio track reports a Spanish language code
 - **THEN** the extension treats the video as non-English-audio content for subtitle policy decisions
 
+#### Scenario: Active audio track reports Spanish in current YouTube metadata shape
+
+- **WHEN** the current confirmed watch page's active player audio track reports Spanish metadata through the current YouTube audio-track metadata shape
+- **THEN** the extension treats the video as non-English-audio content for subtitle policy decisions
+
 #### Scenario: Active audio track is undefined
 
 - **WHEN** the current confirmed watch page's active audio track does not expose a usable language code
