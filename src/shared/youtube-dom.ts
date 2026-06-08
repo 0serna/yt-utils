@@ -20,6 +20,7 @@ const LABELS = {
   startAt: [/\bstart at\b/i, /\bempezar en\b/i],
   hide: [/\bhide\b/i, /\bocultar\b/i],
   moreActions: [/\bmore actions\b/i, /\bm[aá]s acciones\b/i],
+  mostRelevant: [/\bmost relevant\b/i],
 } as const;
 
 export function waitFor<T>(
@@ -297,6 +298,30 @@ export function removeAllShortsSections(): void {
       section.remove();
     }
   }
+}
+
+export function findMostRelevantShelves(): HTMLElement[] {
+  return [
+    ...document.querySelectorAll<HTMLElement>("ytd-rich-shelf-renderer"),
+  ].filter(isMostRelevantShelf);
+}
+
+export function removeAllMostRelevantSections(): void {
+  for (const shelf of findMostRelevantShelves()) {
+    const section = shelf.closest<HTMLElement>("ytd-rich-section-renderer");
+    if (section) {
+      section.remove();
+    }
+  }
+}
+
+function isMostRelevantShelf(shelf: HTMLElement): boolean {
+  const title = shelf.querySelector<HTMLElement>("[id='title']");
+  return title
+    ? LABELS.mostRelevant.some((matcher) =>
+        matcher.test(title.textContent ?? ""),
+      )
+    : false;
 }
 
 export function isVisible(element: Element): boolean {
