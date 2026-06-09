@@ -368,6 +368,106 @@ describe("youtube-player-bridge", () => {
       expect(snapshot!.audioLanguage).toBe("es-us");
     });
 
+    it("infers Spanish audio language from the US YouTube metadata shape", async () => {
+      const fakePlayer = createFakePlayer({
+        videoId: "us-shape-spanish-video",
+        audioTrack: {
+          id: "251;ChEKBWFjb250EghvcmlnaW5hbAoNCgRsYW5nEgVlcy1VUwoHCgJ2YhIBMQ",
+          US: {
+            id: "es-US.4",
+            name: "Spanish (US) original",
+          },
+        },
+        captionTracks: [{ languageCode: "en" }],
+        subtitlesOn: false,
+      });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-3g",
+        action: "readSnapshot",
+      });
+
+      const snapshot = response.result as PlayerSnapshot;
+      expect(snapshot).not.toBeNull();
+      expect(snapshot!.audioLanguage).toBe("es-us");
+    });
+
+    it("does not expose opaque audio track ids as audio language", async () => {
+      const fakePlayer = createFakePlayer({
+        videoId: "opaque-audio-id-video",
+        audioTrack: {
+          id: "251;ChEKBWFjb250EghvcmlnaW5hbAoNCgRsYW5nEgVlcy1VUwoHCgJ2YhIBMQ",
+        },
+        captionTracks: [{ languageCode: "es", kind: "asr", vssId: "a.es" }],
+        subtitlesOn: false,
+      });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-3h",
+        action: "readSnapshot",
+      });
+
+      const snapshot = response.result as PlayerSnapshot;
+      expect(snapshot).not.toBeNull();
+      expect(snapshot!.audioLanguage).toBeNull();
+    });
+
+    it("infers Spanish audio language from US name when ids are not usable", async () => {
+      const fakePlayer = createFakePlayer({
+        videoId: "spanish-audio-name-video",
+        audioTrack: {
+          id: "251;ChEKBWFjb250EghvcmlnaW5hbAoNCgRsYW5nEgVlcy1VUwoHCgJ2YhIBMQ",
+          US: {
+            id: "251;opaque",
+            name: "Spanish (US) original",
+          },
+        },
+        captionTracks: [{ languageCode: "en" }],
+        subtitlesOn: false,
+      });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-3i",
+        action: "readSnapshot",
+      });
+
+      const snapshot = response.result as PlayerSnapshot;
+      expect(snapshot).not.toBeNull();
+      expect(snapshot!.audioLanguage).toBe("es");
+    });
+
+    it("infers English audio language from US name when ids are not usable", async () => {
+      const fakePlayer = createFakePlayer({
+        videoId: "english-audio-name-video",
+        audioTrack: {
+          id: "251;opaque",
+          US: {
+            id: "251;also-opaque",
+            name: "English (US) original",
+          },
+        },
+        captionTracks: [{ languageCode: "es" }],
+        subtitlesOn: false,
+      });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-3j",
+        action: "readSnapshot",
+      });
+
+      const snapshot = response.result as PlayerSnapshot;
+      expect(snapshot).not.toBeNull();
+      expect(snapshot!.audioLanguage).toBe("en");
+    });
+
     it("returns snapshot with translation languages", async () => {
       const fakePlayer = createFakePlayer({
         videoId: "test-video",

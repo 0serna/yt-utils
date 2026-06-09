@@ -22,10 +22,11 @@ function snapshot(
   videoId: string,
   audioLanguage: string | null,
   captionTracks: PlayerSnapshot["captionTracks"] = [],
+  audioTrack: PlayerSnapshot["audioTrack"] = null,
 ): PlayerSnapshot {
   return {
     videoId,
-    audioTrack: null,
+    audioTrack,
     audioLanguage,
     captionTracks,
     translationLanguages: [],
@@ -112,6 +113,28 @@ describe("playback-speed feature", () => {
     });
   });
 
+  it("initializes Spanish videos from US audio metadata at 1.10x", async () => {
+    const { readPlayerSnapshot } = await import("@shared/youtube-player");
+    vi.mocked(readPlayerSnapshot).mockResolvedValue(
+      snapshot("test-video", "es-us", [], {
+        id: "251;ChEKBWFjb250EghvcmlnaW5hbAoNCgRsYW5nEgVlcy1VUwoHCgJ2YhIBMQ",
+        US: {
+          id: "es-US.4",
+          name: "Spanish (US) original",
+        },
+      }),
+    );
+
+    const feature = await importFreshFeature();
+    activeFeature = feature.default;
+    feature.default.activate(makeFeatureContext());
+
+    const video = document.querySelector("video")!;
+    await vi.waitFor(() => expect(video.playbackRate).toBe(1.1), {
+      timeout: 2000,
+    });
+  });
+
   it("does not initialize speed while URL and player video IDs differ", async () => {
     const { readPlayerSnapshot } = await import("@shared/youtube-player");
     vi.mocked(readPlayerSnapshot).mockResolvedValue(
@@ -180,6 +203,29 @@ describe("playback-speed feature", () => {
     const { readPlayerSnapshot } = await import("@shared/youtube-player");
     vi.mocked(readPlayerSnapshot).mockResolvedValue(
       snapshot("test-video", null, [{ languageCode: "es", vssId: "a.es" }]),
+    );
+
+    const feature = await importFreshFeature();
+    activeFeature = feature.default;
+    feature.default.activate(makeFeatureContext());
+
+    const video = document.querySelector("video")!;
+    await vi.waitFor(() => expect(video.playbackRate).toBe(1.1), {
+      timeout: 2000,
+    });
+  });
+
+  it("falls back to Spanish ASR when opaque audio id has no usable metadata", async () => {
+    const { readPlayerSnapshot } = await import("@shared/youtube-player");
+    vi.mocked(readPlayerSnapshot).mockResolvedValue(
+      snapshot(
+        "test-video",
+        null,
+        [{ languageCode: "es", kind: "asr", vssId: "a.es" }],
+        {
+          id: "251;ChEKBWFjb250EghvcmlnaW5hbAoNCgRsYW5nEgVlcy1VUwoHCgJ2YhIBMQ",
+        },
+      ),
     );
 
     const feature = await importFreshFeature();

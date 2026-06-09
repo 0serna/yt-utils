@@ -279,6 +279,7 @@ function readAudioTrackId(
     audioTrack?.C_?.id,
     audioTrack?.Iw?.id,
     audioTrack?.Z1?.id,
+    audioTrack?.US?.id,
     audioTrack?.yG?.id,
     audioTrack?.hs?.id,
     audioTrack?.id,
@@ -292,6 +293,7 @@ function readAudioTrackName(
     audioTrack?.C_?.name,
     audioTrack?.Iw?.name,
     audioTrack?.Z1?.name,
+    audioTrack?.US?.name,
     audioTrack?.yG?.name,
     audioTrack?.hs?.name,
   ]);
@@ -320,7 +322,9 @@ function inferLanguageFromName(
 }
 
 function isKnownLanguageCode(value: string | null): value is string {
-  return Boolean(value && value !== "und");
+  return Boolean(
+    value && value !== "und" && /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/.test(value),
+  );
 }
 
 function normalizeVideoId(value: string | null | undefined): string | null {

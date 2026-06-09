@@ -36,6 +36,7 @@ export type AudioTrack = {
   Iw?: AudioTrackMetadata;
   Z1?: AudioTrackMetadata;
   hs?: AudioTrackMetadata;
+  US?: AudioTrackMetadata;
   yG?: AudioTrackMetadata;
   captionTracks?: CaptionTrack[];
 };
@@ -178,7 +179,9 @@ function getAudioTrackSignature(track: AudioTrack | null): string {
 }
 
 function readAudioTrackMetadata(track: AudioTrack): AudioTrackMetadata | null {
-  return track.C_ || track.Iw || track.Z1 || track.hs || track.yG || null;
+  return (
+    track.C_ || track.Iw || track.Z1 || track.hs || track.US || track.yG || null
+  );
 }
 
 function readAudioTrackLanguagePart(track: AudioTrack): string {
