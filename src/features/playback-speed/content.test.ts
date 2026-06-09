@@ -143,10 +143,43 @@ describe("playback-speed feature", () => {
     });
   });
 
-  it("falls back to Spanish caption metadata when audio language is unavailable", async () => {
+  it("does not fall back to non-ASR Spanish caption metadata when audio language is unavailable", async () => {
     const { readPlayerSnapshot } = await import("@shared/youtube-player");
     vi.mocked(readPlayerSnapshot).mockResolvedValue(
       snapshot("test-video", null, [{ languageCode: "es", vssId: ".es" }]),
+    );
+
+    const feature = await importFreshFeature();
+    activeFeature = feature.default;
+    feature.default.activate(makeFeatureContext());
+
+    const video = document.querySelector("video")!;
+    await vi.waitFor(() => expect(readPlayerSnapshot).toHaveBeenCalled());
+    expect(video.playbackRate).toBe(1);
+  });
+
+  it("falls back to English ASR caption metadata when audio language is unavailable", async () => {
+    const { readPlayerSnapshot } = await import("@shared/youtube-player");
+    vi.mocked(readPlayerSnapshot).mockResolvedValue(
+      snapshot("test-video", null, [
+        { languageCode: "en", kind: "asr", vssId: "a.en" },
+      ]),
+    );
+
+    const feature = await importFreshFeature();
+    activeFeature = feature.default;
+    feature.default.activate(makeFeatureContext());
+
+    const video = document.querySelector("video")!;
+    await vi.waitFor(() => expect(video.playbackRate).toBe(0.95), {
+      timeout: 2000,
+    });
+  });
+
+  it("falls back to Spanish ASR caption metadata when audio language is unavailable", async () => {
+    const { readPlayerSnapshot } = await import("@shared/youtube-player");
+    vi.mocked(readPlayerSnapshot).mockResolvedValue(
+      snapshot("test-video", null, [{ languageCode: "es", vssId: "a.es" }]),
     );
 
     const feature = await importFreshFeature();
@@ -159,10 +192,13 @@ describe("playback-speed feature", () => {
     });
   });
 
-  it("falls back to English caption metadata when audio language is unavailable", async () => {
+  it("prefers English when unavailable audio has English and Spanish ASR captions", async () => {
     const { readPlayerSnapshot } = await import("@shared/youtube-player");
     vi.mocked(readPlayerSnapshot).mockResolvedValue(
-      snapshot("test-video", null, [{ languageCode: "en", vssId: ".en" }]),
+      snapshot("test-video", null, [
+        { languageCode: "es", kind: "asr", vssId: "a.es" },
+        { languageCode: "en", kind: "asr", vssId: "a.en" },
+      ]),
     );
 
     const feature = await importFreshFeature();
@@ -173,6 +209,24 @@ describe("playback-speed feature", () => {
     await vi.waitFor(() => expect(video.playbackRate).toBe(0.95), {
       timeout: 2000,
     });
+  });
+
+  it("does not override explicit non-English audio with ASR caption metadata", async () => {
+    const { readPlayerSnapshot } = await import("@shared/youtube-player");
+    vi.mocked(readPlayerSnapshot).mockResolvedValue(
+      snapshot("test-video", "fr", [
+        { languageCode: "en", kind: "asr", vssId: "a.en" },
+        { languageCode: "es", kind: "asr", vssId: "a.es" },
+      ]),
+    );
+
+    const feature = await importFreshFeature();
+    activeFeature = feature.default;
+    feature.default.activate(makeFeatureContext());
+
+    const video = document.querySelector("video")!;
+    await vi.waitFor(() => expect(readPlayerSnapshot).toHaveBeenCalled());
+    expect(video.playbackRate).toBe(1);
   });
 
   it("reinitializes language speed for a new SPA video session", async () => {

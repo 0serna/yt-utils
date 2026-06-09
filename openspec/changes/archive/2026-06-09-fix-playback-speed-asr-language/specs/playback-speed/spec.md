@@ -1,44 +1,4 @@
-# playback-speed Specification
-
-## Purpose
-
-Provide an inline playback-speed control on supported YouTube watch pages and initialize each video's speed from its inferred audio language.
-
-## Requirements
-
-### Requirement: Extension shows an inline desktop watch-page playback speed control
-
-The extension SHALL render a single inline playback-speed control on supported desktop `www.youtube.com/watch` pages near the existing inline action area.
-The control SHALL display decrement and increment buttons plus the current speed as visible text with an `x` suffix.
-The control SHALL use `0.05` increments, clamp values to `0.50x` through `2.00x`, disable the button at the matching bound, and reflect the current video's initialized playback speed.
-The current speed text SHALL be clickable and SHALL reset playback speed to `1.00x` when activated.
-
-#### Scenario: Supported desktop watch page renders the playback speed control
-
-- **WHEN** the user opens a supported desktop YouTube watch page and the action row finishes rendering
-- **THEN** the extension displays a single inline playback-speed control in that row with visible current-speed text and `-` / `+` controls
-
-#### Scenario: Playback speed reaches lower bound
-
-- **WHEN** the current saved or selected playback speed is `0.50x`
-- **THEN** the decrement button is disabled and the increment button remains available
-
-#### Scenario: Playback speed reaches upper bound
-
-- **WHEN** the current saved or selected playback speed is `2.00x`
-- **THEN** the increment button is disabled and the decrement button remains available
-
-#### Scenario: Unsupported YouTube surface does not render playback speed control
-
-- **WHEN** the user is on a non-desktop or non-watch YouTube surface
-- **THEN** the extension does not render the inline playback-speed control
-
-#### Scenario: User clicks current speed text to reset to default
-
-- **WHEN** the user clicks the current speed text in the inline playback-speed control
-- **THEN** the extension resets playback speed to `1.00x`, applies it to the video, and disables automatic language-based speed changes for the current video
-- **AND WHEN** the speed is already `1.00x`
-- **THEN** the click has no effect
+## MODIFIED Requirements
 
 ### Requirement: Extension applies and persists a per-video playback speed preference
 
