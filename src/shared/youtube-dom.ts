@@ -228,12 +228,16 @@ function placeHostBefore(host: HTMLElement, target: HTMLElement): void {
 export const RELEVANT_MUTATION_SELECTORS =
   "ytd-watch-metadata, #actions-inner, #top-level-buttons-computed, segmented-like-dislike-button-view-model, ytd-menu-renderer";
 
+export function isDesktopYouTubePage(
+  url: URL = new URL(window.location.href),
+): boolean {
+  return url.hostname === "www.youtube.com";
+}
+
 export function isDesktopSubscriptionsFeedPage(
   url: URL = new URL(window.location.href),
 ): boolean {
-  return (
-    url.hostname === "www.youtube.com" && url.pathname === "/feed/subscriptions"
-  );
+  return isDesktopYouTubePage(url) && url.pathname === "/feed/subscriptions";
 }
 
 export function isDesktopFeedPage(
@@ -255,6 +259,21 @@ export function isDesktopWatchPage(): boolean {
 
 export function findSubscriptionsFeedCards(): HTMLElement[] {
   return [...document.querySelectorAll<HTMLElement>("ytd-rich-item-renderer")];
+}
+
+export function findDesktopYouTubeVideoListCards(): HTMLElement[] {
+  return [
+    ...document.querySelectorAll<HTMLElement>(
+      [
+        "ytd-rich-item-renderer",
+        "ytd-compact-video-renderer",
+        "ytd-video-renderer",
+        "ytd-playlist-video-renderer",
+        "ytd-grid-video-renderer",
+        "yt-lockup-view-model",
+      ].join(","),
+    ),
+  ];
 }
 
 export function findSubscriptionsCardOverlayActionsHost(

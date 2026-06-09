@@ -1,11 +1,20 @@
 import type { Feature, FeatureContext } from "@shared/types";
 import {
-  findSubscriptionsFeedCards,
-  isDesktopSubscriptionsFeedPage,
+  findDesktopYouTubeVideoListCards,
+  isDesktopYouTubePage,
 } from "@shared/youtube-dom";
 
 const PROGRESS_SEGMENT_CLASS =
   "ytThumbnailOverlayProgressBarHostWatchedProgressBarSegment";
+const DIMMED_ATTRIBUTE = "data-yt-utils-seen-dimmed";
+const VIDEO_CARD_SELECTORS = [
+  "ytd-rich-item-renderer",
+  "ytd-compact-video-renderer",
+  "ytd-video-renderer",
+  "ytd-playlist-video-renderer",
+  "ytd-grid-video-renderer",
+  "yt-lockup-view-model",
+].join(",");
 
 let observer: MutationObserver | null = null;
 let ensureQueued = false;
@@ -13,7 +22,7 @@ let ensureQueued = false;
 const seenCardDimmingFeature: Feature = {
   name: "seen-card-dimming",
   matchesPage(url: URL): boolean {
-    return isDesktopSubscriptionsFeedPage(url);
+    return isDesktopYouTubePage(url);
   },
 
   activate(_context: FeatureContext): void {
@@ -30,21 +39,27 @@ const seenCardDimmingFeature: Feature = {
 export default seenCardDimmingFeature;
 
 function ensureDimming(): void {
-  if (!isDesktopSubscriptionsFeedPage()) {
+  if (!isDesktopYouTubePage()) {
     return;
   }
 
-  const cards = findSubscriptionsFeedCards();
+  const cards = findDesktopYouTubeVideoListCards();
   for (const card of cards) {
     ensureDimmingForCard(card);
   }
 }
 
 function ensureDimmingForCard(card: HTMLElement): void {
-  const cardLockup = card.querySelector<HTMLElement>("yt-lockup-view-model");
+  const cardLockup = findCardLockup(card);
   if (shouldDimCard(card, cardLockup)) {
     applyDimming(cardLockup);
   }
+}
+
+function findCardLockup(card: HTMLElement): HTMLElement | null {
+  return card.matches("yt-lockup-view-model")
+    ? card
+    : card.querySelector<HTMLElement>("yt-lockup-view-model");
 }
 
 function shouldDimCard(
@@ -54,7 +69,7 @@ function shouldDimCard(
   return (
     !isShortsCard(card) &&
     !!lockup &&
-    lockup.style.opacity === "" &&
+    !lockup.hasAttribute(DIMMED_ATTRIBUTE) &&
     isSeenVideo(card)
   );
 }
@@ -63,7 +78,7 @@ function isShortsCard(card: HTMLElement): boolean {
   return (
     card.tagName === "YTD-REEL-ITEM-RENDERER" ||
     Boolean(card.querySelector("ytd-reel-item-renderer")) ||
-    Boolean(card.querySelector('[class*="shorts"]'))
+    Boolean(card.querySelector('[class*="shorts"], a[href^="/shorts/"]'))
   );
 }
 
@@ -83,21 +98,21 @@ function isSeenVideo(card: HTMLElement): boolean {
       return false;
     }
 
-    return parseInt(match[1], 10) >= 80;
+    return parseInt(match[1], 10) >= 90;
   });
 }
 
 function applyDimming(cardLockup: HTMLElement): void {
+  cardLockup.setAttribute(DIMMED_ATTRIBUTE, "true");
   Object.assign(cardLockup.style, { opacity: "0.4" });
 }
 
 function removeAllDimming(): void {
   for (const cardLockup of document.querySelectorAll<HTMLElement>(
-    "yt-lockup-view-model",
+    `yt-lockup-view-model[${DIMMED_ATTRIBUTE}]`,
   )) {
-    if (cardLockup.style.opacity !== "") {
-      cardLockup.style.opacity = "";
-    }
+    cardLockup.style.opacity = "";
+    cardLockup.removeAttribute(DIMMED_ATTRIBUTE);
   }
 }
 
@@ -141,10 +156,7 @@ function isRelevantAttributeMutation(mutation: MutationRecord): boolean {
     return false;
   }
 
-  return (
-    target.classList.contains(PROGRESS_SEGMENT_CLASS) ||
-    !!target.closest("ytd-rich-item-renderer")
-  );
+  return target.classList.contains(PROGRESS_SEGMENT_CLASS);
 }
 
 function isRelevantChildListMutation(mutation: MutationRecord): boolean {
@@ -157,18 +169,18 @@ function isSeenOverlayMutationNode(node: Node): boolean {
 
 function hasSeenOverlayMatch(node: Element): boolean {
   return (
-    isRichItemRenderer(node) ||
-    hasChildRichItemRenderer(node) ||
+    isVideoCard(node) ||
+    hasChildVideoCard(node) ||
     hasProgressSegmentClass(node)
   );
 }
 
-function isRichItemRenderer(node: Element): boolean {
-  return !!node.matches?.("ytd-rich-item-renderer");
+function isVideoCard(node: Element): boolean {
+  return !!node.matches?.(VIDEO_CARD_SELECTORS);
 }
 
-function hasChildRichItemRenderer(node: Element): boolean {
-  return !!node.querySelector?.("ytd-rich-item-renderer");
+function hasChildVideoCard(node: Element): boolean {
+  return !!node.querySelector?.(VIDEO_CARD_SELECTORS);
 }
 
 function hasProgressSegmentClass(node: Element): boolean {

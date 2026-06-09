@@ -1,10 +1,4 @@
-# seen-card-dimming Specification
-
-## Purpose
-
-Dim watched video cards on desktop YouTube so already-seen videos are visually de-emphasized without changing YouTube behavior.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Entire card dims for seen videos
 
@@ -48,15 +42,6 @@ The extension SHALL NOT apply opacity dimming to Shorts videos on any desktop `w
 
 - **WHEN** the user opens a desktop `www.youtube.com` page and a Shorts card appears in a video list
 - **THEN** the extension does not modify the opacity of that Shorts card regardless of watch status
-
-### Requirement: Dimming is purely cosmetic
-
-The card dimming SHALL NOT affect video functionality. Users can still click, watch, and interact with dimmed video cards normally.
-
-#### Scenario: Dimming does not prevent video playback
-
-- **WHEN** the user clicks on a dimmed video card
-- **THEN** the video plays normally and the dimming does not block or interfere with playback
 
 ### Requirement: Dimming works with dynamic feed updates
 
