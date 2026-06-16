@@ -29,7 +29,7 @@
     "prettier": "*",
     "typescript": "^6.0.2",
     "typescript-eslint": "*",
-    "vite": "^8.0.8",
+    "vite": "^8.0.16",
     "vitest": "^4.1.5"
   }
 }
