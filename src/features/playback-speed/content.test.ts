@@ -97,7 +97,7 @@ describe("playback-speed feature", () => {
     });
   });
 
-  it("initializes English videos at 0.95x after player confirmation", async () => {
+  it("initializes English videos at 1x after player confirmation", async () => {
     const { readPlayerSnapshot } = await import("@shared/youtube-player");
     vi.mocked(readPlayerSnapshot).mockResolvedValue(
       snapshot("test-video", "en-US"),
@@ -108,7 +108,7 @@ describe("playback-speed feature", () => {
     feature.default.activate(makeFeatureContext());
 
     const video = document.querySelector("video")!;
-    await vi.waitFor(() => expect(video.playbackRate).toBe(0.95), {
+    await vi.waitFor(() => expect(video.playbackRate).toBe(1), {
       timeout: 2000,
     });
   });
@@ -194,7 +194,7 @@ describe("playback-speed feature", () => {
     feature.default.activate(makeFeatureContext());
 
     const video = document.querySelector("video")!;
-    await vi.waitFor(() => expect(video.playbackRate).toBe(0.95), {
+    await vi.waitFor(() => expect(video.playbackRate).toBe(1), {
       timeout: 2000,
     });
   });
@@ -252,7 +252,7 @@ describe("playback-speed feature", () => {
     feature.default.activate(makeFeatureContext());
 
     const video = document.querySelector("video")!;
-    await vi.waitFor(() => expect(video.playbackRate).toBe(0.95), {
+    await vi.waitFor(() => expect(video.playbackRate).toBe(1), {
       timeout: 2000,
     });
   });
@@ -297,7 +297,7 @@ describe("playback-speed feature", () => {
     );
     feature.default.activate(makeFeatureContext());
 
-    await vi.waitFor(() => expect(video.playbackRate).toBe(0.95), {
+    await vi.waitFor(() => expect(video.playbackRate).toBe(1), {
       timeout: 2000,
     });
   });
