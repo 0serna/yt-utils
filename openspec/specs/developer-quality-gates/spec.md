@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define repository quality gates that enforce formatting, linting, type checking, and pre-commit hook behavior.
+Define repository quality gates that enforce formatting, linting, type checking, OpenSpec validation, and pre-commit hook behavior.
 
 ## Requirements
 
@@ -20,37 +20,14 @@ The project SHALL use Prettier to format and ESLint with `typescript-eslint` to 
 - **WHEN** a contributor runs `eslint .` on the repository
 - **THEN** files with rule violations are reported so they can be fixed before commit
 
-### Requirement: Fallow analyzes extension entry points
+### Requirement: Unified check command runs active quality gates
 
-The project SHALL configure Fallow with the Chrome extension runtime entry points used by the manifest so reachable extension modules are not reported as unused files.
+The project SHALL provide a unified check command that runs ESLint, TypeScript, and OpenSpec validation without running removed tooling.
 
-#### Scenario: Fallow runs with extension roots
+#### Scenario: Repository check runs active gates
 
 - **WHEN** a contributor runs the repository check command
-- **THEN** Fallow analyzes `src/background.ts`, `src/content.ts`, `src/global-selection.ts`, and `src/main-world/youtube-player-bridge.ts` as runtime entry points
-
-### Requirement: Fallow blocks real quality issues
-
-The project SHALL run Fallow with failure behavior enabled as part of the unified check command, without broad source-wide suppression of duplicate-code analysis or health findings.
-
-#### Scenario: Fallow reports real issues
-
-- **WHEN** Fallow detects dead code, duplicate code, unresolved imports, or configured health violations after entry points are applied
-- **THEN** the repository check command fails until the issues are resolved
-
-#### Scenario: Fallow health violations are resolved
-
-- **WHEN** the repository check command runs after the Fallow health debt reduction is complete
-- **THEN** Fallow completes without health violations above the configured thresholds
-
-### Requirement: Fallow health limits are explicit
-
-The project SHALL define explicit Fallow health thresholds so complexity failures are based on project-approved limits rather than implicit defaults.
-
-#### Scenario: Health threshold is exceeded
-
-- **WHEN** analyzed code exceeds a configured Fallow health threshold
-- **THEN** the repository check command reports the violation and fails
+- **THEN** ESLint, TypeScript, and OpenSpec validation run and report failures through the check summary
 
 ### Requirement: Pre-commit hooks gate commits with quality checks
 
@@ -75,22 +52,16 @@ The project SHALL make the Husky hook setup available from the repository so con
 - **WHEN** a contributor installs project dependencies in a fresh clone
 - **THEN** the repository provides the hook setup needed to activate the pre-commit checks locally
 
-### Requirement: Refactors SHALL reduce Fallow debt without suppressions
+### Requirement: Refactors SHALL preserve quality gates without suppressions
 
-The project SHALL reduce targeted Fallow health findings through tested code simplification rather than inline suppressions, broad ignores, or weaker configured thresholds.
-When the same structural logic is duplicated across production modules, the project SHALL prefer a shared reusable abstraction or equivalent code simplification over leaving the duplication in place.
+The project SHALL reduce targeted quality findings through tested code simplification rather than inline suppressions, broad ignores, or weaker configured thresholds. When the same structural logic is duplicated across production modules, the project SHALL prefer a shared reusable abstraction or equivalent code simplification over leaving the duplication in place.
 
-#### Scenario: Targeted refactor reduces findings
+#### Scenario: Targeted refactor reduces quality findings
 
-- **WHEN** a refactor targets functions reported by Fallow health
-- **THEN** the resulting code reduces or eliminates those findings without adding `fallow-ignore` suppressions or raising configured health limits
+- **WHEN** a refactor targets functions reported by active quality gates
+- **THEN** the resulting code reduces or eliminates those findings without adding suppressions or weakening configured limits
 
-#### Scenario: Remaining findings are resolved before completion
-
-- **WHEN** the Fallow health debt reduction change is complete
-- **THEN** the repository check command passes without unresolved Fallow health findings
-
-#### Scenario: Shared duplication is simplified without weakening the gate
+#### Scenario: Shared duplication is simplified without weakening gates
 
 - **WHEN** duplicated production logic is refactored into a shared helper or an equivalent simpler structure
-- **THEN** the repository check command passes without adding broad Fallow ignore rules for those files
+- **THEN** the repository check command passes without adding broad ignore rules for those files
