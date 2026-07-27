@@ -8,6 +8,7 @@ import seenCardDimmingFeature from "./features/seen-card-dimming/content";
 import subscriptionsFeedControlsFeature from "./features/subscriptions-feed-controls/content";
 import subscriptionsMostRelevantRemovalFeature from "./features/subscriptions-most-relevant-removal/content";
 import subscriptionsShortsRemovalFeature from "./features/subscriptions-shorts-removal/content";
+import homePlayablesRemovalFeature from "./features/home-playables-removal/content";
 import searchDateFilterFeature from "./features/search-date-filter/content";
 import { FeatureRegistry } from "./shared/feature-registry";
 
@@ -21,5 +22,6 @@ registry.register(subscriptionsFeedControlsFeature);
 registry.register(seenCardDimmingFeature);
 registry.register(subscriptionsMostRelevantRemovalFeature);
 registry.register(subscriptionsShortsRemovalFeature);
+registry.register(homePlayablesRemovalFeature);
 registry.register(autoSwitchToVideosTabFeature);
 registry.register(searchDateFilterFeature);

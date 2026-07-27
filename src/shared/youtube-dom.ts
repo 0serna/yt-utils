@@ -249,6 +249,12 @@ export function isDesktopFeedPage(
   );
 }
 
+export function isDesktopHomePage(
+  url: URL = new URL(window.location.href),
+): boolean {
+  return isDesktopYouTubePage(url) && url.pathname === "/";
+}
+
 export function isDesktopWatchPage(): boolean {
   return (
     window.location.hostname === "www.youtube.com" &&
@@ -311,27 +317,15 @@ function findShortsShelves(): HTMLElement[] {
 }
 
 export function removeAllShortsSections(): void {
-  for (const shelf of findShortsShelves()) {
-    const section = shelf.closest<HTMLElement>("ytd-rich-section-renderer");
-    if (section) {
-      section.remove();
-    }
-  }
+  removeRichSectionsForShelves(findShortsShelves());
 }
 
 export function findMostRelevantShelves(): HTMLElement[] {
-  return [
-    ...document.querySelectorAll<HTMLElement>("ytd-rich-shelf-renderer"),
-  ].filter(isMostRelevantShelf);
+  return findRichShelves(isMostRelevantShelf);
 }
 
 export function removeAllMostRelevantSections(): void {
-  for (const shelf of findMostRelevantShelves()) {
-    const section = shelf.closest<HTMLElement>("ytd-rich-section-renderer");
-    if (section) {
-      section.remove();
-    }
-  }
+  removeRichSectionsForShelves(findMostRelevantShelves());
 }
 
 function isMostRelevantShelf(shelf: HTMLElement): boolean {
@@ -341,6 +335,32 @@ function isMostRelevantShelf(shelf: HTMLElement): boolean {
         matcher.test(title.textContent ?? ""),
       )
     : false;
+}
+
+export function findPlayablesShelves(): HTMLElement[] {
+  return findRichShelves(isPlayablesShelf);
+}
+
+export function removeAllPlayablesSections(): void {
+  removeRichSectionsForShelves(findPlayablesShelves());
+}
+
+function isPlayablesShelf(shelf: HTMLElement): boolean {
+  return shelf.querySelector('a[href*="/playables"]') !== null;
+}
+
+function findRichShelves(
+  isMatch: (shelf: HTMLElement) => boolean,
+): HTMLElement[] {
+  return [
+    ...document.querySelectorAll<HTMLElement>("ytd-rich-shelf-renderer"),
+  ].filter(isMatch);
+}
+
+function removeRichSectionsForShelves(shelves: HTMLElement[]): void {
+  for (const shelf of shelves) {
+    shelf.closest<HTMLElement>("ytd-rich-section-renderer")?.remove();
+  }
 }
 
 export function isVisible(element: Element): boolean {
