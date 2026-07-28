@@ -67,7 +67,7 @@ The `src/background.ts` barrel file SHALL import all feature background handlers
 
 ### Requirement: Build and validation scripts are documented
 
-The `package.json` SHALL define `build` and `check` scripts. The README SHALL document the build step as part of the local setup instructions and the validation command for contributors.
+The `package.json` SHALL define `build`, `lint`, `typecheck`, and `validate` scripts. The README SHALL document the build step as part of the local setup instructions and the validation commands for contributors.
 
 #### Scenario: Contributor sets up the project
 

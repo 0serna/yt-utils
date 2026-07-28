@@ -6,8 +6,10 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "check": "bash scripts/check.sh",
     "format": "prettier --write .",
+    "lint": "eslint --fix .",
+    "typecheck": "tsc --noEmit",
+    "validate": "openspec validate --all",
     "test": "vitest run --coverage",
     "prepare": "husky"
   },

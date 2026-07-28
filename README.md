@@ -19,7 +19,9 @@ Then load the generated extension from the build output in `chrome://extensions`
 
 ## Development
 
-- `npm run check` - run Biome checks and TypeScript type checking
+- `npm run lint` - run ESLint with auto-fix
+- `npm run typecheck` - run TypeScript type checking
+- `npm run validate` - run OpenSpec validation
 - `npm run build` - production build
 
 ## Project Structure

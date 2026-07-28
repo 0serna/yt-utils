@@ -15,33 +15,38 @@ The project SHALL use Prettier to format and ESLint with `typescript-eslint` to 
 - **WHEN** a contributor runs `prettier --write` on the repository
 - **THEN** files that do not match the configured style are rewritten into the expected format
 
-#### Scenario: ESLint reports lint issues
+#### Scenario: ESLint auto-fixes and reports remaining lint issues
 
-- **WHEN** a contributor runs `eslint .` on the repository
-- **THEN** files with rule violations are reported so they can be fixed before commit
+- **WHEN** a contributor runs `npm run lint`
+- **THEN** auto-fixable rule violations are corrected in-place and any remaining violations are reported
 
-### Requirement: Unified check command runs active quality gates
+### Requirement: Quality gate commands run active checks
 
-The project SHALL provide a unified check command that runs ESLint, TypeScript, and OpenSpec validation without running removed tooling.
+The project SHALL provide separate commands for ESLint, TypeScript, and OpenSpec validation.
 
-#### Scenario: Repository check runs active gates
+#### Scenario: Repository validation commands run active gates
 
-- **WHEN** a contributor runs the repository check command
-- **THEN** ESLint, TypeScript, and OpenSpec validation run and report failures through the check summary
+- **WHEN** a contributor runs `npm run lint`, `npm run typecheck`, and `npm run validate`
+- **THEN** ESLint, TypeScript, and OpenSpec validation run and report failures directly
 
-### Requirement: Pre-commit hooks gate commits with quality checks
+### Requirement: Pre-commit hooks auto-format and auto-fix staged files
 
-The project SHALL use a Git pre-commit hook managed by Husky to run formatting, linting, and TypeScript type checking before a commit completes.
+The project SHALL use a Git pre-commit hook managed by Husky to run `lint-staged`, which applies Prettier formatting and ESLint auto-fixes to staged files and re-stages the results.
 
-#### Scenario: Commit is blocked by failing checks
+#### Scenario: Staged files are formatted and auto-fixed before commit
 
-- **WHEN** a contributor attempts to commit changes and either Prettier, ESLint, or type checking fails
+- **WHEN** a contributor attempts to commit changes
+- **THEN** `lint-staged` runs Prettier and `eslint --fix` on staged matching files and re-stages any changes
+
+#### Scenario: Commit is blocked by failing auto-fix
+
+- **WHEN** a contributor attempts to commit changes and `lint-staged` cannot format or auto-fix staged files
 - **THEN** the commit does not complete until the issues are resolved
 
-#### Scenario: Commit succeeds when checks pass
+#### Scenario: Commit proceeds after the hook succeeds
 
-- **WHEN** a contributor attempts to commit changes and Prettier, ESLint, and type checking all pass
-- **THEN** the commit completes successfully
+- **WHEN** a contributor attempts to commit changes and `lint-staged` completes without errors
+- **THEN** the commit continues
 
 ### Requirement: Hook setup is reproducible after install
 
@@ -64,4 +69,4 @@ The project SHALL reduce targeted quality findings through tested code simplific
 #### Scenario: Shared duplication is simplified without weakening gates
 
 - **WHEN** duplicated production logic is refactored into a shared helper or an equivalent simpler structure
-- **THEN** the repository check command passes without adding broad ignore rules for those files
+- **THEN** `npm run lint`, `npm run typecheck`, and `npm run validate` pass without adding broad ignore rules for those files

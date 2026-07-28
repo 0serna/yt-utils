@@ -10,7 +10,6 @@
 │   ├── content.ts        # YouTube content-script entrypoint
 │   └── global-selection.ts # all-pages text selection content script
 ├── openspec/             # specs, changes, and validation
-├── scripts/              # local automation (check.sh)
 └── extension/            # build output (generated)
 ```
 
@@ -19,7 +18,9 @@
 - `npm install`: install dependencies.
 - `npm run build`: build the extension with Vite.
 - `npm test`: run tests with Vitest (coverage via Istanbul).
-- `npm run check`: run ESLint, TypeScript, and OpenSpec validation.
+- `npm run lint`: run ESLint with auto-fix.
+- `npm run typecheck`: run TypeScript type checking.
+- `npm run validate`: run OpenSpec validation.
 - `npm run format`: format files with Prettier.
 
 ## Workflow
