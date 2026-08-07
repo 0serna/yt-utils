@@ -4,8 +4,8 @@ import { applyExtensionButtonStyles } from "@shared/extension-button";
 import type { Feature, FeatureContext } from "@shared/types";
 import {
   clickElement,
+  findSubscriptionsCardHidePlacement,
   findSubscriptionsCardMenuButton,
-  findSubscriptionsCardOverlayActionsHost,
   findSubscriptionsFeedCards,
   findSubscriptionsHideMenuItem,
   isDesktopSubscriptionsFeedPage,
@@ -14,14 +14,35 @@ import {
 
 const BUTTON_HOST_ID_PREFIX = "yt-utils-subscriptions-hide-host-";
 const BUTTON_ID_PREFIX = "yt-utils-subscriptions-hide-button-";
+const STYLE_ELEMENT_ID = "yt-utils-subscriptions-hide-styles";
 const CARD_KEY_ATTRIBUTE = "ytUtilsSubscriptionsHideKey";
 const HIDE_ACTION_TIMEOUT_MS = 3000;
-const RELEVANT_HIDE_SELECTOR =
-  "ytd-rich-item-renderer, yt-thumbnail-hover-overlay-toggle-actions-view-model, yt-lockup-metadata-view-model, [role='menuitem']";
+const RELEVANT_HIDE_SELECTOR = [
+  "ytd-rich-item-renderer",
+  "yt-thumbnail-view-model",
+  "yt-lockup-metadata-view-model",
+  "a.ytLockupViewModelContentImage",
+  "[role='menuitem']",
+].join(", ");
+const HOVER_VISIBILITY_STYLES = `
+[id^="${BUTTON_HOST_ID_PREFIX}"] {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+yt-thumbnail-view-model:hover > [id^="${BUTTON_HOST_ID_PREFIX}"],
+a.ytLockupViewModelContentImage:hover > [id^="${BUTTON_HOST_ID_PREFIX}"],
+[id^="${BUTTON_HOST_ID_PREFIX}"]:focus-within,
+[id^="${BUTTON_HOST_ID_PREFIX}"][data-pending="true"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+`.trim();
 
 let observer: MutationObserver | null = null;
 let ensureQueued = false;
 let nextCardKey = 0;
+let hasLoggedPlacementFailure = false;
 const pendingCardKeys = new Set<string>();
 
 const subscriptionsFeedControlsFeature: Feature = {
@@ -32,6 +53,8 @@ const subscriptionsFeedControlsFeature: Feature = {
 
   activate(context: FeatureContext): void {
     activeContext = context;
+    hasLoggedPlacementFailure = false;
+    ensureHoverVisibilityStyles();
     ensureHideButtons();
     observePage();
   },
@@ -40,6 +63,7 @@ const subscriptionsFeedControlsFeature: Feature = {
     activeContext = null;
     pendingCardKeys.clear();
     removeHideButtons();
+    removeHoverVisibilityStyles();
     stopObserving();
   },
 };
@@ -54,24 +78,61 @@ function ensureHideButtons(): void {
     return;
   }
 
+  let cardsWithMenu = 0;
+  let cardsWithPlacement = 0;
+
   for (const card of findSubscriptionsFeedCards()) {
-    ensureHideButton(card);
+    const menuButton = findSubscriptionsCardMenuButton(card);
+    const placement = findSubscriptionsCardHidePlacement(card);
+
+    if (menuButton) {
+      cardsWithMenu += 1;
+    }
+    if (placement) {
+      cardsWithPlacement += 1;
+    }
+
+    ensureHideButton(card, menuButton, placement);
   }
+
+  maybeLogPlacementFailure(cardsWithMenu, cardsWithPlacement);
 }
 
-function ensureHideButton(card: HTMLElement): void {
-  const overlayActionsHost = findSubscriptionsCardOverlayActionsHost(card);
-  const menuButton = findSubscriptionsCardMenuButton(card);
-
-  if (!overlayActionsHost || !menuButton) {
+function ensureHideButton(
+  card: HTMLElement,
+  menuButton: HTMLElement | null,
+  placementRoot: HTMLElement | null,
+): void {
+  if (!menuButton || !placementRoot) {
     removeHideButton(card);
     return;
   }
 
   const cardKey = getCardKey(card);
   const host = getOrCreateHideButtonHost(cardKey);
-  appendIfNeeded(host, overlayActionsHost);
+  placeHideButtonHost(host, placementRoot);
   syncHideButtonState(cardKey);
+}
+
+function maybeLogPlacementFailure(
+  cardsWithMenu: number,
+  cardsWithPlacement: number,
+): void {
+  if (
+    hasLoggedPlacementFailure ||
+    cardsWithMenu === 0 ||
+    cardsWithPlacement > 0
+  ) {
+    return;
+  }
+
+  hasLoggedPlacementFailure = true;
+  activeContext?.logger.error(
+    new Error(
+      "Subscriptions hide controls could not find a thumbnail placement surface.",
+    ),
+    { phase: "runtime" },
+  );
 }
 
 function getOrCreateHideButtonHost(cardKey: string): HTMLElement {
@@ -82,20 +143,49 @@ function getOrCreateHideButtonHost(cardKey: string): HTMLElement {
   );
 }
 
-function appendIfNeeded(host: HTMLElement, parent: HTMLElement): void {
-  if (host.parentElement !== parent) {
-    parent.append(host);
+function placeHideButtonHost(host: HTMLElement, root: HTMLElement): void {
+  ensureRelativePosition(root);
+  applyOwnedOverlayStyles(host);
+  if (host.parentElement !== root) {
+    root.append(host);
   }
+}
+
+function ensureRelativePosition(element: HTMLElement): void {
+  if (window.getComputedStyle(element).position === "static") {
+    element.style.position = "relative";
+  }
+}
+
+function applyOwnedOverlayStyles(host: HTMLElement): void {
+  // Top-left avoids YouTube hover preview controls (top-right) and duration badge (bottom-right).
+  host.style.position = "absolute";
+  host.style.top = "8px";
+  host.style.left = "8px";
+  host.style.zIndex = "3";
+  host.style.display = "flex";
+  host.style.alignItems = "center";
+  host.style.justifyContent = "center";
+}
+
+function ensureHoverVisibilityStyles(): void {
+  if (document.getElementById(STYLE_ELEMENT_ID)) {
+    return;
+  }
+
+  const style = document.createElement("style");
+  style.id = STYLE_ELEMENT_ID;
+  style.textContent = HOVER_VISIBILITY_STYLES;
+  document.documentElement.append(style);
+}
+
+function removeHoverVisibilityStyles(): void {
+  document.getElementById(STYLE_ELEMENT_ID)?.remove();
 }
 
 function createHideButtonHost(cardKey: string, buttonId: string): HTMLElement {
   const host = document.createElement("div");
   host.id = getHostId(cardKey);
-  host.className = "ytThumbnailHoverOverlayToggleActionsViewModelButton";
-  host.style.display = "flex";
-  host.style.alignItems = "center";
-  host.style.justifyContent = "center";
-  host.style.pointerEvents = "auto";
 
   const button = document.createElement("button");
   button.id = buttonId;
@@ -129,23 +219,24 @@ function styleHideButton(button: HTMLButtonElement): void {
   button.style.setProperty("-webkit-backdrop-filter", "blur(12px)");
   button.style.margin = "0";
   button.style.padding = "0";
-  button.style.pointerEvents = "auto";
   button.style.touchAction = "manipulation";
 }
 
 function syncHideButtonState(cardKey: string): void {
+  const host = document.getElementById(getHostId(cardKey));
   const button = document.getElementById(
     getButtonId(cardKey),
   ) as HTMLButtonElement | null;
 
-  if (!button) {
+  if (!host || !button) {
     return;
   }
 
-  applyButtonPendingState(button, pendingCardKeys.has(cardKey));
+  applyButtonPendingState(host, button, pendingCardKeys.has(cardKey));
 }
 
 function applyButtonPendingState(
+  host: HTMLElement,
   button: HTMLButtonElement,
   pending: boolean,
 ): void {
@@ -157,6 +248,12 @@ function applyButtonPendingState(
   button.style.cursor = state.cursor;
   button.setAttribute("aria-label", state.label);
   button.title = state.label;
+
+  if (pending) {
+    host.dataset.pending = "true";
+  } else {
+    delete host.dataset.pending;
+  }
 }
 
 async function onHideButtonClick(cardKey: string, event: Event): Promise<void> {

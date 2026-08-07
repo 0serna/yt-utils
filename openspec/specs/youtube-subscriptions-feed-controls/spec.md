@@ -8,12 +8,17 @@ Inline controls that augment supported subscriptions-feed video cards while dele
 
 ### Requirement: Extension shows an inline subscriptions-feed hide control
 
-The extension SHALL render a single inline hide button on supported desktop `www.youtube.com/feed/subscriptions` video cards. The button SHALL be inserted into the same thumbnail overlay action cluster that contains YouTube's native `Watch later` and `Add to queue` controls, and its DOM IDs SHALL use the `yt-utils-` prefix.
+The extension SHALL render a single inline hide button on supported desktop `www.youtube.com/feed/subscriptions` video cards that expose a native card menu trigger. The button SHALL mount on an owned overlay at the top-left of the card thumbnail surface so it does not compete with YouTube's hover preview controls (top-right) or duration badge (bottom-right). The button SHALL remain visually hidden until the video thumbnail image is hovered (matching native thumbnail controls), or the control receives keyboard focus, and its DOM IDs SHALL use the `yt-utils-` prefix.
 
-#### Scenario: Supported subscriptions card renders the hide control
+#### Scenario: Supported subscriptions card renders the hide control on current lockups
 
-- **WHEN** the user opens the desktop subscriptions feed and a standard video card exposes the native thumbnail quick-action cluster
-- **THEN** the extension displays exactly one hide button in that card's thumbnail overlay action area using `yt-utils-` prefixed DOM IDs
+- **WHEN** the user opens the desktop subscriptions feed and a standard video card exposes a native `More actions` menu trigger plus a thumbnail surface
+- **THEN** the extension mounts exactly one hide button at the top-left of that card's thumbnail using `yt-utils-` prefixed DOM IDs, hidden until the thumbnail is hovered
+
+#### Scenario: Hide control becomes visible on thumbnail hover
+
+- **WHEN** the user hovers the video thumbnail image of a subscriptions-feed card that has a mounted hide control
+- **THEN** the hide control becomes visible for that card and can be activated
 
 #### Scenario: Unsupported YouTube surface does not render the hide control
 
@@ -22,7 +27,7 @@ The extension SHALL render a single inline hide button on supported desktop `www
 
 #### Scenario: Card lacks required native affordances
 
-- **WHEN** a subscriptions-feed card does not expose the native overlay action host or the native card menu trigger required for hiding
+- **WHEN** a subscriptions-feed card does not expose the native card menu trigger required for hiding, or no usable thumbnail placement surface is available
 - **THEN** the extension does not render a hide button for that card
 
 ### Requirement: Inline hide control triggers the native card hide action
@@ -52,3 +57,12 @@ The extension SHALL keep the subscriptions-feed hide control aligned with the co
 
 - **WHEN** the user navigates into `www.youtube.com/feed/subscriptions` through YouTube's SPA navigation
 - **THEN** the extension initializes the subscriptions-feed hide controls for newly eligible cards on that page
+
+### Requirement: Placement failures are observable
+
+When subscriptions-feed cards expose a native hide menu trigger but the extension cannot resolve any thumbnail placement surface, the feature SHALL record a runtime error through the feature logger so the breakage is visible in extension logs.
+
+#### Scenario: Menu-capable cards without placement surface log once
+
+- **WHEN** the subscriptions feed contains one or more cards with a native menu trigger and none of those cards expose a usable placement surface
+- **THEN** the feature logs a runtime placement failure error at most once until deactivation

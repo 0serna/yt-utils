@@ -282,11 +282,24 @@ export function findDesktopYouTubeVideoListCards(): HTMLElement[] {
   ];
 }
 
-export function findSubscriptionsCardOverlayActionsHost(
+export function findSubscriptionsCardHidePlacement(
+  card: HTMLElement,
+): HTMLElement | null {
+  return (
+    card.querySelector<HTMLElement>("yt-thumbnail-view-model") ??
+    findSubscriptionsCardThumbnailLink(card)
+  );
+}
+
+function findSubscriptionsCardThumbnailLink(
   card: ParentNode,
 ): HTMLElement | null {
-  return card.querySelector<HTMLElement>(
-    "yt-thumbnail-hover-overlay-toggle-actions-view-model",
+  return (
+    card.querySelector<HTMLElement>("a.ytLockupViewModelContentImage") ??
+    [...card.querySelectorAll<HTMLAnchorElement>("a[href*='/watch']")].find(
+      (link) => Boolean(link.querySelector("yt-thumbnail-view-model, img")),
+    ) ??
+    null
   );
 }
 
