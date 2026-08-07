@@ -18,7 +18,7 @@
     "*.{js,jsx,ts,tsx}": "eslint --fix"
   },
   "devDependencies": {
-    "@crxjs/vite-plugin": "^2.0.0",
+    "@crxjs/vite-plugin": "^2.7.1",
     "@types/chrome": "^0.1.40",
     "@types/node": "^25.6.0",
     "@vitest/coverage-istanbul": "^4.1.10",
@@ -30,7 +30,7 @@
     "prettier": "*",
     "typescript": "^6.0.2",
     "typescript-eslint": "*",
-    "vite": "^8.0.8",
+    "vite": "^8.1.5",
     "vitest": "^4.1.10"
   }
 }
