@@ -26,7 +26,7 @@
 ## Workflow
 
 - Use `playwriter` to explore and analyze web pages.
-- When you need to validate the extension, you can run `npm run build` and ask the user (`question` tool) to reload the extension manually.
+- After changing files under `src/` (or anything else that feeds `extension/`), run `npm run build` before asking the user to reload. Done when the build exits 0; then ask the user to reload the extension manually.
 
 ## Debugging
 
