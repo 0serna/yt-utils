@@ -19,6 +19,7 @@ const LABELS = {
   copy: [/\bcopy\b/i, /\bcopy link\b/i, /\bcopiar\b/i, /\bcopiar enlace\b/i],
   startAt: [/\bstart at\b/i, /\bempezar en\b/i],
   hide: [/\bhide\b/i, /\bocultar\b/i],
+  notInterested: [/\bnot interested\b/i, /\bno me interesa\b/i],
   moreActions: [/\bmore actions\b/i, /\bm[aá]s acciones\b/i],
   mostRelevant: [/\bmost relevant\b/i],
 } as const;
@@ -263,7 +264,7 @@ export function isDesktopWatchPage(): boolean {
   );
 }
 
-export function findSubscriptionsFeedCards(): HTMLElement[] {
+export function findRichItemCards(): HTMLElement[] {
   return [...document.querySelectorAll<HTMLElement>("ytd-rich-item-renderer")];
 }
 
@@ -282,18 +283,16 @@ export function findDesktopYouTubeVideoListCards(): HTMLElement[] {
   ];
 }
 
-export function findSubscriptionsCardHidePlacement(
+export function findRichItemThumbnailPlacement(
   card: HTMLElement,
 ): HTMLElement | null {
   return (
     card.querySelector<HTMLElement>("yt-thumbnail-view-model") ??
-    findSubscriptionsCardThumbnailLink(card)
+    findRichItemThumbnailLink(card)
   );
 }
 
-function findSubscriptionsCardThumbnailLink(
-  card: ParentNode,
-): HTMLElement | null {
+function findRichItemThumbnailLink(card: ParentNode): HTMLElement | null {
   return (
     card.querySelector<HTMLElement>("a.ytLockupViewModelContentImage") ??
     [...card.querySelectorAll<HTMLAnchorElement>("a[href*='/watch']")].find(
@@ -303,16 +302,20 @@ function findSubscriptionsCardThumbnailLink(
   );
 }
 
-export function findSubscriptionsCardMenuButton(
-  card: ParentNode,
-): HTMLElement | null {
+export function findRichItemMenuButton(card: ParentNode): HTMLElement | null {
   return findButton(card, LABELS.moreActions);
 }
 
-export function findSubscriptionsHideMenuItem(
+export function findHideMenuItem(
   root: ParentNode = document,
 ): HTMLElement | null {
   return findMenuItem(root, LABELS.hide);
+}
+
+export function findNotInterestedMenuItem(
+  root: ParentNode = document,
+): HTMLElement | null {
+  return findMenuItem(root, LABELS.notInterested);
 }
 
 export function findShortsShelf(): HTMLElement | null {
