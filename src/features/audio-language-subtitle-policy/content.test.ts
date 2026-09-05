@@ -46,7 +46,9 @@ describe("audio-language-subtitle-policy feature", () => {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    const { default: feature } = await importFreshFeature();
+    feature.deactivate();
     vi.clearAllMocks();
     vi.useRealTimers();
   });
@@ -447,6 +449,44 @@ describe("audio-language-subtitle-policy feature", () => {
       });
 
       await new Promise((resolve) => window.setTimeout(resolve, 3000));
+      expect(clickSpy).not.toHaveBeenCalled();
+    });
+
+    it.each(["navigate", "deactivate"])(
+      "stops the second caption click after %s",
+      async (change) => {
+        vi.useFakeTimers();
+        await setupEnglishTrackMocks();
+        const clickSpy = createCaptionButton();
+        const feature = await importFreshFeature();
+        feature.default.activate(makeFeatureContext());
+        await vi.advanceTimersByTimeAsync(3000);
+        expect(clickSpy).toHaveBeenCalledTimes(1);
+        if (change === "deactivate") {
+          feature.default.deactivate();
+        } else {
+          window.location.href = "https://www.youtube.com/watch?v=next";
+        }
+        await vi.advanceTimersByTimeAsync(200);
+        expect(clickSpy).toHaveBeenCalledTimes(1);
+        feature.default.deactivate();
+      },
+    );
+
+    it("rejects renderer fallback when deactivated during its snapshot read", async () => {
+      vi.useFakeTimers();
+      await setupEnglishTrackMocks();
+      const clickSpy = createCaptionButton();
+      const feature = await importFreshFeature();
+      feature.default.activate(makeFeatureContext());
+      await vi.advanceTimersByTimeAsync(2999);
+      const { readPlayerSnapshot } = await import("@shared/youtube-player");
+      const pending = Promise.withResolvers<PlayerSnapshot | null>();
+      vi.mocked(readPlayerSnapshot).mockReturnValue(pending.promise);
+      await vi.advanceTimersByTimeAsync(1);
+      feature.default.deactivate();
+      pending.resolve(snapshot("test-video"));
+      await vi.advanceTimersByTimeAsync(1000);
       expect(clickSpy).not.toHaveBeenCalled();
     });
 

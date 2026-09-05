@@ -18,8 +18,8 @@ import {
 import type { PlayerSnapshot } from "@shared/youtube-player";
 import { isEnglishLanguage, isSpanishLanguage } from "@shared/youtube-player";
 import {
-  getCurrentWatchVideoId,
-  readConfirmedCurrentVideoSnapshot,
+  createWatchSessionController,
+  type WatchSession,
 } from "@shared/youtube-session";
 
 const CONTROL_HOST_ID = "yt-utils-speed-host";
@@ -30,11 +30,10 @@ const MARK_AS_SEEN_HOST_ID = "yt-utils-inline-host";
 
 let localSpeed: number = PLAYBACK_SPEED_DEFAULT;
 let observer: MutationObserver | null = null;
-let ensureQueued = false;
+let ensureFrame: number | null = null;
 let userInteracted = false;
 let pollTimer: number | null = null;
-let sessionToken = 0;
-let syncQueued = false;
+const watchSessions = createWatchSessionController();
 let initializedVideoId: string | null = null;
 
 const playbackSpeedFeature: Feature = {
@@ -42,22 +41,24 @@ const playbackSpeedFeature: Feature = {
   isWatchPage: true,
 
   activate(_context: FeatureContext): void {
-    sessionToken += 1;
+    watchSessions.activate();
     localSpeed = PLAYBACK_SPEED_DEFAULT;
     userInteracted = false;
-    syncQueued = false;
     initializedVideoId = null;
     ensureSpeedControl();
     applySpeedToVideo();
     observePage();
     startPolling();
-    void queueSync(sessionToken);
+    void watchSessions.run(syncSpeedForCurrentVideo);
   },
 
   deactivate(): void {
-    sessionToken += 1;
+    watchSessions.deactivate();
+    if (ensureFrame !== null) {
+      window.cancelAnimationFrame(ensureFrame);
+      ensureFrame = null;
+    }
     removeSpeedControl();
-    syncQueued = false;
     initializedVideoId = null;
     stopPolling();
     stopObserving();
@@ -170,7 +171,7 @@ function startPolling(): void {
   }
 
   pollTimer = window.setInterval(() => {
-    void queueSync(sessionToken);
+    void watchSessions.run(syncSpeedForCurrentVideo);
   }, 500);
 }
 
@@ -258,51 +259,24 @@ function stopObserving(): void {
 }
 
 function queueEnsureSpeedControl(): void {
-  if (ensureQueued) {
+  if (ensureFrame !== null) {
     return;
   }
 
-  ensureQueued = true;
-
-  window.requestAnimationFrame(() => {
-    ensureQueued = false;
+  ensureFrame = window.requestAnimationFrame(() => {
+    ensureFrame = null;
     ensureSpeedControl();
     applySpeedToVideo();
   });
 }
 
-async function queueSync(token: number): Promise<void> {
-  if (syncQueued) {
-    return;
-  }
+async function syncSpeedForCurrentVideo(session: WatchSession): Promise<void> {
+  if (userInteracted) return;
 
-  syncQueued = true;
-  try {
-    await syncSpeedForCurrentVideo(token);
-  } finally {
-    syncQueued = false;
-  }
-}
-
-async function syncSpeedForCurrentVideo(token: number): Promise<void> {
-  if (shouldSkipSync(token)) {
-    return;
-  }
-
-  const snapshot = await readConfirmedCurrentVideoSnapshot();
-  if (!snapshot) {
-    return;
-  }
-
-  if (shouldSkipSync(token) || getCurrentWatchVideoId() !== snapshot.videoId) {
-    return;
-  }
+  const snapshot = await session.readSnapshot();
+  if (!snapshot || !session.isCurrent() || userInteracted) return;
 
   applySpeedForLanguage(snapshot);
-}
-
-function shouldSkipSync(token: number): boolean {
-  return token !== sessionToken || userInteracted;
 }
 
 function applySpeedForLanguage(snapshot: PlayerSnapshot): void {

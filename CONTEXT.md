@@ -23,3 +23,7 @@ _Avoid_: hide, dislike, dismiss
 **home-not-interested**:
 The feature that adds an inline Home card control to activate the native Not Interested action.
 _Avoid_: home-hide, not-interested-button
+
+**Watch Session**:
+A feature's continuous period of activity for one video on the desktop YouTube watch page. Leaving that video or deactivating the feature ends its Watch Session; returning to the same video starts a new one.
+_Avoid_: video ID alone as a synonym for Watch Session

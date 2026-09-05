@@ -5,14 +5,12 @@ import {
   determineSubtitleSelection,
   isEnglishLanguage,
   matchesSubtitleSelection,
-  readPlayerSnapshot,
   readSubtitleSignature,
   waitForSubtitleSelection,
 } from "@shared/youtube-player";
 import {
-  getCurrentWatchVideoId,
-  isCurrentWatchVideo,
-  readConfirmedCurrentVideoSnapshot,
+  createWatchSessionController,
+  type WatchSession,
 } from "@shared/youtube-session";
 
 const POLL_INTERVAL_MS = 500;
@@ -20,8 +18,7 @@ const RENDERER_FALLBACK_GRACE_MS = 3000;
 const UI_TOGGLE_DELAY_MS = 200;
 
 let pollTimer: number | null = null;
-let syncQueued = false;
-let sessionToken = 0;
+const watchSessions = createWatchSessionController();
 let appliedStateByVideo = new Map<string, string>();
 let overriddenVideos = new Set<string>();
 let rendererFallbackAttempted = new Set<string>();
@@ -31,18 +28,16 @@ const audioLanguageSubtitlePolicyFeature: Feature = {
   isWatchPage: true,
 
   activate(_context: FeatureContext): void {
-    sessionToken += 1;
-    syncQueued = false;
+    watchSessions.activate();
     appliedStateByVideo = new Map();
     overriddenVideos = new Set();
     rendererFallbackAttempted = new Set();
     startPolling();
-    void queueSync();
+    void watchSessions.run(syncPolicy);
   },
 
   deactivate(): void {
-    sessionToken += 1;
-    syncQueued = false;
+    watchSessions.deactivate();
     stopPolling();
     appliedStateByVideo.clear();
     overriddenVideos.clear();
@@ -58,7 +53,7 @@ function startPolling(): void {
   }
 
   pollTimer = window.setInterval(() => {
-    void queueSync();
+    void watchSessions.run(syncPolicy);
   }, POLL_INTERVAL_MS);
 }
 
@@ -69,23 +64,9 @@ function stopPolling(): void {
   }
 }
 
-async function queueSync(): Promise<void> {
-  if (syncQueued) {
-    return;
-  }
-
-  syncQueued = true;
-  const token = sessionToken;
-  try {
-    await syncPolicy(token);
-  } finally {
-    syncQueued = false;
-  }
-}
-
-async function syncPolicy(token: number): Promise<void> {
-  const ctx = await getPolicyContext(token);
-  if (!ctx) {
+async function syncPolicy(session: WatchSession): Promise<void> {
+  const ctx = await getPolicyContext(session);
+  if (!ctx || !session.isCurrent()) {
     return;
   }
 
@@ -103,7 +84,7 @@ async function syncPolicy(token: number): Promise<void> {
     ctx.snapshot,
     determineSubtitleSelection(ctx.snapshot),
     ctx.currentSignature,
-    token,
+    session,
   );
 }
 
@@ -113,20 +94,22 @@ type PolicyContext = {
   currentSignature: string;
 };
 
-async function getPolicyContext(token: number): Promise<PolicyContext | null> {
-  if (shouldAbortPolicySync(token)) {
+async function getPolicyContext(
+  session: WatchSession,
+): Promise<PolicyContext | null> {
+  if (!session.isCurrent()) {
     return null;
   }
 
-  const snapshot = await readConfirmedCurrentVideoSnapshot();
-  return createPolicyContext(token, snapshot);
+  const snapshot = await session.readSnapshot();
+  return createPolicyContext(session, snapshot);
 }
 
 function createPolicyContext(
-  token: number,
+  session: WatchSession,
   snapshot: PlayerSnapshot | null,
 ): PolicyContext | null {
-  if (shouldAbortPolicySync(token)) {
+  if (!session.isCurrent()) {
     return null;
   }
 
@@ -139,10 +122,6 @@ function createPolicyContext(
     snapshot,
     currentSignature: readSubtitleSignature(snapshot),
   };
-}
-
-function shouldAbortPolicySync(token: number): boolean {
-  return token !== sessionToken;
 }
 
 function isPolicyOverridden(
@@ -167,7 +146,7 @@ async function ensureSubtitleSelection(
   snapshot: PlayerSnapshot,
   desiredSelection: SubtitleSelection,
   currentSignature: string,
-  token: number,
+  session: WatchSession,
 ): Promise<void> {
   if (
     rememberIfSelectionAlreadyMatches(
@@ -181,18 +160,17 @@ async function ensureSubtitleSelection(
   }
 
   const verifiedSnapshot = await applyAndVerifySubtitleSelection(
-    token,
-    videoId,
+    session,
     desiredSelection,
   );
-  if (!verifiedSnapshot) {
+  if (!verifiedSnapshot || !session.isCurrent()) {
     return;
   }
 
   rememberAppliedSignature(videoId, readSubtitleSignature(verifiedSnapshot));
 
   if (desiredSelection.mode === "track") {
-    void scheduleRendererFallback(videoId, desiredSelection, token);
+    void scheduleRendererFallback(videoId, desiredSelection, session);
   }
 }
 
@@ -232,61 +210,49 @@ function shouldRememberMatchingSelection(
 }
 
 async function applyAndVerifySubtitleSelection(
-  token: number,
-  videoId: string,
+  session: WatchSession,
   desiredSelection: SubtitleSelection,
 ): Promise<PlayerSnapshot | null> {
+  if (!session.isCurrent()) return null;
   const started = await applySubtitleSelection(desiredSelection);
-  return started
-    ? waitForVerifiedSnapshot(token, videoId, desiredSelection)
-    : null;
+  return started ? waitForVerifiedSnapshot(session, desiredSelection) : null;
 }
 
 async function waitForVerifiedSnapshot(
-  token: number,
-  videoId: string,
+  session: WatchSession,
   desiredSelection: SubtitleSelection,
 ): Promise<PlayerSnapshot | null> {
-  if (!(await waitForSelectionApply(desiredSelection))) {
+  if (!(await waitForSelectionApply(session, desiredSelection))) {
     return null;
   }
 
-  if (shouldAbortPolicySync(token) || !isCurrentWatchVideo(videoId)) {
+  if (!session.isCurrent()) {
     return null;
   }
 
-  return readMatchingVerifiedSnapshot(videoId, desiredSelection);
+  return readMatchingVerifiedSnapshot(session, desiredSelection);
 }
 
 async function readMatchingVerifiedSnapshot(
-  videoId: string,
+  session: WatchSession,
   desiredSelection: SubtitleSelection,
 ): Promise<PlayerSnapshot | null> {
-  const verifiedSnapshot = await readVerifiedSnapshot(videoId);
-  return verifiedSnapshot &&
+  const verifiedSnapshot = await session.readSnapshot();
+  return session.isCurrent() &&
+    verifiedSnapshot &&
     matchesSubtitleSelection(verifiedSnapshot, desiredSelection)
     ? verifiedSnapshot
     : null;
 }
 
 async function waitForSelectionApply(
+  session: WatchSession,
   desiredSelection: SubtitleSelection,
 ): Promise<boolean> {
-  return waitForSubtitleSelection(readPlayerSnapshot, desiredSelection, {
+  return waitForSubtitleSelection(session.readSnapshot, desiredSelection, {
     timeoutMs: 2500,
     intervalMs: 100,
   });
-}
-
-async function readVerifiedSnapshot(
-  videoId: string,
-): Promise<PlayerSnapshot | null> {
-  if (!isCurrentWatchVideo(videoId)) {
-    return null;
-  }
-
-  const verifiedSnapshot = await readConfirmedCurrentVideoSnapshot();
-  return verifiedSnapshot?.videoId === videoId ? verifiedSnapshot : null;
 }
 
 function rememberAppliedSignature(videoId: string, signature: string): void {
@@ -300,20 +266,20 @@ function hasRenderedCaptionText(): boolean {
   );
 }
 
-async function refreshCaptionsUI(): Promise<void> {
+async function refreshCaptionsUI(session: WatchSession): Promise<void> {
   const button = document.querySelector<HTMLElement>(".ytp-subtitles-button");
-  if (!button) {
+  if (!button || !session.isCurrent()) {
     return;
   }
   button.click();
   await delay(UI_TOGGLE_DELAY_MS);
-  button.click();
+  if (session.isCurrent() && button.isConnected) button.click();
 }
 
 async function scheduleRendererFallback(
   videoId: string,
   desiredSelection: SubtitleSelection,
-  token: number,
+  session: WatchSession,
 ): Promise<void> {
   if (rendererFallbackAttempted.has(videoId)) {
     return;
@@ -321,7 +287,7 @@ async function scheduleRendererFallback(
 
   await delay(RENDERER_FALLBACK_GRACE_MS);
 
-  if (shouldAbortPolicySync(token) || !isCurrentWatchVideo(videoId)) {
+  if (!session.isCurrent()) {
     return;
   }
 
@@ -329,8 +295,8 @@ async function scheduleRendererFallback(
     return;
   }
 
-  const snapshot = await readConfirmedCurrentVideoSnapshot();
-  if (!snapshot || snapshot.videoId !== videoId) {
+  const snapshot = await session.readSnapshot();
+  if (!snapshot || !session.isCurrent()) {
     return;
   }
 
@@ -343,13 +309,9 @@ async function scheduleRendererFallback(
   }
 
   rendererFallbackAttempted.add(videoId);
-  await refreshCaptionsUI();
+  await refreshCaptionsUI(session);
 }
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
-
-if (!getCurrentWatchVideoId()) {
-  stopPolling();
 }
