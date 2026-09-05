@@ -9,7 +9,6 @@
     "format": "prettier --write .",
     "lint": "eslint --fix .",
     "typecheck": "tsc --noEmit",
-    "validate": "openspec validate --all",
     "test": "vitest run --coverage",
     "prepare": "husky"
   },

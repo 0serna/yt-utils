@@ -9,7 +9,6 @@
 │   ├── background.ts     # extension service worker entrypoint
 │   ├── content.ts        # YouTube content-script entrypoint
 │   └── global-selection.ts # all-pages text selection content script
-├── openspec/             # specs, changes, and validation
 └── extension/            # build output (generated)
 ```
 
@@ -20,7 +19,6 @@
 - `npm test`: run tests with Vitest (coverage via Istanbul).
 - `npm run lint`: run ESLint with auto-fix.
 - `npm run typecheck`: run TypeScript type checking.
-- `npm run validate`: run OpenSpec validation.
 - `npm run format`: format files with Prettier.
 
 ## Workflow

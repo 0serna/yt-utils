@@ -11,10 +11,9 @@ Chrome MV3 extension for desktop YouTube helpers plus an all-pages Google search
 | Shared runtime          | `src/shared/`                                                       | Feature registry, messaging, DOM sync, YouTube DOM/player helpers, structured logs under `yt-utils:logs`                                                        |
 | MAIN-world bridge       | `src/main-world/youtube-player-bridge.ts`                           | Injected into the page world to read and drive the YouTube player API for subtitle/audio features                                                               |
 | Entrypoints             | `src/background.ts`, `src/content.ts`, `src/global-selection.ts`    | Service worker, YouTube content script, all-URLs selection script                                                                                               |
-| Specs                   | `openspec/specs/`                                                   | OpenSpec capability specs for features and tooling; change history under `openspec/changes/`                                                                    |
 | Build & quality         | `vite.config.ts`, `vitest.config.ts`, ESLint, Prettier, Husky       | Production build to `extension/`; `npm test` runs Vitest with Istanbul coverage                                                                                 |
 
-Most of the product logic lives in `src/features/` and the YouTube helpers in `src/shared/` (especially `youtube-dom.ts`, `youtube-player.ts`, and the registry/logger). Player-backed features read track metadata through the MAIN-world bridge. OpenSpec records shipped behaviors and quality gates as requirements.
+Most of the product logic lives in `src/features/` and the YouTube helpers in `src/shared/` (especially `youtube-dom.ts`, `youtube-player.ts`, and the registry/logger). Player-backed features read track metadata through the MAIN-world bridge.
 
 ## Layout
 
@@ -29,7 +28,6 @@ Most of the product logic lives in `src/features/` and the YouTube helpers in `s
 │   ├── features/          # one folder per feature (content / background / tests)
 │   ├── main-world/        # page-world player bridge
 │   └── shared/            # registry, messaging, DOM/player utilities
-├── openspec/              # specs + archived changes
 └── extension/             # generated loadable package
 ```
 
@@ -42,4 +40,4 @@ npm run build
 
 Load `extension/` in `chrome://extensions` with Developer mode enabled.
 
-Useful checks: `npm test`, `npm run typecheck`, `npm run lint`, `npm run validate`.
+Useful checks: `npm test`, `npm run typecheck`, `npm run lint`.
