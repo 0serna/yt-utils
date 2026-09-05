@@ -1,4 +1,4 @@
-import { makeFeatureContext } from "@shared/test-helpers";
+import { makeFeatureContext, requireValue } from "@shared/test-helpers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 function stubHomePage(): void {
@@ -192,18 +192,24 @@ describe("home-not-interested feature", () => {
   it("opens the native menu and activates Not interested when clicked", async () => {
     renderHomeCard();
 
-    const menuButton = document.querySelector<HTMLButtonElement>(
-      'button[aria-label="More actions"]',
-    )!;
+    const menuButton = requireValue(
+      document.querySelector<HTMLButtonElement>(
+        'button[aria-label="More actions"]',
+      ),
+      "missing menu button",
+    );
     menuButton.scrollIntoView = vi.fn();
     const clickSpy = vi.spyOn(menuButton, "click");
 
     const { default: feature } = await importFreshFeature();
     feature.activate(makeFeatureContext());
 
-    const actionButton = document.querySelector<HTMLButtonElement>(
-      "[id^='yt-utils-home-not-interested-button-']",
-    )!;
+    const actionButton = requireValue(
+      document.querySelector<HTMLButtonElement>(
+        "[id^='yt-utils-home-not-interested-button-']",
+      ),
+      "missing not-interested button",
+    );
 
     const notInterestedItem = document.createElement("button");
     notInterestedItem.setAttribute("role", "menuitem");
@@ -236,17 +242,23 @@ describe("home-not-interested feature", () => {
   it("activates the Spanish native menu item", async () => {
     renderHomeCard();
 
-    const menuButton = document.querySelector<HTMLButtonElement>(
-      'button[aria-label="More actions"]',
-    )!;
+    const menuButton = requireValue(
+      document.querySelector<HTMLButtonElement>(
+        'button[aria-label="More actions"]',
+      ),
+      "missing menu button",
+    );
     menuButton.scrollIntoView = vi.fn();
 
     const { default: feature } = await importFreshFeature();
     feature.activate(makeFeatureContext());
 
-    const actionButton = document.querySelector<HTMLButtonElement>(
-      "[id^='yt-utils-home-not-interested-button-']",
-    )!;
+    const actionButton = requireValue(
+      document.querySelector<HTMLButtonElement>(
+        "[id^='yt-utils-home-not-interested-button-']",
+      ),
+      "missing not-interested button",
+    );
 
     const spanishItem = document.createElement("button");
     spanishItem.setAttribute("role", "menuitem");

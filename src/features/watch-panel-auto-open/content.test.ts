@@ -1,4 +1,4 @@
-import { makeFeatureContext } from "@shared/test-helpers";
+import { makeFeatureContext, requireValue } from "@shared/test-helpers";
 import type { PlayerSnapshot } from "@shared/youtube-player";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -138,13 +138,17 @@ function appendLiveChatReplayIframe(): {
   iframe.src = "https://www.youtube.com/live_chat_replay";
   document.body.appendChild(iframe);
 
-  iframe.contentDocument!.open();
-  iframe.contentDocument!.write("<body></body>");
-  iframe.contentDocument!.close();
+  const iframeDocument = requireValue(
+    iframe.contentDocument,
+    "missing iframe document",
+  );
+  iframeDocument.open();
+  iframeDocument.write("<body></body>");
+  iframeDocument.close();
 
-  const closeButton = iframe.contentDocument!.createElement("button");
+  const closeButton = iframeDocument.createElement("button");
   closeButton.setAttribute("aria-label", "Close");
-  iframe.contentDocument!.body.appendChild(closeButton);
+  iframeDocument.body.appendChild(closeButton);
 
   return { iframe, closeButton };
 }
@@ -1025,7 +1029,12 @@ describe("watch-panel-auto-open feature", () => {
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
       vi.mocked(readPlayerSnapshot).mockImplementation(() =>
         Promise.resolve(
-          snapshot(new URLSearchParams(mockLocationSearch).get("v")!),
+          snapshot(
+            requireValue(
+              new URLSearchParams(mockLocationSearch).get("v"),
+              "missing video id",
+            ),
+          ),
         ),
       );
 

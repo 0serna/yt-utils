@@ -22,13 +22,6 @@
 - `npm test`: run tests with Vitest (coverage via Istanbul).
 - `npm run typecheck`: run TypeScript type checking.
 
-## Quality debt
-
-`npm run check` exits 0 with these Biome warnings. Counts may only shrink. When a rule reaches 0, set it to error in `biome.json`. Do not add `biome-ignore` to hide them.
-
-- `lint/style/noNonNullAssertion`: 56
-- `lint/suspicious/noExplicitAny`: 6 (all in `src/main-world/youtube-player-bridge.test.ts`)
-
 ## Workflow
 
 - Use `playwriter` to explore and analyze web pages.

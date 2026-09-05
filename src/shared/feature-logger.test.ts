@@ -7,6 +7,7 @@ import {
   normalizeError,
   trimLogs,
 } from "./feature-logger";
+import { requireValue } from "./test-helpers";
 
 describe("captureUrlContext", () => {
   it("captures full URL and videoId from watch page", () => {
@@ -131,12 +132,11 @@ describe("createFeatureLogger", () => {
     const logger = createFeatureLogger("test-feature");
     logger.activation();
 
-    const msg = getLastSendMessageCall();
-    expect(msg).toBeDefined();
-    expect(msg!.entry.feature).toBe("test-feature");
-    expect(msg!.entry.event).toBe("activation");
-    expect(msg!.entry.timestamp).toBeDefined();
-    expect(msg!.entry.url).toBeDefined();
+    const msg = requireValue(getLastSendMessageCall(), "missing log message");
+    expect(msg.entry.feature).toBe("test-feature");
+    expect(msg.entry.event).toBe("activation");
+    expect(msg.entry.timestamp).toBeDefined();
+    expect(msg.entry.url).toBeDefined();
     expect(console.error).not.toHaveBeenCalled();
   });
 
@@ -195,9 +195,12 @@ describe("appendAndTrim", () => {
       url: "https://example.com",
     });
 
-    const logs = getLastSetCall()?.["yt-utils:logs"];
+    const logs = requireValue(
+      getLastSetCall()?.["yt-utils:logs"],
+      "missing logs",
+    );
     expect(logs).toHaveLength(1);
-    expect(logs![0].feature).toBe("test");
+    expect(logs[0].feature).toBe("test");
   });
 
   it("trims entries to retention limit", async () => {
@@ -216,10 +219,13 @@ describe("appendAndTrim", () => {
       url: "https://example.com",
     });
 
-    const logs = getLastSetCall()?.["yt-utils:logs"];
+    const logs = requireValue(
+      getLastSetCall()?.["yt-utils:logs"],
+      "missing logs",
+    );
     expect(logs).toHaveLength(1000);
-    expect(logs![0].feature).toBe("old-1");
-    expect(logs![999].feature).toBe("new-feature");
+    expect(logs[0].feature).toBe("old-1");
+    expect(logs[999].feature).toBe("new-feature");
   });
 
   it("preserves concurrent append bursts in order", async () => {

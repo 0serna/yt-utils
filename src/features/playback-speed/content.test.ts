@@ -1,4 +1,4 @@
-import { makeFeatureContext } from "@shared/test-helpers";
+import { makeFeatureContext, requireValue } from "@shared/test-helpers";
 import type { PlayerSnapshot } from "@shared/youtube-player";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -92,7 +92,10 @@ describe("playback-speed feature", () => {
     activeFeature = feature.default;
     feature.default.activate(makeFeatureContext());
 
-    const video = document.querySelector("video")!;
+    const video = requireValue(
+      document.querySelector("video"),
+      "missing video",
+    );
     await vi.waitFor(() => expect(video.playbackRate).toBe(1.1), {
       timeout: 2000,
     });
@@ -108,7 +111,10 @@ describe("playback-speed feature", () => {
     activeFeature = feature.default;
     feature.default.activate(makeFeatureContext());
 
-    const video = document.querySelector("video")!;
+    const video = requireValue(
+      document.querySelector("video"),
+      "missing video",
+    );
     await vi.waitFor(() => expect(video.playbackRate).toBe(1), {
       timeout: 2000,
     });
@@ -130,7 +136,10 @@ describe("playback-speed feature", () => {
     activeFeature = feature.default;
     feature.default.activate(makeFeatureContext());
 
-    const video = document.querySelector("video")!;
+    const video = requireValue(
+      document.querySelector("video"),
+      "missing video",
+    );
     await vi.waitFor(() => expect(video.playbackRate).toBe(1.1), {
       timeout: 2000,
     });
@@ -146,7 +155,10 @@ describe("playback-speed feature", () => {
     activeFeature = feature.default;
     feature.default.activate(makeFeatureContext());
 
-    const video = document.querySelector("video")!;
+    const video = requireValue(
+      document.querySelector("video"),
+      "missing video",
+    );
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(video.playbackRate).toBe(1);
   });
@@ -161,7 +173,10 @@ describe("playback-speed feature", () => {
     activeFeature = feature.default;
     feature.default.activate(makeFeatureContext());
 
-    const video = document.querySelector("video")!;
+    const video = requireValue(
+      document.querySelector("video"),
+      "missing video",
+    );
     await vi.waitFor(() => expect(video.playbackRate).toBe(1.1), {
       timeout: 2000,
     });
@@ -177,7 +192,10 @@ describe("playback-speed feature", () => {
     activeFeature = feature.default;
     feature.default.activate(makeFeatureContext());
 
-    const video = document.querySelector("video")!;
+    const video = requireValue(
+      document.querySelector("video"),
+      "missing video",
+    );
     await vi.waitFor(() => expect(readPlayerSnapshot).toHaveBeenCalled());
     expect(video.playbackRate).toBe(1);
   });
@@ -194,7 +212,10 @@ describe("playback-speed feature", () => {
     activeFeature = feature.default;
     feature.default.activate(makeFeatureContext());
 
-    const video = document.querySelector("video")!;
+    const video = requireValue(
+      document.querySelector("video"),
+      "missing video",
+    );
     await vi.waitFor(() => expect(video.playbackRate).toBe(1), {
       timeout: 2000,
     });
@@ -210,7 +231,10 @@ describe("playback-speed feature", () => {
     activeFeature = feature.default;
     feature.default.activate(makeFeatureContext());
 
-    const video = document.querySelector("video")!;
+    const video = requireValue(
+      document.querySelector("video"),
+      "missing video",
+    );
     await vi.waitFor(() => expect(video.playbackRate).toBe(1.1), {
       timeout: 2000,
     });
@@ -233,7 +257,10 @@ describe("playback-speed feature", () => {
     activeFeature = feature.default;
     feature.default.activate(makeFeatureContext());
 
-    const video = document.querySelector("video")!;
+    const video = requireValue(
+      document.querySelector("video"),
+      "missing video",
+    );
     await vi.waitFor(() => expect(video.playbackRate).toBe(1.1), {
       timeout: 2000,
     });
@@ -252,7 +279,10 @@ describe("playback-speed feature", () => {
     activeFeature = feature.default;
     feature.default.activate(makeFeatureContext());
 
-    const video = document.querySelector("video")!;
+    const video = requireValue(
+      document.querySelector("video"),
+      "missing video",
+    );
     await vi.waitFor(() => expect(video.playbackRate).toBe(1), {
       timeout: 2000,
     });
@@ -271,7 +301,10 @@ describe("playback-speed feature", () => {
     activeFeature = feature.default;
     feature.default.activate(makeFeatureContext());
 
-    const video = document.querySelector("video")!;
+    const video = requireValue(
+      document.querySelector("video"),
+      "missing video",
+    );
     await vi.waitFor(() => expect(readPlayerSnapshot).toHaveBeenCalled());
     expect(video.playbackRate).toBe(1);
   });
@@ -286,7 +319,10 @@ describe("playback-speed feature", () => {
     activeFeature = feature.default;
     feature.default.activate(makeFeatureContext());
 
-    const video = document.querySelector("video")!;
+    const video = requireValue(
+      document.querySelector("video"),
+      "missing video",
+    );
     await vi.waitFor(() => expect(video.playbackRate).toBe(1.1), {
       timeout: 2000,
     });

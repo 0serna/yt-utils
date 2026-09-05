@@ -1,4 +1,11 @@
 {
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
-  "formatter": { "indentStyle": "space" }
+  "formatter": { "indentStyle": "space" },
+  "linter": {
+    "rules": {
+      "complexity": { "useLiteralKeys": "error" },
+      "style": { "noNonNullAssertion": "error" },
+      "suspicious": { "noExplicitAny": "error" }
+    }
+  }
 }

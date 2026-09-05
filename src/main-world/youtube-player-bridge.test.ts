@@ -8,28 +8,44 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 const BRIDGE_SOURCE = "yt-utils:youtube-player-bridge";
 const BRIDGE_FLAG = "__ytUtilsYoutubePlayerBridgeInstalled";
 
-type BridgeWindow = Window & Record<string, any>;
+type BridgeWindow = Window & Record<string, boolean | undefined>;
+
+type FakePlayer = HTMLDivElement & {
+  getPlayerResponse: () => unknown;
+  getVideoData: () => unknown;
+  getAudioTrack: () => unknown;
+  getOption: (namespace: string, key: string) => unknown;
+  isSubtitlesOn: () => boolean;
+  toggleSubtitles: () => void;
+};
+
+function requireSnapshot(result: BridgeResponse["result"]): PlayerSnapshot {
+  if (result == null || typeof result === "boolean") {
+    throw new Error("expected player snapshot");
+  }
+  return result;
+}
 
 describe("youtube-player-bridge", () => {
   let playerElement: HTMLElement | null = null;
   let bridgeHandler: ((event: MessageEvent) => void) | null = null;
 
   beforeAll(async () => {
-    delete (window as BridgeWindow)[BRIDGE_FLAG];
+    delete (window as unknown as BridgeWindow)[BRIDGE_FLAG];
 
     // Capture the bridge's message handler
     const origAddEventListener = window.addEventListener.bind(window);
     let captured = false;
     window.addEventListener = ((
       type: string,
-      listener: any,
-      ...args: any[]
+      listener: EventListenerOrEventListenerObject,
+      options?: boolean | AddEventListenerOptions,
     ) => {
-      if (type === "message" && !captured) {
-        bridgeHandler = listener;
+      if (type === "message" && !captured && typeof listener === "function") {
+        bridgeHandler = listener as (event: MessageEvent) => void;
         captured = true;
       }
-      return origAddEventListener(type, listener, ...args);
+      return origAddEventListener(type, listener, options);
     }) as typeof window.addEventListener;
 
     // Import bridge to register the listener
@@ -63,7 +79,7 @@ describe("youtube-player-bridge", () => {
     const element = document.createElement("div");
     element.id = "movie_player";
 
-    const player = element as any;
+    const player = element as FakePlayer;
     player.getPlayerResponse = () => ({
       captions: {
         playerCaptionsTracklistRenderer: {
@@ -102,7 +118,7 @@ describe("youtube-player-bridge", () => {
       videoId: "test-video",
       subtitlesOn: true,
     });
-    const player = element as any;
+    const player = element as FakePlayer;
     player.isSubtitlesOn = () => subtitlesOn;
     player.toggleSubtitles = () => {
       subtitlesOn = !subtitlesOn;
@@ -113,7 +129,8 @@ describe("youtube-player-bridge", () => {
   async function sendBridgeRequest(
     request: Omit<BridgeRequest, "source" | "kind">,
   ): Promise<BridgeResponse> {
-    if (!bridgeHandler) {
+    const handler = bridgeHandler;
+    if (!handler) {
       throw new Error("Bridge message handler was not captured");
     }
 
@@ -146,11 +163,11 @@ describe("youtube-player-bridge", () => {
 
       const syntheticEvent = new MessageEvent("message", {
         data: fullRequest,
-        source: window as any,
+        source: window,
         origin: window.location.origin,
       });
 
-      bridgeHandler!(syntheticEvent);
+      handler(syntheticEvent);
     });
   }
 
@@ -188,12 +205,12 @@ describe("youtube-player-bridge", () => {
         action: "readSnapshot",
       });
 
-      const snapshot = response.result as PlayerSnapshot;
+      const snapshot = requireSnapshot(response.result);
       expect(snapshot).not.toBeNull();
-      expect(snapshot!.videoId).toBe("abc123");
-      expect(snapshot!.subtitlesOn).toBe(true);
-      expect(snapshot!.captionTracks).toHaveLength(1);
-      expect(snapshot!.captionTracks[0].languageCode).toBe("en");
+      expect(snapshot.videoId).toBe("abc123");
+      expect(snapshot.subtitlesOn).toBe(true);
+      expect(snapshot.captionTracks).toHaveLength(1);
+      expect(snapshot.captionTracks[0].languageCode).toBe("en");
     });
 
     it("returns snapshot with audio track", async () => {
@@ -217,12 +234,12 @@ describe("youtube-player-bridge", () => {
         action: "readSnapshot",
       });
 
-      const snapshot = response.result as PlayerSnapshot;
+      const snapshot = requireSnapshot(response.result);
       expect(snapshot).not.toBeNull();
-      expect(snapshot!.videoId).toBe("xyz789");
-      expect(snapshot!.subtitlesOn).toBe(false);
-      expect(snapshot!.audioTrack).not.toBeNull();
-      expect(snapshot!.audioLanguage).toBe("es");
+      expect(snapshot.videoId).toBe("xyz789");
+      expect(snapshot.subtitlesOn).toBe(false);
+      expect(snapshot.audioTrack).not.toBeNull();
+      expect(snapshot.audioLanguage).toBe("es");
     });
 
     it("prefers caption tracks from the active audio track without inferring audio language from them", async () => {
@@ -255,9 +272,9 @@ describe("youtube-player-bridge", () => {
         action: "readSnapshot",
       });
 
-      const snapshot = response.result as PlayerSnapshot;
-      expect(snapshot!.captionTracks).toEqual([audioCaptionTrack]);
-      expect(snapshot!.audioLanguage).toBeNull();
+      const snapshot = requireSnapshot(response.result);
+      expect(snapshot.captionTracks).toEqual([audioCaptionTrack]);
+      expect(snapshot.audioLanguage).toBeNull();
     });
 
     it("infers English audio language from the current YouTube metadata shape", async () => {
@@ -280,9 +297,9 @@ describe("youtube-player-bridge", () => {
         action: "readSnapshot",
       });
 
-      const snapshot = response.result as PlayerSnapshot;
+      const snapshot = requireSnapshot(response.result);
       expect(snapshot).not.toBeNull();
-      expect(snapshot!.audioLanguage).toBe("en-us");
+      expect(snapshot.audioLanguage).toBe("en-us");
     });
 
     it("infers Spanish audio language from the current YouTube metadata shape", async () => {
@@ -305,9 +322,9 @@ describe("youtube-player-bridge", () => {
         action: "readSnapshot",
       });
 
-      const snapshot = response.result as PlayerSnapshot;
+      const snapshot = requireSnapshot(response.result);
       expect(snapshot).not.toBeNull();
-      expect(snapshot!.audioLanguage).toBe("es-mx");
+      expect(snapshot.audioLanguage).toBe("es-mx");
     });
 
     it("infers Spanish audio language from the Iw YouTube metadata shape", async () => {
@@ -331,9 +348,9 @@ describe("youtube-player-bridge", () => {
         action: "readSnapshot",
       });
 
-      const snapshot = response.result as PlayerSnapshot;
+      const snapshot = requireSnapshot(response.result);
       expect(snapshot).not.toBeNull();
-      expect(snapshot!.audioLanguage).toBe("es-us");
+      expect(snapshot.audioLanguage).toBe("es-us");
     });
 
     it("infers Spanish audio language from the Z1 YouTube metadata shape", async () => {
@@ -357,9 +374,9 @@ describe("youtube-player-bridge", () => {
         action: "readSnapshot",
       });
 
-      const snapshot = response.result as PlayerSnapshot;
+      const snapshot = requireSnapshot(response.result);
       expect(snapshot).not.toBeNull();
-      expect(snapshot!.audioLanguage).toBe("es-us");
+      expect(snapshot.audioLanguage).toBe("es-us");
     });
 
     it("infers Spanish audio language from the US YouTube metadata shape", async () => {
@@ -383,9 +400,9 @@ describe("youtube-player-bridge", () => {
         action: "readSnapshot",
       });
 
-      const snapshot = response.result as PlayerSnapshot;
+      const snapshot = requireSnapshot(response.result);
       expect(snapshot).not.toBeNull();
-      expect(snapshot!.audioLanguage).toBe("es-us");
+      expect(snapshot.audioLanguage).toBe("es-us");
     });
 
     it("does not expose opaque audio track ids as audio language", async () => {
@@ -405,9 +422,9 @@ describe("youtube-player-bridge", () => {
         action: "readSnapshot",
       });
 
-      const snapshot = response.result as PlayerSnapshot;
+      const snapshot = requireSnapshot(response.result);
       expect(snapshot).not.toBeNull();
-      expect(snapshot!.audioLanguage).toBeNull();
+      expect(snapshot.audioLanguage).toBeNull();
     });
 
     it("infers Spanish audio language from US name when ids are not usable", async () => {
@@ -431,9 +448,9 @@ describe("youtube-player-bridge", () => {
         action: "readSnapshot",
       });
 
-      const snapshot = response.result as PlayerSnapshot;
+      const snapshot = requireSnapshot(response.result);
       expect(snapshot).not.toBeNull();
-      expect(snapshot!.audioLanguage).toBe("es");
+      expect(snapshot.audioLanguage).toBe("es");
     });
 
     it("infers English audio language from US name when ids are not usable", async () => {
@@ -457,9 +474,9 @@ describe("youtube-player-bridge", () => {
         action: "readSnapshot",
       });
 
-      const snapshot = response.result as PlayerSnapshot;
+      const snapshot = requireSnapshot(response.result);
       expect(snapshot).not.toBeNull();
-      expect(snapshot!.audioLanguage).toBe("en");
+      expect(snapshot.audioLanguage).toBe("en");
     });
 
     it("returns snapshot with translation languages", async () => {
@@ -479,11 +496,11 @@ describe("youtube-player-bridge", () => {
         action: "readSnapshot",
       });
 
-      const snapshot = response.result as PlayerSnapshot;
+      const snapshot = requireSnapshot(response.result);
       expect(snapshot).not.toBeNull();
-      expect(snapshot!.translationLanguages).toHaveLength(2);
-      expect(snapshot!.translationLanguages[0].languageCode).toBe("en");
-      expect(snapshot!.translationLanguages[1].languageCode).toBe("es");
+      expect(snapshot.translationLanguages).toHaveLength(2);
+      expect(snapshot.translationLanguages[0].languageCode).toBe("en");
+      expect(snapshot.translationLanguages[1].languageCode).toBe("es");
     });
 
     it("falls back to the URL video id and filters invalid translation languages", async () => {
@@ -507,10 +524,10 @@ describe("youtube-player-bridge", () => {
         action: "readSnapshot",
       });
 
-      const snapshot = response.result as PlayerSnapshot;
+      const snapshot = requireSnapshot(response.result);
       expect(snapshot).not.toBeNull();
-      expect(snapshot!.videoId).toBe("url-video-id");
-      expect(snapshot!.translationLanguages).toEqual([
+      expect(snapshot.videoId).toBe("url-video-id");
+      expect(snapshot.translationLanguages).toEqual([
         { languageCode: "en", languageName: "English" },
       ]);
     });
@@ -535,9 +552,9 @@ describe("youtube-player-bridge", () => {
         action: "readSnapshot",
       });
 
-      const snapshot = response.result as PlayerSnapshot;
+      const snapshot = requireSnapshot(response.result);
       expect(snapshot).not.toBeNull();
-      expect(snapshot!.audioLanguage).toBe("en");
+      expect(snapshot.audioLanguage).toBe("en");
     });
   });
 

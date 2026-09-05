@@ -27,6 +27,18 @@ function makeFeature(name: string, opts?: Partial<Feature>): Feature {
   };
 }
 
+type RegistryInternals = {
+  activeFeatures: Set<Feature>;
+  deactivateAll: () => void;
+  syncFeatures: () => void;
+};
+
+function internals(
+  registry: InstanceType<FeatureRegistryClass>,
+): RegistryInternals {
+  return registry as unknown as RegistryInternals;
+}
+
 describe("FeatureRegistry logging", () => {
   beforeEach(async () => {
     vi.resetModules();
@@ -48,7 +60,7 @@ describe("FeatureRegistry logging", () => {
     it("creates a logger and passes it through context on activate", () => {
       const registry = new FeatureRegistry();
       const feature = makeFeature("test-feature");
-      registry["register"](feature);
+      registry.register(feature);
 
       const context = vi.mocked(feature.activate).mock
         .calls[0]?.[0] as FeatureContext;
@@ -66,9 +78,9 @@ describe("FeatureRegistry logging", () => {
           throw new Error("fail");
         }),
       });
-      registry["register"](broken);
+      registry.register(broken);
 
-      const active = registry["activeFeatures"] as Set<Feature>;
+      const active = internals(registry).activeFeatures;
       expect(active.has(broken)).toBe(false);
     });
 
@@ -80,8 +92,8 @@ describe("FeatureRegistry logging", () => {
         }),
       });
       const good = makeFeature("good");
-      registry["register"](broken);
-      registry["register"](good);
+      registry.register(broken);
+      registry.register(good);
 
       expect(good.activate).toHaveBeenCalled();
     });
@@ -93,9 +105,9 @@ describe("FeatureRegistry logging", () => {
           throw new Error("fail");
         }),
       });
-      const active = registry["activeFeatures"] as Set<Feature>;
+      const active = internals(registry).activeFeatures;
       active.add(broken);
-      (registry["deactivateAll"] as () => void)();
+      internals(registry).deactivateAll();
 
       expect(active.has(broken)).toBe(false);
     });
@@ -103,7 +115,7 @@ describe("FeatureRegistry logging", () => {
     it("does not reset watch features for same-video URL parameter changes", () => {
       const registry = new FeatureRegistry();
       const feature = makeFeature("watch-feature");
-      registry["register"](feature);
+      registry.register(feature);
       vi.mocked(feature.activate).mockClear();
       vi.mocked(feature.deactivate).mockClear();
 
@@ -115,7 +127,7 @@ describe("FeatureRegistry logging", () => {
         configurable: true,
       });
 
-      registry["syncFeatures"]();
+      internals(registry).syncFeatures();
 
       expect(feature.deactivate).not.toHaveBeenCalled();
       expect(feature.activate).not.toHaveBeenCalled();
@@ -139,7 +151,7 @@ describe("FeatureRegistry logging", () => {
     it("resets watch features when the URL video ID changes", () => {
       const registry = new FeatureRegistry();
       const feature = makeFeature("watch-feature");
-      registry["register"](feature);
+      registry.register(feature);
       vi.mocked(feature.activate).mockClear();
       vi.mocked(feature.deactivate).mockClear();
 
@@ -151,7 +163,7 @@ describe("FeatureRegistry logging", () => {
         configurable: true,
       });
 
-      registry["syncFeatures"]();
+      internals(registry).syncFeatures();
 
       expect(feature.deactivate).toHaveBeenCalledOnce();
       expect(feature.activate).toHaveBeenCalledOnce();

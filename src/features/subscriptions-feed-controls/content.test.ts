@@ -1,4 +1,4 @@
-import { makeFeatureContext } from "@shared/test-helpers";
+import { makeFeatureContext, requireValue } from "@shared/test-helpers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 function stubSubscriptionsPage(): void {
@@ -190,18 +190,24 @@ describe("subscriptions-feed-controls feature", () => {
   it("opens the native menu and activates Hide when clicked", async () => {
     renderCurrentLockupCard();
 
-    const menuButton = document.querySelector<HTMLButtonElement>(
-      'button[aria-label="More actions"]',
-    )!;
+    const menuButton = requireValue(
+      document.querySelector<HTMLButtonElement>(
+        'button[aria-label="More actions"]',
+      ),
+      "missing menu button",
+    );
     menuButton.scrollIntoView = vi.fn();
     const clickSpy = vi.spyOn(menuButton, "click");
 
     const { default: feature } = await importFreshFeature();
     feature.activate(makeFeatureContext());
 
-    const hideButton = document.querySelector<HTMLButtonElement>(
-      "[id^='yt-utils-subscriptions-hide-button-']",
-    )!;
+    const hideButton = requireValue(
+      document.querySelector<HTMLButtonElement>(
+        "[id^='yt-utils-subscriptions-hide-button-']",
+      ),
+      "missing hide button",
+    );
 
     const hideItem = document.createElement("div");
     hideItem.setAttribute("role", "menuitem");
