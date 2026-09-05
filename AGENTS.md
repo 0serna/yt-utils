@@ -2,24 +2,32 @@
 
 ```text
 .
-├── src/                  # TypeScript extension source
-│   ├── features/         # feature modules with content/background logic
-│   ├── main-world/       # MAIN-world YouTube player bridge scripts
-│   ├── shared/           # shared helpers, messaging, and types
-│   ├── background.ts     # extension service worker entrypoint
-│   ├── content.ts        # YouTube content-script entrypoint
+├── src/                    # TypeScript extension source
+│   ├── features/           # feature modules with content/background logic
+│   ├── main-world/         # MAIN-world YouTube player bridge scripts
+│   ├── shared/             # shared helpers, messaging, and types
+│   ├── background.ts       # extension service worker entrypoint
+│   ├── content.ts          # YouTube content-script entrypoint
 │   └── global-selection.ts # all-pages text selection content script
-└── extension/            # build output (generated)
+└── .github/
+    └── workflows/          # GitHub Actions CI
 ```
 
 ## Repository Commands
 
 - `npm install`: install dependencies.
 - `npm run build`: build the extension with Vite.
+- `npm run check`: verify format, lint, and imports with Biome.
+- `npm run check:fix`: apply Biome format, lint, and import fixes.
 - `npm test`: run tests with Vitest (coverage via Istanbul).
-- `npm run lint`: run ESLint with auto-fix.
 - `npm run typecheck`: run TypeScript type checking.
-- `npm run format`: format files with Prettier.
+
+## Quality debt
+
+`npm run check` exits 0 with these Biome warnings. Counts may only shrink. When a rule reaches 0, set it to error in `biome.json`. Do not add `biome-ignore` to hide them.
+
+- `lint/style/noNonNullAssertion`: 56
+- `lint/suspicious/noExplicitAny`: 6 (all in `src/main-world/youtube-player-bridge.test.ts`)
 
 ## Workflow
 

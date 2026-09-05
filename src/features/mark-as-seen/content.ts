@@ -258,7 +258,7 @@ async function executeInlineAction(): Promise<void> {
     message?: string;
   } | null;
 
-  if (!response || !response.ok) {
+  if (!response?.ok) {
     throw new Error(getResponseErrorMessage(response));
   }
 }
@@ -266,7 +266,7 @@ async function executeInlineAction(): Promise<void> {
 function getResponseErrorMessage(
   response: { message?: string } | null,
 ): string {
-  return (response && response.message) || "The automation failed.";
+  return response?.message || "The automation failed.";
 }
 
 function transitionToState(state: ButtonState): void {

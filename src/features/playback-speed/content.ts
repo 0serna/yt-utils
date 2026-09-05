@@ -15,8 +15,8 @@ import {
   placeWatchActionHost,
   RELEVANT_MUTATION_SELECTORS,
 } from "@shared/youtube-dom";
-import { isEnglishLanguage, isSpanishLanguage } from "@shared/youtube-player";
 import type { PlayerSnapshot } from "@shared/youtube-player";
+import { isEnglishLanguage, isSpanishLanguage } from "@shared/youtube-player";
 import {
   getCurrentWatchVideoId,
   readConfirmedCurrentVideoSnapshot,

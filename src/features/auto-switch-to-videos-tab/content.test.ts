@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeFeatureContext } from "@shared/test-helpers";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const CHANNEL_URL = "https://www.youtube.com/@Ingl%C3%A9sconelG%C3%BCero";
 

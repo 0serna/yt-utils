@@ -40,4 +40,4 @@ npm run build
 
 Load `extension/` in `chrome://extensions` with Developer mode enabled.
 
-Useful checks: `npm test`, `npm run typecheck`, `npm run lint`.
+Useful checks: `npm test`, `npm run typecheck`, `npm run check`.

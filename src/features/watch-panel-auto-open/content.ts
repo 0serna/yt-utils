@@ -585,8 +585,8 @@ function hasExpandedChaptersItems(): boolean {
   const chaptersPanel = findChaptersPanel();
   return Boolean(
     chaptersPanel &&
-    isAskPanelExpanded(chaptersPanel) &&
-    findVisibleChapterItems().length > 0,
+      isAskPanelExpanded(chaptersPanel) &&
+      findVisibleChapterItems().length > 0,
   );
 }
 

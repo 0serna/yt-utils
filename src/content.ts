@@ -1,16 +1,16 @@
-import watchPanelAutoOpenFeature from "./features/watch-panel-auto-open/content";
 import audioLanguageSubtitlePolicyFeature from "./features/audio-language-subtitle-policy/content";
 import autoSwitchToVideosTabFeature from "./features/auto-switch-to-videos-tab/content";
 import engagementPanelScrollContainmentFeature from "./features/engagement-panel-scroll-containment/content";
+import homeNotInterestedFeature from "./features/home-not-interested/content";
+import homePlayablesRemovalFeature from "./features/home-playables-removal/content";
 import markAsSeenFeature from "./features/mark-as-seen/content";
 import playbackSpeedFeature from "./features/playback-speed/content";
+import searchDateFilterFeature from "./features/search-date-filter/content";
 import seenCardDimmingFeature from "./features/seen-card-dimming/content";
 import subscriptionsFeedControlsFeature from "./features/subscriptions-feed-controls/content";
 import subscriptionsMostRelevantRemovalFeature from "./features/subscriptions-most-relevant-removal/content";
 import subscriptionsShortsRemovalFeature from "./features/subscriptions-shorts-removal/content";
-import homeNotInterestedFeature from "./features/home-not-interested/content";
-import homePlayablesRemovalFeature from "./features/home-playables-removal/content";
-import searchDateFilterFeature from "./features/search-date-filter/content";
+import watchPanelAutoOpenFeature from "./features/watch-panel-auto-open/content";
 import { FeatureRegistry } from "./shared/feature-registry";
 
 const registry = new FeatureRegistry();

@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { isDesktopWatchPage, placeWatchActionHost } from "@shared/youtube-dom";
 import { sendMessage } from "@shared/messaging";
 import { makeFeatureContext } from "@shared/test-helpers";
+import { isDesktopWatchPage, placeWatchActionHost } from "@shared/youtube-dom";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@shared/youtube-dom", () => ({
   isDesktopWatchPage: vi.fn(() => true),

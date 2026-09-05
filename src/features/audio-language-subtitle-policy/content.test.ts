@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { makeFeatureContext } from "@shared/test-helpers";
 import type { PlayerSnapshot } from "@shared/youtube-player";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@shared/youtube-player", () => ({
   applySubtitleSelection: vi.fn(),
@@ -80,8 +80,9 @@ describe("audio-language-subtitle-policy feature", () => {
     feature.default.activate(makeFeatureContext());
     feature.default.deactivate();
 
-    const { determineSubtitleSelection } =
-      await import("@shared/youtube-player");
+    const { determineSubtitleSelection } = await import(
+      "@shared/youtube-player"
+    );
     await vi.waitFor(
       () => {
         expect(determineSubtitleSelection).not.toHaveBeenCalled();
@@ -115,8 +116,9 @@ describe("audio-language-subtitle-policy feature", () => {
     const feature = await importFreshFeature();
     feature.default.activate(makeFeatureContext());
 
-    const { determineSubtitleSelection } =
-      await import("@shared/youtube-player");
+    const { determineSubtitleSelection } = await import(
+      "@shared/youtube-player"
+    );
     await vi.waitFor(
       () => {
         expect(determineSubtitleSelection).not.toHaveBeenCalled();
@@ -132,8 +134,9 @@ describe("audio-language-subtitle-policy feature", () => {
     const feature = await importFreshFeature();
     feature.default.activate(makeFeatureContext());
 
-    const { determineSubtitleSelection } =
-      await import("@shared/youtube-player");
+    const { determineSubtitleSelection } = await import(
+      "@shared/youtube-player"
+    );
     await vi.waitFor(
       () => {
         expect(determineSubtitleSelection).not.toHaveBeenCalled();
@@ -146,13 +149,15 @@ describe("audio-language-subtitle-policy feature", () => {
     const { readPlayerSnapshot } = await import("@shared/youtube-player");
     vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
-    const { readSubtitleSignature, determineSubtitleSelection } =
-      await import("@shared/youtube-player");
+    const { readSubtitleSignature, determineSubtitleSelection } = await import(
+      "@shared/youtube-player"
+    );
     vi.mocked(readSubtitleSignature).mockReturnValue("sig-matching");
     vi.mocked(determineSubtitleSelection).mockReturnValue({ mode: "off" });
 
-    const { matchesSubtitleSelection, applySubtitleSelection } =
-      await import("@shared/youtube-player");
+    const { matchesSubtitleSelection, applySubtitleSelection } = await import(
+      "@shared/youtube-player"
+    );
     vi.mocked(matchesSubtitleSelection).mockReturnValue(true);
 
     const feature = await importFreshFeature();
@@ -181,8 +186,9 @@ describe("audio-language-subtitle-policy feature", () => {
       .mockResolvedValueOnce(initialSnapshot)
       .mockResolvedValue(captionSnapshot);
 
-    const { readSubtitleSignature, determineSubtitleSelection } =
-      await import("@shared/youtube-player");
+    const { readSubtitleSignature, determineSubtitleSelection } = await import(
+      "@shared/youtube-player"
+    );
     vi.mocked(readSubtitleSignature).mockReturnValue("sig");
     vi.mocked(determineSubtitleSelection)
       .mockReturnValueOnce({ mode: "off" })
@@ -191,8 +197,9 @@ describe("audio-language-subtitle-policy feature", () => {
         track: captionSnapshot.captionTracks[0],
       });
 
-    const { matchesSubtitleSelection, applySubtitleSelection } =
-      await import("@shared/youtube-player");
+    const { matchesSubtitleSelection, applySubtitleSelection } = await import(
+      "@shared/youtube-player"
+    );
     vi.mocked(matchesSubtitleSelection)
       .mockReturnValueOnce(true)
       .mockReturnValue(false);
@@ -226,16 +233,18 @@ describe("audio-language-subtitle-policy feature", () => {
     const { readPlayerSnapshot } = await import("@shared/youtube-player");
     vi.mocked(readPlayerSnapshot).mockResolvedValue(englishSnapshot);
 
-    const { readSubtitleSignature, determineSubtitleSelection } =
-      await import("@shared/youtube-player");
+    const { readSubtitleSignature, determineSubtitleSelection } = await import(
+      "@shared/youtube-player"
+    );
     vi.mocked(readSubtitleSignature).mockReturnValue("sig-english");
     vi.mocked(determineSubtitleSelection).mockReturnValue({
       mode: "track",
       track: englishTrack,
     });
 
-    const { matchesSubtitleSelection, applySubtitleSelection } =
-      await import("@shared/youtube-player");
+    const { matchesSubtitleSelection, applySubtitleSelection } = await import(
+      "@shared/youtube-player"
+    );
     vi.mocked(matchesSubtitleSelection).mockReturnValue(false);
     vi.mocked(applySubtitleSelection).mockResolvedValue(true);
 
@@ -265,13 +274,15 @@ describe("audio-language-subtitle-policy feature", () => {
     const { readPlayerSnapshot } = await import("@shared/youtube-player");
     vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
-    const { readSubtitleSignature, determineSubtitleSelection } =
-      await import("@shared/youtube-player");
+    const { readSubtitleSignature, determineSubtitleSelection } = await import(
+      "@shared/youtube-player"
+    );
     vi.mocked(readSubtitleSignature).mockReturnValue("sig-applied");
     vi.mocked(determineSubtitleSelection).mockReturnValue({ mode: "off" });
 
-    const { matchesSubtitleSelection, applySubtitleSelection } =
-      await import("@shared/youtube-player");
+    const { matchesSubtitleSelection, applySubtitleSelection } = await import(
+      "@shared/youtube-player"
+    );
     vi.mocked(matchesSubtitleSelection).mockReturnValue(false);
     vi.mocked(applySubtitleSelection).mockResolvedValue(true);
 
@@ -341,15 +352,17 @@ describe("audio-language-subtitle-policy feature", () => {
         track: { languageCode: "en", vssId: "a.en" },
       });
 
-      const { matchesSubtitleSelection, applySubtitleSelection } =
-        await import("@shared/youtube-player");
+      const { matchesSubtitleSelection, applySubtitleSelection } = await import(
+        "@shared/youtube-player"
+      );
       vi.mocked(matchesSubtitleSelection)
         .mockReturnValueOnce(false)
         .mockReturnValue(true);
       vi.mocked(applySubtitleSelection).mockResolvedValue(true);
 
-      const { waitForSubtitleSelection } =
-        await import("@shared/youtube-player");
+      const { waitForSubtitleSelection } = await import(
+        "@shared/youtube-player"
+      );
       vi.mocked(waitForSubtitleSelection).mockResolvedValue(true);
     }
 

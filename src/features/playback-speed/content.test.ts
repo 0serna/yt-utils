@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeFeatureContext } from "@shared/test-helpers";
 import type { PlayerSnapshot } from "@shared/youtube-player";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@shared/youtube-dom", () => ({
   isDesktopWatchPage: vi.fn(),
@@ -63,8 +63,9 @@ describe("playback-speed feature", () => {
     document.body.innerHTML = "<video></video>";
     setWatchVideo("test-video");
 
-    const { isDesktopWatchPage, placeWatchActionHost } =
-      await import("@shared/youtube-dom");
+    const { isDesktopWatchPage, placeWatchActionHost } = await import(
+      "@shared/youtube-dom"
+    );
     vi.mocked(isDesktopWatchPage).mockReturnValue(true);
     vi.mocked(placeWatchActionHost).mockReturnValue(true);
   });

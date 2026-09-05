@@ -6,29 +6,25 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "format": "prettier --write .",
-    "lint": "eslint --fix .",
+    "check": "biome check .",
+    "check:fix": "biome check --write .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --coverage",
     "prepare": "husky"
   },
   "lint-staged": {
-    "*": "prettier --write --ignore-unknown",
-    "*.{js,jsx,ts,tsx}": "eslint --fix"
+    "*.{js,jsx,ts,tsx,json,jsonc}": "biome check --write --no-errors-on-unmatched"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.12",
     "@crxjs/vite-plugin": "^2.7.1",
     "@types/chrome": "^0.1.40",
     "@types/node": "^25.6.0",
     "@vitest/coverage-istanbul": "^4.1.10",
-    "eslint": "*",
-    "eslint-config-prettier": "*",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
     "lint-staged": "^16.4.0",
-    "prettier": "*",
     "typescript": "^6.0.2",
-    "typescript-eslint": "*",
     "vite": "^8.1.5",
     "vitest": "^4.1.10"
   }

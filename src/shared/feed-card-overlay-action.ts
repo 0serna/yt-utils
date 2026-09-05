@@ -1,6 +1,6 @@
 import {
-  getBootstrapIconMarkup,
   type BootstrapIconName,
+  getBootstrapIconMarkup,
 } from "@shared/bootstrap-icons";
 import { hasRelevantSelectorMutation } from "@shared/dom-mutations";
 import { applyExtensionButtonStyles } from "@shared/extension-button";

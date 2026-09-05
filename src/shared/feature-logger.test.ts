@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { LogEntry } from "./feature-logger";
 import {
   appendAndTrim,
   captureUrlContext,
@@ -6,7 +7,6 @@ import {
   normalizeError,
   trimLogs,
 } from "./feature-logger";
-import type { LogEntry } from "./feature-logger";
 
 describe("captureUrlContext", () => {
   it("captures full URL and videoId from watch page", () => {

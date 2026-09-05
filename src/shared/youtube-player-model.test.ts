@@ -1,13 +1,13 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  isSpanishLanguage,
-  isEnglishLanguage,
+  type AudioTrack,
+  type CaptionTrack,
   determineSubtitleSelection,
-  readSubtitleSignature,
+  isEnglishLanguage,
+  isSpanishLanguage,
   matchesSubtitleSelection,
   type PlayerSnapshot,
-  type CaptionTrack,
-  type AudioTrack,
+  readSubtitleSignature,
 } from "./youtube-player-model";
 
 const defaultSnapshot: PlayerSnapshot = {

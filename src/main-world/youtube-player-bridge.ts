@@ -209,9 +209,9 @@ function readTranslationLanguages(
   return raw.filter((value): value is TranslationLanguage =>
     Boolean(
       value &&
-      typeof value === "object" &&
-      "languageCode" in value &&
-      typeof (value as TranslationLanguage).languageCode === "string",
+        typeof value === "object" &&
+        "languageCode" in value &&
+        typeof (value as TranslationLanguage).languageCode === "string",
     ),
   );
 }
@@ -350,9 +350,9 @@ function normalizeLanguageCode(
 function isNonEmptyObject(value: unknown): value is Record<string, unknown> {
   return Boolean(
     value &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    Object.keys(value).length > 0,
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      Object.keys(value).length > 0,
   );
 }
 

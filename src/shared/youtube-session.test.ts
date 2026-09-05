@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { PlayerSnapshot } from "./youtube-player";
 import {
   getCurrentWatchSessionKey,
   getCurrentWatchVideoId,
   isCurrentWatchVideo,
   readConfirmedCurrentVideoSnapshot,
 } from "./youtube-session";
-import type { PlayerSnapshot } from "./youtube-player";
 
 vi.mock("./youtube-dom", () => ({
   isDesktopWatchPage: vi.fn(),

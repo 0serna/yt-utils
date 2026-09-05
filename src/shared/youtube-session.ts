@@ -1,6 +1,6 @@
 import { isDesktopWatchPage } from "./youtube-dom";
-import { readPlayerSnapshot } from "./youtube-player";
 import type { PlayerSnapshot } from "./youtube-player";
+import { readPlayerSnapshot } from "./youtube-player";
 
 export function getCurrentWatchVideoId(
   url: URL = new URL(window.location.href),

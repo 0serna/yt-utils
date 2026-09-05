@@ -1,3 +1,9 @@
+import type {
+  BridgeRequest,
+  BridgeResponse,
+  PlayerSnapshot,
+  SubtitleSelection,
+} from "@shared/youtube-player-model";
 import {
   BRIDGE_SOURCE,
   determineSubtitleSelection,
@@ -6,13 +12,11 @@ import {
   matchesSubtitleSelection,
   readSubtitleSignature,
 } from "@shared/youtube-player-model";
-import type {
-  BridgeRequest,
-  BridgeResponse,
+
+export type {
   PlayerSnapshot,
   SubtitleSelection,
 } from "@shared/youtube-player-model";
-
 export {
   determineSubtitleSelection,
   isEnglishLanguage,
@@ -20,10 +24,6 @@ export {
   matchesSubtitleSelection,
   readSubtitleSignature,
 };
-export type {
-  PlayerSnapshot,
-  SubtitleSelection,
-} from "@shared/youtube-player-model";
 
 const BRIDGE_RESPONSE_TIMEOUT_MS = 2000;
 const DEFAULT_SUBTITLE_SELECTION_WAIT = {

@@ -1,14 +1,13 @@
-import { describe, it, expect, beforeAll, beforeEach, afterEach } from "vitest";
 import type {
   BridgeRequest,
   BridgeResponse,
   PlayerSnapshot,
 } from "@shared/youtube-player-model";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 const BRIDGE_SOURCE = "yt-utils:youtube-player-bridge";
 const BRIDGE_FLAG = "__ytUtilsYoutubePlayerBridgeInstalled";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type BridgeWindow = Window & Record<string, any>;
 
 describe("youtube-player-bridge", () => {
@@ -23,9 +22,7 @@ describe("youtube-player-bridge", () => {
     let captured = false;
     window.addEventListener = ((
       type: string,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       listener: any,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ...args: any[]
     ) => {
       if (type === "message" && !captured) {
@@ -66,7 +63,6 @@ describe("youtube-player-bridge", () => {
     const element = document.createElement("div");
     element.id = "movie_player";
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const player = element as any;
     player.getPlayerResponse = () => ({
       captions: {
@@ -106,7 +102,6 @@ describe("youtube-player-bridge", () => {
       videoId: "test-video",
       subtitlesOn: true,
     });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const player = element as any;
     player.isSubtitlesOn = () => subtitlesOn;
     player.toggleSubtitles = () => {
@@ -151,7 +146,6 @@ describe("youtube-player-bridge", () => {
 
       const syntheticEvent = new MessageEvent("message", {
         data: fullRequest,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         source: window as any,
         origin: window.location.origin,
       });

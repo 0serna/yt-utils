@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { makeFeatureContext } from "@shared/test-helpers";
 import type { PlayerSnapshot } from "@shared/youtube-player";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let mockLocationSearch: string;
 
@@ -341,8 +341,9 @@ describe("watch-panel-auto-open feature", () => {
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
-      const { findButton, clickElement, waitFor } =
-        await import("@shared/youtube-dom");
+      const { findButton, clickElement, waitFor } = await import(
+        "@shared/youtube-dom"
+      );
       vi.mocked(findButton).mockReturnValue(askButton);
       vi.mocked(waitFor).mockResolvedValue(askButton);
 
@@ -430,8 +431,9 @@ describe("watch-panel-auto-open feature", () => {
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
-      const { findButton, isVisible, clickElement, waitFor } =
-        await import("@shared/youtube-dom");
+      const { findButton, isVisible, clickElement, waitFor } = await import(
+        "@shared/youtube-dom"
+      );
       vi.mocked(findButton).mockImplementation((_root, matchers) => {
         if (matchesButtonLabel(matchers, "Ask")) return askButton;
         if (matchesButtonLabel(matchers, "Chapters")) {
@@ -489,8 +491,9 @@ describe("watch-panel-auto-open feature", () => {
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
-      const { isVisible, clickElement, findButton, waitFor } =
-        await import("@shared/youtube-dom");
+      const { isVisible, clickElement, findButton, waitFor } = await import(
+        "@shared/youtube-dom"
+      );
       vi.mocked(findButton).mockImplementation((_root, matchers) =>
         matchesButtonLabel(matchers, "Ask") ? askButton : null,
       );
@@ -535,8 +538,9 @@ describe("watch-panel-auto-open feature", () => {
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
-      const { findButton, clickElement, waitFor, isVisible } =
-        await import("@shared/youtube-dom");
+      const { findButton, clickElement, waitFor, isVisible } = await import(
+        "@shared/youtube-dom"
+      );
       vi.mocked(findButton).mockImplementation((_root, matchers) =>
         matchesButtonLabel(matchers, "Chapters") ? chaptersButton : null,
       );
@@ -586,8 +590,9 @@ describe("watch-panel-auto-open feature", () => {
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
-      const { findButton, clickElement, waitFor, isVisible } =
-        await import("@shared/youtube-dom");
+      const { findButton, clickElement, waitFor, isVisible } = await import(
+        "@shared/youtube-dom"
+      );
       vi.mocked(findButton).mockImplementation((_root, matchers) =>
         matchesButtonLabel(matchers, "Ask") ? askButton : null,
       );
@@ -632,8 +637,9 @@ describe("watch-panel-auto-open feature", () => {
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
-      const { delay, findButton, clickElement, waitFor } =
-        await import("@shared/youtube-dom");
+      const { delay, findButton, clickElement, waitFor } = await import(
+        "@shared/youtube-dom"
+      );
       vi.mocked(findButton).mockImplementation((_root, matchers) =>
         matchesButtonLabel(matchers, "Ask") ? askButton : null,
       );
@@ -713,8 +719,9 @@ describe("watch-panel-auto-open feature", () => {
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
-      const { clickElement, findButton, isVisible } =
-        await import("@shared/youtube-dom");
+      const { clickElement, findButton, isVisible } = await import(
+        "@shared/youtube-dom"
+      );
       vi.mocked(findButton).mockImplementation((root, matchers) => {
         if (root === inThisVideo.panel) return inThisVideo.closeButton;
         if (root === liveChatReplay.frame) {
@@ -767,8 +774,9 @@ describe("watch-panel-auto-open feature", () => {
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
-      const { clickElement, findButton, isVisible } =
-        await import("@shared/youtube-dom");
+      const { clickElement, findButton, isVisible } = await import(
+        "@shared/youtube-dom"
+      );
       vi.mocked(findButton).mockImplementation((root, matchers) => {
         if (root === collapsedFrame.frame) {
           return matchers.some((matcher) => matcher.test("Show chat replay"))
@@ -808,8 +816,9 @@ describe("watch-panel-auto-open feature", () => {
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
-      const { findButton, clickElement, waitFor, isVisible } =
-        await import("@shared/youtube-dom");
+      const { findButton, clickElement, waitFor, isVisible } = await import(
+        "@shared/youtube-dom"
+      );
 
       const askButton = document.createElement("button");
       vi.mocked(findButton).mockReturnValue(askButton);
@@ -859,8 +868,9 @@ describe("watch-panel-auto-open feature", () => {
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
-      const { findButton, clickElement, waitFor, isVisible } =
-        await import("@shared/youtube-dom");
+      const { findButton, clickElement, waitFor, isVisible } = await import(
+        "@shared/youtube-dom"
+      );
       vi.mocked(findButton).mockImplementation((_root, matchers) => {
         if (matchesButtonLabel(matchers, "Ask")) return askButton;
         if (matchesButtonLabel(matchers, "Chapters")) {
@@ -939,8 +949,9 @@ describe("watch-panel-auto-open feature", () => {
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
-      const { clickElement, waitFor, isVisible } =
-        await import("@shared/youtube-dom");
+      const { clickElement, waitFor, isVisible } = await import(
+        "@shared/youtube-dom"
+      );
       vi.mocked(isVisible).mockImplementation((el) => el === chatInput);
       vi.mocked(waitFor).mockImplementation((callback) =>
         Promise.resolve(callback() as HTMLElement),
@@ -970,8 +981,9 @@ describe("watch-panel-auto-open feature", () => {
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
-      const { clickElement, waitFor, isVisible } =
-        await import("@shared/youtube-dom");
+      const { clickElement, waitFor, isVisible } = await import(
+        "@shared/youtube-dom"
+      );
       vi.mocked(isVisible).mockImplementation((el) => el === chatInput);
       vi.mocked(waitFor).mockImplementation((callback) =>
         Promise.resolve(callback() as HTMLElement),
@@ -1017,8 +1029,9 @@ describe("watch-panel-auto-open feature", () => {
         ),
       );
 
-      const { findButton, clickElement, waitFor } =
-        await import("@shared/youtube-dom");
+      const { findButton, clickElement, waitFor } = await import(
+        "@shared/youtube-dom"
+      );
       vi.mocked(findButton).mockReturnValue(askButton);
       vi.mocked(waitFor).mockResolvedValue(askButton);
 
@@ -1068,8 +1081,9 @@ describe("watch-panel-auto-open feature", () => {
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
-      const { clickElement, findButton, isVisible, waitFor } =
-        await import("@shared/youtube-dom");
+      const { clickElement, findButton, isVisible, waitFor } = await import(
+        "@shared/youtube-dom"
+      );
       vi.mocked(findButton).mockImplementation((_root, matchers) =>
         askAvailable && matchesButtonLabel(matchers, "Ask") ? askButton : null,
       );
@@ -1127,8 +1141,9 @@ describe("watch-panel-auto-open feature", () => {
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
-      const { clickElement, findButton, isVisible } =
-        await import("@shared/youtube-dom");
+      const { clickElement, findButton, isVisible } = await import(
+        "@shared/youtube-dom"
+      );
       vi.mocked(isVisible).mockImplementation((el) => el === chapterItem);
 
       const feature = await setupWatchPage();

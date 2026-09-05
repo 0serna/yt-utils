@@ -1,4 +1,5 @@
 import type { Feature, FeatureContext } from "@shared/types";
+import type { PlayerSnapshot, SubtitleSelection } from "@shared/youtube-player";
 import {
   applySubtitleSelection,
   determineSubtitleSelection,
@@ -8,7 +9,6 @@ import {
   readSubtitleSignature,
   waitForSubtitleSelection,
 } from "@shared/youtube-player";
-import type { PlayerSnapshot, SubtitleSelection } from "@shared/youtube-player";
 import {
   getCurrentWatchVideoId,
   isCurrentWatchVideo,

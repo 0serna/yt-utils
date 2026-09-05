@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { makeFeatureContext } from "@shared/test-helpers";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("search-date-filter feature", () => {
   let replaceSpy: ReturnType<typeof vi.fn>;

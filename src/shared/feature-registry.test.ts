@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Feature, FeatureContext } from "./types";
 
 type FeatureRegistryClass = typeof import("./feature-registry").FeatureRegistry;
