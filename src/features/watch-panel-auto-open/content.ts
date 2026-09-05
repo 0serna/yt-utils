@@ -7,14 +7,13 @@ import {
   clickElement,
   delay,
   findButton,
-  isDesktopWatchPage,
   isVisible,
   waitFor,
 } from "@shared/youtube-dom";
 import {
+  createWatchSessionController,
   getCurrentWatchVideoId,
-  isCurrentWatchVideo,
-  readConfirmedCurrentVideoSnapshot,
+  type WatchSession,
 } from "@shared/youtube-session";
 
 const PANEL_TARGET_ID = "PAyouchat";
@@ -48,7 +47,7 @@ const SUMMARIZE_PROMPT =
   "Summarize this video chronologically with timestamped bullets, then the key takeaways.";
 const ASK_SCROLL_OVERSCROLL_BEHAVIOR = "contain";
 
-let sessionToken = 0;
+const watchSessions = createWatchSessionController();
 let completedVideoId: string | null = null;
 let promptedVideoId: string | null = null;
 let promptingVideoId: string | null = null;
@@ -68,7 +67,7 @@ const domSyncController = createDomSyncController({
   },
   hasRelevantMutation: (mutations) =>
     hasRelevantSurfaceMutation(mutations, isInsidePanelSurface),
-  sync: syncCurrentVideoPanel,
+  sync: () => watchSessions.run(syncCurrentVideoPanel),
 });
 
 const watchPanelAutoOpenFeature: Feature = {
@@ -79,12 +78,14 @@ const watchPanelAutoOpenFeature: Feature = {
     resetSessionState();
     observedVideoId = getCurrentWatchVideoId();
     syncAskScrollContainment();
-    sessionToken = domSyncController.activate();
+    watchSessions.activate();
+    domSyncController.activate();
     startVideoWatch();
   },
 
   deactivate(): void {
-    sessionToken = domSyncController.deactivate();
+    watchSessions.deactivate();
+    domSyncController.deactivate();
     resetSessionState();
     observedVideoId = null;
     stopVideoWatch();
@@ -118,7 +119,8 @@ function syncObservedVideoId(): void {
 
   observedVideoId = currentVideoId;
   resetSessionState();
-  sessionToken = domSyncController.activate();
+  watchSessions.activate();
+  domSyncController.activate();
 }
 
 function resetSessionState(): void {
@@ -208,40 +210,42 @@ function findAskButton(): HTMLElement | null {
   return findButton(document, ASK_LABELS);
 }
 
-async function syncCurrentVideoPanel(token: number): Promise<void> {
-  const videoId = await validateSyncContext(token);
-  if (!videoId) {
-    return;
-  }
+async function syncCurrentVideoPanel(session: WatchSession): Promise<void> {
+  const snapshot = await session.readSnapshot();
+  if (!snapshot || !session.isCurrent()) return;
 
-  await syncValidatedVideoPanel(videoId, token);
+  await syncValidatedVideoPanel(session.videoId, session);
 }
 
 async function syncValidatedVideoPanel(
   videoId: string,
-  token: number,
+  session: WatchSession,
 ): Promise<void> {
+  if (!session.isCurrent()) return;
   const askState = readAskPanelState();
 
   if (!prepareVideoState(videoId, askState.expanded)) {
     return;
   }
 
-  if (await handleAlreadyExpandedAsk(videoId, token, askState.expanded)) {
+  if (
+    (await handleAlreadyExpandedAsk(videoId, session, askState.expanded)) ||
+    !session.isCurrent()
+  ) {
     return;
   }
 
-  closeNoisyPanels(videoId, token);
+  closeNoisyPanels(videoId, session);
 
   syncCollapsedAskPanelScrollContainment(askState.panel, askState.expanded);
 
-  if (await handledAskOrLostSession(videoId, token)) {
+  if (await handledAskOrLostSession(videoId, session)) {
     return;
   }
 
-  closeNoisyPanels(videoId, token);
+  closeNoisyPanels(videoId, session);
 
-  await tryOpenChapters(videoId, token);
+  await tryOpenChapters(videoId, session);
 }
 
 function readAskPanelState(): { panel: HTMLElement | null; expanded: boolean } {
@@ -259,7 +263,7 @@ function prepareVideoState(videoId: string, askExpanded: boolean): boolean {
 
 async function handleAlreadyExpandedAsk(
   videoId: string,
-  token: number,
+  session: WatchSession,
   askExpanded: boolean,
 ): Promise<boolean> {
   if (shouldDeferInitialExpandedAsk(videoId, askExpanded)) {
@@ -267,8 +271,8 @@ async function handleAlreadyExpandedAsk(
   }
 
   if (shouldPromptExpandedAsk(videoId, askExpanded)) {
-    await promptCurrentVideo(videoId, token);
-    if (!isContextValid(token, videoId)) {
+    await promptCurrentVideo(videoId, session);
+    if (!session.isCurrent()) {
       return true;
     }
     completeVideo(videoId);
@@ -285,10 +289,10 @@ async function handleAlreadyExpandedAsk(
 
 async function handledAskOrLostSession(
   videoId: string,
-  token: number,
+  session: WatchSession,
 ): Promise<boolean> {
-  const askHandled = await tryOpenAsk(videoId, token);
-  return token !== sessionToken || askHandled;
+  const askHandled = await tryOpenAsk(videoId, session);
+  return !session.isCurrent() || askHandled;
 }
 
 function shouldPromptExpandedAsk(
@@ -309,13 +313,13 @@ function syncCollapsedAskPanelScrollContainment(
   }
 }
 
-function closeNoisyPanels(videoId: string, token: number): void {
-  if (!isContextValid(token, videoId) || completedVideoId === videoId) {
+function closeNoisyPanels(videoId: string, session: WatchSession): void {
+  if (!session.isCurrent() || completedVideoId === videoId) {
     return;
   }
 
   for (const panel of findNoisyExpandedPanels()) {
-    if (!isContextValid(token, videoId) || completedVideoId === videoId) {
+    if (!session.isCurrent() || completedVideoId === videoId) {
       return;
     }
 
@@ -327,7 +331,7 @@ function closeNoisyPanels(videoId: string, token: number): void {
   }
 
   for (const iframe of findNoisyLiveChatReplayIframes()) {
-    if (!isContextValid(token, videoId) || completedVideoId === videoId) {
+    if (!session.isCurrent() || completedVideoId === videoId) {
       return;
     }
 
@@ -472,46 +476,6 @@ function shouldDeferInitialExpandedAsk(
   );
 }
 
-async function validateSyncContext(token: number): Promise<string | null> {
-  if (!canSyncCurrentPage(token)) {
-    return null;
-  }
-
-  return validateCurrentVideoSnapshot(token, getCurrentWatchVideoId());
-}
-
-async function validateCurrentVideoSnapshot(
-  token: number,
-  videoId: string | null,
-): Promise<string | null> {
-  if (!videoId) {
-    return null;
-  }
-
-  const snapshot = await readConfirmedCurrentVideoSnapshot();
-  if (!isMatchingVideoSnapshot(token, videoId, snapshot?.videoId)) {
-    return null;
-  }
-
-  return videoId;
-}
-
-function canSyncCurrentPage(token: number): boolean {
-  return !shouldAbortSync(token);
-}
-
-function shouldAbortSync(token: number): boolean {
-  return token !== sessionToken || !isDesktopWatchPage();
-}
-
-function isMatchingVideoSnapshot(
-  token: number,
-  expectedVideoId: string,
-  snapshotVideoId: string | null | undefined,
-): boolean {
-  return token === sessionToken && snapshotVideoId === expectedVideoId;
-}
-
 function resetStaleState(videoId: string): void {
   completedVideoId = resetVideoStateValue(completedVideoId, videoId);
   promptedVideoId = resetVideoStateValue(promptedVideoId, videoId);
@@ -526,14 +490,6 @@ function resetVideoStateValue(
   return stateVideoId && stateVideoId !== currentVideoId ? null : stateVideoId;
 }
 
-function isContextValid(token: number, videoId: string): boolean {
-  return (
-    token === sessionToken &&
-    isCurrentWatchVideo(videoId) &&
-    isDesktopWatchPage()
-  );
-}
-
 function completeVideo(videoId: string): void {
   expandedVideoId = videoId;
   completedVideoId = videoId;
@@ -541,8 +497,9 @@ function completeVideo(videoId: string): void {
 
 async function tryOpenChapters(
   videoId: string,
-  token: number,
+  session: WatchSession,
 ): Promise<boolean> {
+  if (!session.isCurrent()) return false;
   if (completeIfChaptersAlreadyOpen(videoId)) {
     return true;
   }
@@ -553,18 +510,18 @@ async function tryOpenChapters(
   }
 
   clickElement(chaptersButton);
-  return completeWhenChaptersOpen(videoId, token);
+  return completeWhenChaptersOpen(videoId, session);
 }
 
 async function completeWhenChaptersOpen(
   videoId: string,
-  token: number,
+  session: WatchSession,
 ): Promise<boolean> {
   if (!(await waitForVisibleChapterItems())) {
     return false;
   }
 
-  if (!isContextValid(token, videoId)) {
+  if (!session.isCurrent()) {
     return false;
   }
 
@@ -610,8 +567,11 @@ async function waitForVisibleChapterItems(): Promise<boolean> {
   }
 }
 
-async function tryOpenAsk(videoId: string, token: number): Promise<boolean> {
-  if (await completeExpandedAskIfOpen(videoId, token)) {
+async function tryOpenAsk(
+  videoId: string,
+  session: WatchSession,
+): Promise<boolean> {
+  if (await completeExpandedAskIfOpen(videoId, session)) {
     return true;
   }
 
@@ -620,53 +580,54 @@ async function tryOpenAsk(videoId: string, token: number): Promise<boolean> {
     return false;
   }
 
-  if (await completeExpandedAskIfOpen(videoId, token)) {
+  if (await completeExpandedAskIfOpen(videoId, session)) {
     return true;
   }
 
-  if (!isContextValid(token, videoId)) {
+  if (!session.isCurrent()) {
     return false;
   }
 
   clickElement(askControl);
-  return completeWhenAskPanelOpen(videoId, token);
+  return completeWhenAskPanelOpen(videoId, session);
 }
 
 async function completeWhenAskPanelOpen(
   videoId: string,
-  token: number,
+  session: WatchSession,
 ): Promise<boolean> {
   if (!(await waitForExpandedAskPanel())) {
     return false;
   }
 
-  return completeExpandedAsk(videoId, token);
+  return completeExpandedAsk(videoId, session);
 }
 
 async function completeExpandedAskIfOpen(
   videoId: string,
-  token: number,
+  session: WatchSession,
 ): Promise<boolean> {
   if (!isAskPanelCurrentlyExpanded()) {
     return false;
   }
 
-  return completeExpandedAsk(videoId, token);
+  return completeExpandedAsk(videoId, session);
 }
 
 async function completeExpandedAsk(
   videoId: string,
-  token: number,
+  session: WatchSession,
 ): Promise<boolean> {
-  if (!isContextValid(token, videoId)) {
+  if (!session.isCurrent()) {
     return false;
   }
 
-  await promptCurrentVideo(videoId, token);
+  await promptCurrentVideo(videoId, session);
 
   await delay(PANEL_SETTLE_DELAY_MS);
 
-  if (!isContextValid(token, videoId) || !isAskPanelCurrentlyExpanded()) {
+  if (!session.isCurrent()) return false;
+  if (!isAskPanelCurrentlyExpanded()) {
     domSyncController.queueSync();
     return false;
   }
@@ -705,18 +666,22 @@ async function waitForAskButtonOrExpandedPanel(): Promise<HTMLElement | null> {
 
 async function promptCurrentVideo(
   videoId: string,
-  token: number,
+  session: WatchSession,
 ): Promise<void> {
-  if (promptedVideoId === videoId || promptingVideoId === videoId) {
+  if (
+    !session.isCurrent() ||
+    promptedVideoId === videoId ||
+    promptingVideoId === videoId
+  ) {
     return;
   }
 
   promptingVideoId = videoId;
-  await typeAndSendPrompt(videoId, token);
-  if (isContextValid(token, videoId)) {
+  await typeAndSendPrompt(session);
+  if (session.isCurrent()) {
     promptedVideoId = videoId;
+    promptingVideoId = null;
   }
-  promptingVideoId = resetVideoStateValue(promptingVideoId, videoId);
 }
 
 function isAskPanelCurrentlyExpanded(): boolean {
@@ -758,10 +723,7 @@ function findSendButton(): HTMLElement | null {
   return askPanel.querySelector<HTMLElement>(SEND_BUTTON_SELECTOR);
 }
 
-async function typeAndSendPrompt(
-  videoId: string,
-  token: number,
-): Promise<void> {
+async function typeAndSendPrompt(session: WatchSession): Promise<void> {
   try {
     const input = await waitFor(
       () => {
@@ -777,7 +739,7 @@ async function typeAndSendPrompt(
     );
 
     const sendButton = findSendButton();
-    if (!sendButton || !isContextValid(token, videoId)) {
+    if (!sendButton || !session.isCurrent()) {
       return;
     }
 
@@ -785,7 +747,7 @@ async function typeAndSendPrompt(
 
     typePromptText(input);
 
-    if (!isContextValid(token, videoId)) {
+    if (!session.isCurrent()) {
       return;
     }
 

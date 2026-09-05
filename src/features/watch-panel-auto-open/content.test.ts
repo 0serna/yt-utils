@@ -198,6 +198,8 @@ describe("watch-panel-auto-open feature", () => {
   });
 
   afterEach(async () => {
+    const { default: feature } = await importFreshFeature();
+    feature.deactivate();
     vi.useRealTimers();
     await resetMocks();
   });
@@ -331,6 +333,40 @@ describe("watch-panel-auto-open feature", () => {
         },
         { timeout: 1000 },
       );
+    });
+
+    it("does not find or click panels after navigation during a snapshot read", async () => {
+      const { readPlayerSnapshot } = await import("@shared/youtube-player");
+      const { findButton, clickElement } = await import("@shared/youtube-dom");
+      const pending = Promise.withResolvers<PlayerSnapshot | null>();
+      vi.mocked(readPlayerSnapshot).mockReturnValue(pending.promise);
+      const feature = await setupWatchPage();
+      feature.activate(makeFeatureContext());
+      mockLocationSearch = "?v=next";
+      pending.resolve(snapshot("test-video"));
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+      expect(findButton).not.toHaveBeenCalled();
+      expect(clickElement).not.toHaveBeenCalled();
+      feature.deactivate();
+    });
+
+    it("does not click a delayed Ask control after navigation", async () => {
+      const { readPlayerSnapshot } = await import("@shared/youtube-player");
+      const { findButton, clickElement, waitFor } = await import(
+        "@shared/youtube-dom"
+      );
+      vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
+      vi.mocked(findButton).mockReturnValue(null);
+      const pending = Promise.withResolvers<HTMLElement>();
+      vi.mocked(waitFor).mockReturnValue(pending.promise);
+      const feature = await setupWatchPage();
+      feature.activate(makeFeatureContext());
+      await vi.waitFor(() => expect(waitFor).toHaveBeenCalled());
+      mockLocationSearch = "?v=next";
+      pending.resolve(document.createElement("button"));
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+      expect(clickElement).not.toHaveBeenCalled();
+      feature.deactivate();
     });
 
     it("sync clicks ask button when panel is not expanded", async () => {

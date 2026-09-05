@@ -338,4 +338,23 @@ describe("playback-speed feature", () => {
       timeout: 2000,
     });
   });
+  it("ignores a pending language result after same-video reactivation", async () => {
+    const { readPlayerSnapshot } = await import("@shared/youtube-player");
+    const pending = Promise.withResolvers<PlayerSnapshot | null>();
+    vi.mocked(readPlayerSnapshot)
+      .mockReturnValueOnce(pending.promise)
+      .mockResolvedValue(snapshot("test-video", "en"));
+    const { default: feature } = await importFreshFeature();
+    activeFeature = feature;
+    feature.activate(makeFeatureContext());
+    feature.deactivate();
+    feature.activate(makeFeatureContext());
+    pending.resolve(snapshot("test-video", "es"));
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    const video = requireValue(
+      document.querySelector("video"),
+      "missing video",
+    );
+    expect(video.playbackRate).toBe(1);
+  });
 });
