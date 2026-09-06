@@ -278,6 +278,128 @@ describe("home-not-interested feature", () => {
     feature.deactivate();
   });
 
+  it("serializes overlapping card actions while their menus arrive late", async () => {
+    renderHomeCard("card-1");
+    renderHomeCard("card-2");
+
+    const menuButtons = [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        'button[aria-label="More actions"]',
+      ),
+    ];
+    const menuClickSpies = menuButtons.map((button) => {
+      button.scrollIntoView = vi.fn();
+      return vi.spyOn(button, "click").mockImplementation(() => {
+        window.setTimeout(() => {
+          const item = document.createElement("button");
+          item.setAttribute("role", "menuitem");
+          item.textContent = "Not interested";
+          item.scrollIntoView = vi.fn();
+          makeVisible(item);
+          item.onclick = () => item.remove();
+          document.body.append(item);
+        }, 20);
+      });
+    });
+
+    const { default: feature } = await importFreshFeature();
+    const context = makeFeatureContext();
+    feature.activate(context);
+
+    const actionButtons = [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        "[id^='yt-utils-home-not-interested-button-']",
+      ),
+    ];
+    expect(actionButtons).toHaveLength(2);
+    actionButtons[0]?.click();
+    actionButtons[1]?.click();
+
+    await vi.waitFor(() => {
+      expect(context.logger.error).not.toHaveBeenCalled();
+      expect(menuClickSpies[0]).toHaveBeenCalledTimes(1);
+    });
+    expect(menuClickSpies[1]).not.toHaveBeenCalled();
+
+    await vi.waitFor(() => {
+      expect(menuClickSpies[1]).toHaveBeenCalledTimes(1);
+      expect(document.querySelectorAll("[role='menuitem']")).toHaveLength(0);
+    });
+
+    feature.deactivate();
+  });
+
+  it("cancels a delayed action when its card is replaced", async () => {
+    renderHomeCard();
+
+    const menuButton = requireValue(
+      document.querySelector<HTMLButtonElement>(
+        'button[aria-label="More actions"]',
+      ),
+      "missing menu button",
+    );
+    menuButton.scrollIntoView = vi.fn();
+    const menuClickSpy = vi.spyOn(menuButton, "click");
+
+    const { default: feature } = await importFreshFeature();
+    const context = makeFeatureContext();
+    feature.activate(context);
+
+    requireValue(
+      document.querySelector<HTMLButtonElement>(
+        "[id^='yt-utils-home-not-interested-button-']",
+      ),
+      "missing not-interested button",
+    ).click();
+    await vi.waitFor(() => expect(menuClickSpy).toHaveBeenCalled());
+
+    document.getElementById("card-1")?.remove();
+    await new Promise<void>((resolve) =>
+      window.requestAnimationFrame(() => resolve()),
+    );
+
+    const delayedItem = document.createElement("button");
+    delayedItem.setAttribute("role", "menuitem");
+    delayedItem.textContent = "Not interested";
+    delayedItem.scrollIntoView = vi.fn();
+    makeVisible(delayedItem);
+    const itemClickSpy = vi.spyOn(delayedItem, "click");
+    document.body.append(delayedItem);
+
+    await new Promise((resolve) => window.setTimeout(resolve, 150));
+    expect(itemClickSpy).not.toHaveBeenCalled();
+    expect(context.logger.error).not.toHaveBeenCalled();
+
+    feature.deactivate();
+  });
+
+  it("cancels a delayed action on deactivation", async () => {
+    renderHomeCard();
+
+    const menuButton = requireValue(
+      document.querySelector<HTMLButtonElement>(
+        'button[aria-label="More actions"]',
+      ),
+      "missing menu button",
+    );
+    menuButton.scrollIntoView = vi.fn();
+
+    const { default: feature } = await importFreshFeature();
+    const context = makeFeatureContext();
+    feature.activate(context);
+
+    requireValue(
+      document.querySelector<HTMLButtonElement>(
+        "[id^='yt-utils-home-not-interested-button-']",
+      ),
+      "missing not-interested button",
+    ).click();
+    feature.deactivate();
+
+    await new Promise((resolve) => window.setTimeout(resolve, 150));
+    expect(context.logger.error).not.toHaveBeenCalled();
+  });
+
   it("logs once when cards have menus but no placement surface", async () => {
     document.body.innerHTML = `
       <ytd-rich-item-renderer id="menu-only">

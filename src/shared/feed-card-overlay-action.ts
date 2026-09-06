@@ -50,7 +50,12 @@ export function createFeedCardOverlayActionFeature(
   let nextCardKey = 0;
   let hasLoggedPlacementFailure = false;
   let activeContext: FeatureContext | null = null;
+  let nativeMenuQueue: Promise<void> = Promise.resolve();
   const pendingCardKeys = new Set<string>();
+  const pendingActions = new Map<
+    string,
+    { card: HTMLElement; controller: AbortController }
+  >();
 
   const feature: Feature = {
     name: config.name,
@@ -64,7 +69,6 @@ export function createFeedCardOverlayActionFeature(
     },
     deactivate(): void {
       activeContext = null;
-      pendingCardKeys.clear();
       removeButtons();
       removeHoverVisibilityStyles();
       stopObserving();
@@ -72,6 +76,8 @@ export function createFeedCardOverlayActionFeature(
   };
 
   function ensureButtons(): void {
+    cancelDisconnectedPendingActions();
+
     if (!config.matchesPage()) {
       removeButtons();
       return;
@@ -224,21 +230,40 @@ export function createFeedCardOverlayActionFeature(
       return;
     }
 
+    const controller = new AbortController();
+    pendingActions.set(cardKey, { card, controller });
     pendingCardKeys.add(cardKey);
     syncButtonState(cardKey);
 
     try {
-      await executeNativeMenuAction(card);
+      await queueNativeMenuAction(() =>
+        executeNativeMenuAction(cardKey, card, controller.signal),
+      );
     } catch (error) {
-      activeContext?.logger.error(error, { phase: "runtime" });
+      if (!isActionCancelled(controller.signal, error)) {
+        activeContext?.logger.error(error, { phase: "runtime" });
+      }
     } finally {
+      pendingActions.delete(cardKey);
       pendingCardKeys.delete(cardKey);
       syncButtonState(cardKey);
       queueEnsureButtons();
     }
   }
 
-  async function executeNativeMenuAction(card: HTMLElement): Promise<void> {
+  function queueNativeMenuAction(action: () => Promise<void>): Promise<void> {
+    const queuedAction = nativeMenuQueue.then(action, action);
+    nativeMenuQueue = queuedAction.catch(() => undefined);
+    return queuedAction;
+  }
+
+  async function executeNativeMenuAction(
+    cardKey: string,
+    card: HTMLElement,
+    signal: AbortSignal,
+  ): Promise<void> {
+    throwIfActionCancelled(cardKey, card, signal);
+
     const menuButton = findRichItemMenuButton(card);
     if (!menuButton) {
       throw new Error("The card menu button is unavailable.");
@@ -250,9 +275,33 @@ export function createFeedCardOverlayActionFeature(
       timeout: ACTION_TIMEOUT_MS,
       errorCode: config.actionUnavailableCode,
       errorMessage: config.actionUnavailableMessage,
+      signal,
     });
 
+    throwIfActionCancelled(cardKey, card, signal);
     clickElement(menuItem);
+  }
+
+  function throwIfActionCancelled(
+    cardKey: string,
+    card: HTMLElement,
+    signal: AbortSignal,
+  ): void {
+    if (
+      signal.aborted ||
+      !card.isConnected ||
+      getCardByKey(cardKey) !== card ||
+      !config.matchesPage()
+    ) {
+      throw new DOMException("The pending action was cancelled.", "AbortError");
+    }
+  }
+
+  function isActionCancelled(signal: AbortSignal, error: unknown): boolean {
+    return (
+      signal.aborted ||
+      (error instanceof DOMException && error.name === "AbortError")
+    );
   }
 
   function observePage(): void {
@@ -306,6 +355,7 @@ export function createFeedCardOverlayActionFeature(
   }
 
   function removeButtons(): void {
+    cancelPendingActions();
     for (const host of document.querySelectorAll<HTMLElement>(
       `[id^="${hostIdPrefix}"]`,
     )) {
@@ -324,7 +374,29 @@ export function createFeedCardOverlayActionFeature(
 
     document.getElementById(`${hostIdPrefix}${cardKey}`)?.remove();
     card.removeAttribute(cardKeyAttribute);
+    cancelPendingAction(cardKey);
+  }
+
+  function cancelPendingActions(): void {
+    for (const action of pendingActions.values()) {
+      action.controller.abort();
+    }
+    pendingActions.clear();
+    pendingCardKeys.clear();
+  }
+
+  function cancelPendingAction(cardKey: string): void {
+    pendingActions.get(cardKey)?.controller.abort();
+    pendingActions.delete(cardKey);
     pendingCardKeys.delete(cardKey);
+  }
+
+  function cancelDisconnectedPendingActions(): void {
+    for (const [cardKey, action] of pendingActions) {
+      if (!action.card.isConnected || getCardByKey(cardKey) !== action.card) {
+        cancelPendingAction(cardKey);
+      }
+    }
   }
 
   function getCardKey(card: HTMLElement): string {

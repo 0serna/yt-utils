@@ -5,9 +5,13 @@ type WaitOptions = {
   interval?: number;
   errorCode?: string;
   errorMessage?: string;
+  signal?: AbortSignal;
 };
 
-const DEFAULT_WAIT_OPTIONS: Required<WaitOptions> = {
+type ResolvedWaitOptions = Omit<Required<WaitOptions>, "signal"> &
+  Pick<WaitOptions, "signal">;
+
+const DEFAULT_WAIT_OPTIONS: Omit<ResolvedWaitOptions, "signal"> = {
   timeout: 5000,
   interval: 100,
   errorCode: "WAIT_FAILED",
@@ -33,15 +37,34 @@ export function waitFor<T>(
   return new Promise((resolve, reject) => {
     const startedAt = Date.now();
 
+    const abort = () => {
+      reject(
+        new DOMException("The pending action was cancelled.", "AbortError"),
+      );
+    };
+
+    if (config.signal?.aborted) {
+      abort();
+      return;
+    }
+
+    config.signal?.addEventListener("abort", abort, { once: true });
+
     const check = () => {
+      if (config.signal?.aborted) {
+        return;
+      }
+
       const value = getValue();
 
       if (value) {
+        config.signal?.removeEventListener("abort", abort);
         resolve(value as NonNullable<T>);
         return;
       }
 
       if (Date.now() - startedAt > config.timeout) {
+        config.signal?.removeEventListener("abort", abort);
         reject(createExtensionError(config.errorCode, config.errorMessage));
         return;
       }
@@ -53,7 +76,7 @@ export function waitFor<T>(
   });
 }
 
-function readWaitConfig(options: WaitOptions = {}): Required<WaitOptions> {
+function readWaitConfig(options: WaitOptions = {}): ResolvedWaitOptions {
   return { ...DEFAULT_WAIT_OPTIONS, ...options };
 }
 

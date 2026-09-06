@@ -228,6 +228,53 @@ describe("subscriptions-feed-controls feature", () => {
     feature.deactivate();
   });
 
+  it("waits for the first card's delayed menu before opening another card's menu", async () => {
+    renderCurrentLockupCard("card-1");
+    renderCurrentLockupCard("card-2");
+
+    const menuButtons = [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        'button[aria-label="More actions"]',
+      ),
+    ];
+    const menuClickSpies = menuButtons.map((button) => {
+      button.scrollIntoView = vi.fn();
+      return vi.spyOn(button, "click").mockImplementation(() => {
+        window.setTimeout(() => {
+          const item = document.createElement("div");
+          item.setAttribute("role", "menuitem");
+          item.setAttribute("aria-label", "Hide");
+          item.scrollIntoView = vi.fn();
+          makeVisible(item);
+          item.onclick = () => item.remove();
+          document.body.append(item);
+        }, 20);
+      });
+    });
+
+    const { default: feature } = await importFreshFeature();
+    feature.activate(makeFeatureContext());
+
+    const hideButtons = [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        "[id^='yt-utils-subscriptions-hide-button-']",
+      ),
+    ];
+    expect(hideButtons).toHaveLength(2);
+    hideButtons[0]?.click();
+    hideButtons[1]?.click();
+
+    await vi.waitFor(() => expect(menuClickSpies[0]).toHaveBeenCalledTimes(1));
+    expect(menuClickSpies[1]).not.toHaveBeenCalled();
+
+    await vi.waitFor(() => {
+      expect(menuClickSpies[1]).toHaveBeenCalledTimes(1);
+      expect(document.querySelectorAll("[role='menuitem']")).toHaveLength(0);
+    });
+
+    feature.deactivate();
+  });
+
   it("logs once when cards have menus but no placement surface", async () => {
     document.body.innerHTML = `
       <ytd-rich-item-renderer id="menu-only">
