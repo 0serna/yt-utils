@@ -7,6 +7,7 @@ import {
   isSpanishLanguage,
   matchesSubtitleSelection,
   type PlayerSnapshot,
+  readAudioTrackMetadata,
   readSubtitleSignature,
 } from "./youtube-player-model";
 
@@ -320,6 +321,20 @@ describe("youtube-player-model", () => {
       );
     });
 
+    it("uses the shared alias precedence for conflicting metadata", () => {
+      const snapshot: PlayerSnapshot = {
+        ...defaultSnapshot,
+        audioTrack: {
+          US: { id: "es-MX.4", name: "Spanish (Mexico)" },
+          hs: { id: "en.4", name: "English", isAutoDubbed: true },
+        },
+      };
+
+      expect(readSubtitleSignature(snapshot)).toBe(
+        "off|caption:none|audio:es-mx:spanish (mexico):auto",
+      );
+    });
+
     it("generates signature with translation language", () => {
       const captionTrack: CaptionTrack = {
         languageCode: "es",
@@ -340,6 +355,63 @@ describe("youtube-player-model", () => {
       expect(readSubtitleSignature(snapshot)).toBe(
         "on|caption:es:asr:.es:en|audio:none",
       );
+    });
+  });
+
+  describe("readAudioTrackMetadata", () => {
+    it.each(["C_", "Iw", "Z1", "US", "yG", "hs"] as const)(
+      "reads the %s metadata alias",
+      (key) => {
+        expect(
+          readAudioTrackMetadata({
+            [key]: {
+              id: "en.4",
+              name: "English",
+              isDefault: true,
+              isAutoDubbed: false,
+            },
+          }),
+        ).toEqual({
+          id: "en.4",
+          name: "English",
+          isDefault: true,
+          isAutoDubbed: false,
+        });
+      },
+    );
+
+    it("falls through each field across partially populated aliases", () => {
+      expect(
+        readAudioTrackMetadata({
+          C_: { id: "en-US.4" },
+          Iw: { name: "English (US)", isAutoDubbed: false },
+          hs: {
+            id: "es.4",
+            name: "Spanish",
+            isDefault: true,
+            isAutoDubbed: true,
+          },
+        }),
+      ).toEqual({
+        id: "en-US.4",
+        name: "English (US)",
+        isDefault: true,
+        isAutoDubbed: false,
+      });
+    });
+
+    it("uses the top-level id only after every metadata alias", () => {
+      expect(
+        readAudioTrackMetadata({
+          id: "opaque-top-level-id",
+          yG: { name: "Spanish" },
+        }),
+      ).toEqual({
+        id: "opaque-top-level-id",
+        name: "Spanish",
+        isDefault: undefined,
+        isAutoDubbed: undefined,
+      });
     });
   });
 });

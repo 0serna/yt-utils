@@ -23,7 +23,7 @@ export type CaptionTrack = {
   vssId?: string;
 };
 
-type AudioTrackMetadata = {
+export type AudioTrackMetadata = {
   id?: string;
   name?: string;
   isDefault?: boolean;
@@ -40,6 +40,8 @@ export type AudioTrack = {
   yG?: AudioTrackMetadata;
   captionTracks?: CaptionTrack[];
 };
+
+const AUDIO_TRACK_METADATA_KEYS = ["C_", "Iw", "Z1", "US", "yG", "hs"] as const;
 
 export type SubtitleSelection =
   | { mode: "off" }
@@ -170,31 +172,40 @@ function getAudioTrackSignature(track: AudioTrack | null): string {
     return "audio:none";
   }
 
+  const metadata = readAudioTrackMetadata(track);
   return [
     "audio",
-    readAudioTrackLanguagePart(track),
-    readAudioTrackNamePart(track),
-    readAudioTrackDubPart(track),
+    signaturePart(normalizeLanguageCode(metadata?.id || track.id)),
+    signaturePart(normalizeText(metadata?.name)),
+    metadata?.isAutoDubbed ? "auto" : "original",
   ].join(":");
 }
 
-function readAudioTrackMetadata(track: AudioTrack): AudioTrackMetadata | null {
-  return (
-    track.C_ || track.Iw || track.Z1 || track.hs || track.US || track.yG || null
-  );
-}
+/**
+ * YouTube renames this nested object without notice. Precedence is C_, Iw, Z1,
+ * US, yG, then hs. Each field falls through independently. The top-level id is
+ * the final id fallback because it can be an opaque identifier.
+ */
+export function readAudioTrackMetadata(
+  track: AudioTrack | null,
+): AudioTrackMetadata | null {
+  if (!track) {
+    return null;
+  }
 
-function readAudioTrackLanguagePart(track: AudioTrack): string {
-  const metadata = readAudioTrackMetadata(track);
-  return signaturePart(normalizeLanguageCode(metadata?.id || track.id));
-}
+  const aliases = AUDIO_TRACK_METADATA_KEYS.map((key) => track[key]);
+  const metadata: AudioTrackMetadata = {
+    id: readFirstValue([...aliases.map(({ id } = {}) => id), track.id]),
+    name: readFirstValue(aliases.map(({ name } = {}) => name)),
+    isDefault: readFirstValue(aliases.map(({ isDefault } = {}) => isDefault)),
+    isAutoDubbed: readFirstValue(
+      aliases.map(({ isAutoDubbed } = {}) => isAutoDubbed),
+    ),
+  };
 
-function readAudioTrackNamePart(track: AudioTrack): string {
-  return signaturePart(normalizeText(readAudioTrackMetadata(track)?.name));
-}
-
-function readAudioTrackDubPart(track: AudioTrack): string {
-  return readAudioTrackMetadata(track)?.isAutoDubbed ? "auto" : "original";
+  return Object.values(metadata).some((value) => value != null)
+    ? metadata
+    : null;
 }
 
 function signaturePart(value: string | null | undefined): string {
@@ -208,4 +219,8 @@ function normalizeText(value: string | null | undefined): string | null {
 
   const normalized = value.trim().toLowerCase();
   return normalized.length > 0 ? normalized : null;
+}
+
+function readFirstValue<T>(values: Array<T | null | undefined>): T | undefined {
+  return values.find((value): value is T => value != null);
 }

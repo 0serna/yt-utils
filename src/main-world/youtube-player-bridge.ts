@@ -7,6 +7,7 @@ import type {
   SubtitleSelection,
   TranslationLanguage,
 } from "@shared/youtube-player-model";
+import { readAudioTrackMetadata } from "@shared/youtube-player-model";
 
 type PlayerResponse = {
   captions?: {
@@ -265,38 +266,11 @@ function readUrlVideoId(): string | null {
 }
 
 function inferAudioLanguage(audioTrack: AudioTrack | null): string | null {
-  const id = readAudioTrackId(audioTrack);
-  const normalized = normalizeLanguageCode(id);
+  const metadata = readAudioTrackMetadata(audioTrack);
+  const normalized = normalizeLanguageCode(metadata?.id);
   return isKnownLanguageCode(normalized)
     ? normalized
-    : inferLanguageFromName(readAudioTrackName(audioTrack));
-}
-
-function readAudioTrackId(
-  audioTrack: AudioTrack | null,
-): string | null | undefined {
-  return readFirstValue([
-    audioTrack?.C_?.id,
-    audioTrack?.Iw?.id,
-    audioTrack?.Z1?.id,
-    audioTrack?.US?.id,
-    audioTrack?.yG?.id,
-    audioTrack?.hs?.id,
-    audioTrack?.id,
-  ]);
-}
-
-function readAudioTrackName(
-  audioTrack: AudioTrack | null,
-): string | null | undefined {
-  return readFirstValue([
-    audioTrack?.C_?.name,
-    audioTrack?.Iw?.name,
-    audioTrack?.Z1?.name,
-    audioTrack?.US?.name,
-    audioTrack?.yG?.name,
-    audioTrack?.hs?.name,
-  ]);
+    : inferLanguageFromName(metadata?.name);
 }
 
 function readFirstValue<T>(values: Array<T | null | undefined>): T | null {

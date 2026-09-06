@@ -405,6 +405,27 @@ describe("youtube-player-bridge", () => {
       expect(snapshot.audioLanguage).toBe("es-us");
     });
 
+    it("infers audio language from mixed partially populated aliases", async () => {
+      const fakePlayer = createFakePlayer({
+        videoId: "mixed-audio-metadata-video",
+        audioTrack: {
+          C_: { name: "English" },
+          US: { id: "es-MX.4" },
+          hs: { id: "en.4", name: "Spanish" },
+        },
+        subtitlesOn: false,
+      });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-3h",
+        action: "readSnapshot",
+      });
+
+      expect(requireSnapshot(response.result).audioLanguage).toBe("es-mx");
+    });
+
     it("does not expose opaque audio track ids as audio language", async () => {
       const fakePlayer = createFakePlayer({
         videoId: "opaque-audio-id-video",
