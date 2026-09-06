@@ -25,6 +25,7 @@ const ASK_SCROLL_CONTAINER_SELECTOR =
   'ytd-engagement-panel-section-list-renderer[target-id="PAyouchat"] yt-section-list-renderer';
 const POLL_INTERVAL_MS = 500;
 const SYNC_TIMEOUT_MS = 5000;
+const INITIAL_ASK_DELAY_MS = 3000;
 const PANEL_SETTLE_DELAY_MS = 1500;
 const VIDEO_WATCH_INTERVAL_MS = 500;
 const ASK_LABELS = [/\bask\b/i, /\bpreguntar\b/i];
@@ -222,6 +223,8 @@ async function syncValidatedVideoPanel(
   session: WatchSession,
 ): Promise<void> {
   if (!session.isCurrent()) return;
+  if (!(await waitForInitialAskDelay(session))) return;
+
   const askState = readAskPanelState();
 
   if (!prepareVideoState(videoId, askState.expanded)) {
@@ -575,7 +578,9 @@ async function tryOpenAsk(
     return true;
   }
 
-  const askControl = await waitForAskButtonOrExpandedPanel();
+  const askPanel = findAskPanel();
+  const askControl =
+    askPanel && isAskPanelExpanded(askPanel) ? askPanel : findAskButton();
   if (!askControl) {
     return false;
   }
@@ -637,31 +642,13 @@ async function completeExpandedAsk(
   return true;
 }
 
-async function waitForAskButtonOrExpandedPanel(): Promise<HTMLElement | null> {
-  const immediateAskButton = findAskButton();
-  if (immediateAskButton) {
-    return immediateAskButton;
+async function waitForInitialAskDelay(session: WatchSession): Promise<boolean> {
+  const remainingDelay = activatedAt + INITIAL_ASK_DELAY_MS - Date.now();
+  if (remainingDelay > 0) {
+    await delay(remainingDelay);
   }
 
-  try {
-    return await waitFor(
-      () => {
-        if (isAskPanelCurrentlyExpanded()) {
-          return findAskPanel();
-        }
-
-        return findAskButton();
-      },
-      {
-        timeout: SYNC_TIMEOUT_MS,
-        interval: 100,
-        errorCode: "ASK_NOT_AVAILABLE",
-        errorMessage: "Timed out waiting for Ask to become available.",
-      },
-    );
-  } catch {
-    return null;
-  }
+  return session.isCurrent();
 }
 
 async function promptCurrentVideo(

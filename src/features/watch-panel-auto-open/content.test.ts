@@ -350,20 +350,20 @@ describe("watch-panel-auto-open feature", () => {
       feature.deactivate();
     });
 
-    it("does not click a delayed Ask control after navigation", async () => {
+    it("does not attempt Ask after navigation during the initial delay", async () => {
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
-      const { findButton, clickElement, waitFor } = await import(
+      const { findButton, clickElement, delay } = await import(
         "@shared/youtube-dom"
       );
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
       vi.mocked(findButton).mockReturnValue(null);
-      const pending = Promise.withResolvers<HTMLElement>();
-      vi.mocked(waitFor).mockReturnValue(pending.promise);
+      const pending = Promise.withResolvers<void>();
+      vi.mocked(delay).mockReturnValueOnce(pending.promise);
       const feature = await setupWatchPage();
       feature.activate(makeFeatureContext());
-      await vi.waitFor(() => expect(waitFor).toHaveBeenCalled());
+      await vi.waitFor(() => expect(delay).toHaveBeenCalled());
       mockLocationSearch = "?v=next";
-      pending.resolve(document.createElement("button"));
+      pending.resolve();
       await new Promise((resolve) => window.setTimeout(resolve, 0));
       expect(clickElement).not.toHaveBeenCalled();
       feature.deactivate();
@@ -567,7 +567,7 @@ describe("watch-panel-auto-open feature", () => {
       askPanel.remove();
     });
 
-    it("falls back to chapters when ask is not available within the wait window", async () => {
+    it("falls back to chapters after the fixed Ask delay", async () => {
       const chaptersPanel = appendEngagementPanel(
         "engagement-panel-macro-markers",
         "ENGAGEMENT_PANEL_VISIBILITY_HIDDEN",
@@ -578,9 +578,8 @@ describe("watch-panel-auto-open feature", () => {
       const { readPlayerSnapshot } = await import("@shared/youtube-player");
       vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
 
-      const { findButton, clickElement, waitFor, isVisible } = await import(
-        "@shared/youtube-dom"
-      );
+      const { findButton, clickElement, waitFor, isVisible, delay } =
+        await import("@shared/youtube-dom");
       vi.mocked(findButton).mockImplementation((_root, matchers) =>
         matchesButtonLabel(matchers, "Chapters") ? chaptersButton : null,
       );
@@ -593,12 +592,9 @@ describe("watch-panel-auto-open feature", () => {
         }
       });
       vi.mocked(isVisible).mockImplementation((el) => el === chapterItem);
-      vi.mocked(waitFor).mockImplementation((callback, options) => {
-        if (options?.errorCode === "ASK_NOT_AVAILABLE") {
-          return Promise.reject(new Error("ask timeout"));
-        }
-        return Promise.resolve(callback() as HTMLElement);
-      });
+      vi.mocked(waitFor).mockImplementation((callback) =>
+        Promise.resolve(callback() as HTMLElement),
+      );
 
       const feature = await setupWatchPage();
       feature.activate(makeFeatureContext());
@@ -609,6 +605,14 @@ describe("watch-panel-auto-open feature", () => {
         },
         { timeout: 2000 },
       );
+
+      expect(
+        vi
+          .mocked(delay)
+          .mock.calls.some(
+            ([milliseconds]) => milliseconds >= 2900 && milliseconds <= 3000,
+          ),
+      ).toBe(true);
 
       chaptersPanel.remove();
     });
@@ -1136,12 +1140,9 @@ describe("watch-panel-auto-open feature", () => {
         if (el === chapterItem || el === chatInput) return true;
         return false;
       });
-      vi.mocked(waitFor).mockImplementation((callback, options) => {
-        if (options?.errorCode === "ASK_NOT_AVAILABLE") {
-          return Promise.reject(new Error("ask timeout"));
-        }
-        return Promise.resolve(callback() as HTMLElement);
-      });
+      vi.mocked(waitFor).mockImplementation((callback) =>
+        Promise.resolve(callback() as HTMLElement),
+      );
 
       const feature = await setupWatchPage();
       feature.activate(makeFeatureContext());
