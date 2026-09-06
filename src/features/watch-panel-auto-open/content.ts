@@ -41,6 +41,7 @@ const CLOSE_LABELS = [
   /\bocultar\b.*\bchat\b/i,
 ];
 const CHAPTER_ITEM_SELECTOR = "ytd-macro-markers-list-item-renderer";
+const PLAYER_CHAPTERS_BUTTON_SELECTOR = "button.ytp-chapter-title";
 const CHAT_INPUT_SELECTOR =
   'textarea.chatInputViewModelChatInput, textarea[placeholder="Ask a question..."], textarea[placeholder="Haz una pregunta..."]';
 const SEND_BUTTON_SELECTOR = 'button[aria-label="Send"]';
@@ -196,7 +197,13 @@ function findVisibleChapterItems(): HTMLElement[] {
 }
 
 function findChaptersButton(): HTMLElement | null {
-  return findButton(document, CHAPTERS_LABELS);
+  const chaptersButton = findButton(document, CHAPTERS_LABELS);
+  if (chaptersButton) return chaptersButton;
+
+  const button = document.querySelector<HTMLElement>(
+    PLAYER_CHAPTERS_BUTTON_SELECTOR,
+  );
+  return button && isVisible(button) ? button : null;
 }
 
 function findAskButton(): HTMLElement | null {

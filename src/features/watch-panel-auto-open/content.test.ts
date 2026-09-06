@@ -617,6 +617,54 @@ describe("watch-panel-auto-open feature", () => {
       chaptersPanel.remove();
     });
 
+    it("opens chapters from the player chapter control when the Chapters chip is hidden", async () => {
+      const chaptersPanel = appendEngagementPanel(
+        "engagement-panel-macro-markers",
+        "ENGAGEMENT_PANEL_VISIBILITY_HIDDEN",
+      );
+      const chapterItem = appendChapterItem(chaptersPanel);
+      const playerChaptersButton = document.createElement("button");
+      playerChaptersButton.className = "ytp-chapter-title";
+      playerChaptersButton.textContent = "Intro";
+      document.body.appendChild(playerChaptersButton);
+
+      const { readPlayerSnapshot } = await import("@shared/youtube-player");
+      vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
+
+      const { findButton, clickElement, waitFor, isVisible } = await import(
+        "@shared/youtube-dom"
+      );
+      vi.mocked(findButton).mockReturnValue(null as unknown as HTMLElement);
+      vi.mocked(clickElement).mockImplementation((element) => {
+        if (element === playerChaptersButton) {
+          chaptersPanel.setAttribute(
+            "visibility",
+            "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
+          );
+        }
+      });
+      vi.mocked(isVisible).mockImplementation(
+        (element) =>
+          element === playerChaptersButton || element === chapterItem,
+      );
+      vi.mocked(waitFor).mockImplementation((callback) =>
+        Promise.resolve(callback() as HTMLElement),
+      );
+
+      const feature = await setupWatchPage();
+      feature.activate(makeFeatureContext());
+
+      await vi.waitFor(
+        () => {
+          expect(clickElement).toHaveBeenCalledWith(playerChaptersButton);
+        },
+        { timeout: 2000 },
+      );
+
+      playerChaptersButton.remove();
+      chaptersPanel.remove();
+    });
+
     it("falls back to ask when only an ambiguous In this video entrypoint is available", async () => {
       const panel = appendEngagementPanel(
         "PAyouchat",
