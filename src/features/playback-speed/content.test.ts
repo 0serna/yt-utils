@@ -221,6 +221,34 @@ describe("playback-speed feature", () => {
     });
   });
 
+  it("logs when Spanish audio appears after an English fallback", async () => {
+    const { readPlayerSnapshot } = await import("@shared/youtube-player");
+    vi.mocked(readPlayerSnapshot)
+      .mockResolvedValueOnce(
+        snapshot("test-video", null, [
+          { languageCode: "en", kind: "asr", vssId: "a.en" },
+        ]),
+      )
+      .mockResolvedValue(snapshot("test-video", "es"));
+
+    const context = makeFeatureContext();
+    const feature = await importFreshFeature();
+    activeFeature = feature.default;
+    feature.default.activate(context);
+
+    await vi.waitFor(
+      () => {
+        expect(context.logger.diagnostic).toHaveBeenCalledWith(
+          expect.objectContaining({
+            detectedAudioLanguage: "es",
+            action: "skip-initialized",
+          }),
+        );
+      },
+      { timeout: 2000 },
+    );
+  });
+
   it("falls back to Spanish ASR caption metadata when audio language is unavailable", async () => {
     const { readPlayerSnapshot } = await import("@shared/youtube-player");
     vi.mocked(readPlayerSnapshot).mockResolvedValue(

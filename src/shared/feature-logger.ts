@@ -10,10 +10,11 @@ let appendQueue: Promise<void> = Promise.resolve();
 export interface LogEntry {
   timestamp: string;
   feature: string;
-  event: "activation" | "deactivation" | "error";
+  event: "activation" | "deactivation" | "diagnostic" | "error";
   phase?: "activate" | "deactivate" | "runtime";
   url: string;
   videoId?: string;
+  details?: Record<string, unknown>;
   error?: {
     code?: string;
     message: string;
@@ -29,6 +30,18 @@ export function createFeatureLogger(featureName: string): FeatureLogger {
 
     deactivation(): void {
       enqueueWrite(buildLogEntry(featureName, "deactivation"));
+    },
+
+    diagnostic(details): void {
+      const context = captureUrlContext();
+      enqueueWrite({
+        timestamp: new Date().toISOString(),
+        feature: featureName,
+        event: "diagnostic",
+        url: context.url,
+        videoId: context.videoId,
+        details,
+      });
     },
 
     error(error: unknown, meta?: FeatureLoggerMeta): void {

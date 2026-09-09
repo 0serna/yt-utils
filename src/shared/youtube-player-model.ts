@@ -35,13 +35,22 @@ export type AudioTrack = {
   C_?: AudioTrackMetadata;
   Iw?: AudioTrackMetadata;
   Z1?: AudioTrackMetadata;
+  s1?: AudioTrackMetadata;
   hs?: AudioTrackMetadata;
   US?: AudioTrackMetadata;
   yG?: AudioTrackMetadata;
   captionTracks?: CaptionTrack[];
 };
 
-const AUDIO_TRACK_METADATA_KEYS = ["C_", "Iw", "Z1", "US", "yG", "hs"] as const;
+const AUDIO_TRACK_METADATA_KEYS = [
+  "C_",
+  "Iw",
+  "Z1",
+  "s1",
+  "US",
+  "yG",
+  "hs",
+] as const;
 
 export type SubtitleSelection =
   | { mode: "off" }
@@ -56,6 +65,50 @@ export type PlayerSnapshot = {
   currentCaptionTrack: CaptionTrack | null;
   subtitlesOn: boolean;
 };
+
+export function summarizePlayerSnapshot(
+  snapshot: PlayerSnapshot,
+): Record<string, unknown> {
+  return {
+    audioLanguage: snapshot.audioLanguage,
+    audioTrack: summarizeAudioTrack(snapshot.audioTrack),
+    captionTracks: snapshot.captionTracks.map(summarizeCaptionTrack),
+    currentCaptionTrack: summarizeCaptionTrack(snapshot.currentCaptionTrack),
+    translationLanguages: snapshot.translationLanguages.map(
+      ({ languageCode, languageName }) => ({ languageCode, languageName }),
+    ),
+    subtitlesOn: snapshot.subtitlesOn,
+  };
+}
+
+export function summarizeCaptionTrack(
+  track: CaptionTrack | null,
+): Record<string, unknown> | null {
+  if (!track) {
+    return null;
+  }
+
+  return {
+    languageCode: track.languageCode,
+    kind: track.kind,
+    vssId: track.vssId,
+    translationLanguageCode: track.translationLanguage?.languageCode,
+  };
+}
+
+function summarizeAudioTrack(
+  track: AudioTrack | null,
+): Record<string, unknown> | null {
+  if (!track) {
+    return null;
+  }
+
+  const { captionTracks: _captionTracks, ...metadata } = track;
+  return {
+    ...metadata,
+    recognizedMetadata: readAudioTrackMetadata(track),
+  };
+}
 
 export type BridgeRequest = {
   source: typeof BRIDGE_SOURCE;
@@ -183,8 +236,8 @@ function getAudioTrackSignature(track: AudioTrack | null): string {
 
 /**
  * YouTube renames this nested object without notice. Precedence is C_, Iw, Z1,
- * US, yG, then hs. Each field falls through independently. The top-level id is
- * the final id fallback because it can be an opaque identifier.
+ * s1, US, yG, then hs. Each field falls through independently. The top-level
+ * id is the final id fallback because it can be an opaque identifier.
  */
 export function readAudioTrackMetadata(
   track: AudioTrack | null,

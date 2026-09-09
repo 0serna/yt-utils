@@ -19,6 +19,7 @@ export function makeFeatureContext(
     logger: {
       activation: vi.fn(),
       deactivation: vi.fn(),
+      diagnostic: vi.fn(),
       error: vi.fn(),
     },
     ...overrides,

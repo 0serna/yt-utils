@@ -9,6 +9,10 @@ import {
   waitForSubtitleSelection,
 } from "@shared/youtube-player";
 import {
+  summarizeCaptionTrack,
+  summarizePlayerSnapshot,
+} from "@shared/youtube-player-model";
+import {
   createWatchSessionController,
   type WatchSession,
 } from "@shared/youtube-session";
@@ -22,18 +26,20 @@ const watchSessions = createWatchSessionController();
 let appliedStateByVideo = new Map<string, string>();
 let overriddenVideos = new Set<string>();
 let rendererFallbackAttempted = new Set<string>();
+let lastLoggedDiagnostic = "";
 
 const audioLanguageSubtitlePolicyFeature: Feature = {
   name: "audio-language-subtitle-policy",
   isWatchPage: true,
 
-  activate(_context: FeatureContext): void {
+  activate(context: FeatureContext): void {
     watchSessions.activate();
     appliedStateByVideo = new Map();
     overriddenVideos = new Set();
     rendererFallbackAttempted = new Set();
-    startPolling();
-    void watchSessions.run(syncPolicy);
+    lastLoggedDiagnostic = "";
+    startPolling(context.logger);
+    void watchSessions.run((session) => syncPolicy(session, context.logger));
   },
 
   deactivate(): void {
@@ -42,18 +48,19 @@ const audioLanguageSubtitlePolicyFeature: Feature = {
     appliedStateByVideo.clear();
     overriddenVideos.clear();
     rendererFallbackAttempted.clear();
+    lastLoggedDiagnostic = "";
   },
 };
 
 export default audioLanguageSubtitlePolicyFeature;
 
-function startPolling(): void {
+function startPolling(logger: FeatureContext["logger"]): void {
   if (pollTimer !== null) {
     return;
   }
 
   pollTimer = window.setInterval(() => {
-    void watchSessions.run(syncPolicy);
+    void watchSessions.run((session) => syncPolicy(session, logger));
   }, POLL_INTERVAL_MS);
 }
 
@@ -64,14 +71,30 @@ function stopPolling(): void {
   }
 }
 
-async function syncPolicy(session: WatchSession): Promise<void> {
+async function syncPolicy(
+  session: WatchSession,
+  logger: FeatureContext["logger"],
+): Promise<void> {
   const ctx = await getPolicyContext(session);
   if (!ctx || !session.isCurrent()) {
     return;
   }
 
   const appliedSignature = appliedStateByVideo.get(ctx.videoId);
-  if (isPolicyOverridden(ctx.videoId, ctx.currentSignature, appliedSignature)) {
+  const desiredSelection = determineSubtitleSelection(ctx.snapshot);
+  const overridden = isPolicyOverridden(
+    ctx.videoId,
+    ctx.currentSignature,
+    appliedSignature,
+  );
+  logPolicyDiagnostic(
+    ctx,
+    desiredSelection,
+    appliedSignature,
+    overridden,
+    logger,
+  );
+  if (overridden) {
     return;
   }
 
@@ -82,10 +105,46 @@ async function syncPolicy(session: WatchSession): Promise<void> {
   await ensureSubtitleSelection(
     ctx.videoId,
     ctx.snapshot,
-    determineSubtitleSelection(ctx.snapshot),
+    desiredSelection,
     ctx.currentSignature,
     session,
   );
+}
+
+function logPolicyDiagnostic(
+  ctx: PolicyContext,
+  desiredSelection: SubtitleSelection,
+  appliedSignature: string | undefined,
+  overridden: boolean,
+  logger: FeatureContext["logger"],
+): void {
+  const details = {
+    stage: "subtitle-policy",
+    action: overridden
+      ? "skip-overridden"
+      : appliedSignature
+        ? "skip-applied"
+        : "apply",
+    currentSignature: ctx.currentSignature,
+    appliedSignature: appliedSignature ?? null,
+    overridden,
+    desiredSelection:
+      desiredSelection.mode === "track"
+        ? {
+            mode: desiredSelection.mode,
+            track: summarizeCaptionTrack(desiredSelection.track),
+          }
+        : desiredSelection,
+    ...summarizePlayerSnapshot(ctx.snapshot),
+  };
+  const key = JSON.stringify(details);
+
+  if (key === lastLoggedDiagnostic) {
+    return;
+  }
+
+  lastLoggedDiagnostic = key;
+  logger.diagnostic(details);
 }
 
 type PolicyContext = {

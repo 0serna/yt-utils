@@ -17,6 +17,7 @@ import {
 } from "@shared/youtube-dom";
 import type { PlayerSnapshot } from "@shared/youtube-player";
 import { isEnglishLanguage, isSpanishLanguage } from "@shared/youtube-player";
+import { summarizePlayerSnapshot } from "@shared/youtube-player-model";
 import {
   createWatchSessionController,
   type WatchSession,
@@ -35,21 +36,25 @@ let userInteracted = false;
 let pollTimer: number | null = null;
 const watchSessions = createWatchSessionController();
 let initializedVideoId: string | null = null;
+let lastLoggedDiagnostic = "";
 
 const playbackSpeedFeature: Feature = {
   name: "playback-speed",
   isWatchPage: true,
 
-  activate(_context: FeatureContext): void {
+  activate(context: FeatureContext): void {
     watchSessions.activate();
     localSpeed = PLAYBACK_SPEED_DEFAULT;
     userInteracted = false;
     initializedVideoId = null;
+    lastLoggedDiagnostic = "";
     ensureSpeedControl();
     applySpeedToVideo();
     observePage();
-    startPolling();
-    void watchSessions.run(syncSpeedForCurrentVideo);
+    startPolling(context.logger);
+    void watchSessions.run((session) =>
+      syncSpeedForCurrentVideo(session, context.logger),
+    );
   },
 
   deactivate(): void {
@@ -60,6 +65,7 @@ const playbackSpeedFeature: Feature = {
     }
     removeSpeedControl();
     initializedVideoId = null;
+    lastLoggedDiagnostic = "";
     stopPolling();
     stopObserving();
   },
@@ -165,13 +171,15 @@ function syncSpeedButton(buttonId: string, atLimit: boolean): void {
   button.style.cursor = atLimit ? "default" : "pointer";
 }
 
-function startPolling(): void {
+function startPolling(logger: FeatureContext["logger"]): void {
   if (pollTimer !== null) {
     return;
   }
 
   pollTimer = window.setInterval(() => {
-    void watchSessions.run(syncSpeedForCurrentVideo);
+    void watchSessions.run((session) =>
+      syncSpeedForCurrentVideo(session, logger),
+    );
   }, 500);
 }
 
@@ -270,13 +278,47 @@ function queueEnsureSpeedControl(): void {
   });
 }
 
-async function syncSpeedForCurrentVideo(session: WatchSession): Promise<void> {
+async function syncSpeedForCurrentVideo(
+  session: WatchSession,
+  logger: FeatureContext["logger"],
+): Promise<void> {
   if (userInteracted) return;
 
   const snapshot = await session.readSnapshot();
   if (!snapshot || !session.isCurrent() || userInteracted) return;
 
+  logSpeedDiagnostic(snapshot, logger);
   applySpeedForLanguage(snapshot);
+}
+
+function logSpeedDiagnostic(
+  snapshot: PlayerSnapshot,
+  logger: FeatureContext["logger"],
+): void {
+  const speedLanguage = readSpeedLanguage(snapshot);
+  const targetSpeed = speedLanguage ? getSpeedForLanguage(speedLanguage) : null;
+  const alreadyInitialized = initializedVideoId === snapshot.videoId;
+  const details = {
+    stage: "speed-decision",
+    action: alreadyInitialized
+      ? "skip-initialized"
+      : speedLanguage
+        ? "apply"
+        : "wait-for-language",
+    detectedAudioLanguage: snapshot.audioLanguage,
+    selectedLanguage: speedLanguage,
+    targetSpeed,
+    initializedVideoId,
+    ...summarizePlayerSnapshot(snapshot),
+  };
+  const key = JSON.stringify(details);
+
+  if (key === lastLoggedDiagnostic) {
+    return;
+  }
+
+  lastLoggedDiagnostic = key;
+  logger.diagnostic(details);
 }
 
 function applySpeedForLanguage(snapshot: PlayerSnapshot): void {

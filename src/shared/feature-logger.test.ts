@@ -148,6 +148,18 @@ describe("createFeatureLogger", () => {
     expect(msg?.entry.event).toBe("deactivation");
   });
 
+  it("diagnostic sends details", () => {
+    const logger = createFeatureLogger("test-feature");
+    logger.diagnostic({ stage: "snapshot", audioLanguage: null });
+
+    const msg = getLastSendMessageCall();
+    expect(msg?.entry.event).toBe("diagnostic");
+    expect(msg?.entry.details).toEqual({
+      stage: "snapshot",
+      audioLanguage: null,
+    });
+  });
+
   it("error sends entry and echoes to console", () => {
     const logger = createFeatureLogger("test-feature");
     const err = new Error("boom");

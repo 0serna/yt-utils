@@ -9,6 +9,7 @@ export interface Feature {
 export interface FeatureLogger {
   activation(): void;
   deactivation(): void;
+  diagnostic(details: Record<string, unknown>): void;
   error(error: unknown, meta?: FeatureLoggerMeta): void;
 }
 

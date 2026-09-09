@@ -359,7 +359,7 @@ describe("youtube-player-model", () => {
   });
 
   describe("readAudioTrackMetadata", () => {
-    it.each(["C_", "Iw", "Z1", "US", "yG", "hs"] as const)(
+    it.each(["C_", "Iw", "Z1", "s1", "US", "yG", "hs"] as const)(
       "reads the %s metadata alias",
       (key) => {
         expect(

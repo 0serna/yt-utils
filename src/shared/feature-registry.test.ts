@@ -9,6 +9,7 @@ vi.mock("./feature-logger", () => ({
   createFeatureLogger: vi.fn((_name: string) => ({
     activation: vi.fn(),
     deactivation: vi.fn(),
+    diagnostic: vi.fn(),
     error: vi.fn(),
   })),
 }));
