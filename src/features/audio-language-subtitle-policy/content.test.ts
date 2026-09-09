@@ -302,6 +302,49 @@ describe("audio-language-subtitle-policy feature", () => {
     );
   });
 
+  it("reapplies the policy when the player changes state during initialization", async () => {
+    const initialSnapshot = snapshot("test-video");
+    const changedSnapshot: PlayerSnapshot = {
+      ...initialSnapshot,
+      subtitlesOn: true,
+      currentCaptionTrack: { languageCode: "en", vssId: "a.en" },
+    };
+
+    const { readPlayerSnapshot } = await import("@shared/youtube-player");
+    vi.mocked(readPlayerSnapshot)
+      .mockResolvedValueOnce(initialSnapshot)
+      .mockResolvedValue(changedSnapshot);
+
+    const { readSubtitleSignature, determineSubtitleSelection } = await import(
+      "@shared/youtube-player"
+    );
+    vi.mocked(readSubtitleSignature)
+      .mockReturnValueOnce("sig-off")
+      .mockReturnValue("sig-on");
+    vi.mocked(determineSubtitleSelection).mockReturnValue({ mode: "off" });
+
+    const { matchesSubtitleSelection, applySubtitleSelection } = await import(
+      "@shared/youtube-player"
+    );
+    vi.mocked(matchesSubtitleSelection)
+      .mockReturnValueOnce(true)
+      .mockReturnValue(false);
+    vi.mocked(applySubtitleSelection).mockResolvedValue(true);
+
+    const { waitForSubtitleSelection } = await import("@shared/youtube-player");
+    vi.mocked(waitForSubtitleSelection).mockResolvedValue(true);
+
+    const feature = await importFreshFeature();
+    feature.default.activate(makeFeatureContext());
+
+    await vi.waitFor(
+      () => {
+        expect(applySubtitleSelection).toHaveBeenCalledWith({ mode: "off" });
+      },
+      { timeout: 3000 },
+    );
+  });
+
   describe("renderer fallback", () => {
     let captionContainer: HTMLDivElement;
     let buttonContainer: HTMLDivElement;

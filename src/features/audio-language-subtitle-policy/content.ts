@@ -18,12 +18,13 @@ import {
 } from "@shared/youtube-session";
 
 const POLL_INTERVAL_MS = 500;
-const RENDERER_FALLBACK_GRACE_MS = 3000;
+const PLAYER_SETTLE_GRACE_MS = 3000;
 const UI_TOGGLE_DELAY_MS = 200;
 
 let pollTimer: number | null = null;
 const watchSessions = createWatchSessionController();
 let appliedStateByVideo = new Map<string, string>();
+let appliedAtByVideo = new Map<string, number>();
 let overriddenVideos = new Set<string>();
 let rendererFallbackAttempted = new Set<string>();
 let lastLoggedDiagnostic = "";
@@ -35,6 +36,7 @@ const audioLanguageSubtitlePolicyFeature: Feature = {
   activate(context: FeatureContext): void {
     watchSessions.activate();
     appliedStateByVideo = new Map();
+    appliedAtByVideo = new Map();
     overriddenVideos = new Set();
     rendererFallbackAttempted = new Set();
     lastLoggedDiagnostic = "";
@@ -46,6 +48,7 @@ const audioLanguageSubtitlePolicyFeature: Feature = {
     watchSessions.deactivate();
     stopPolling();
     appliedStateByVideo.clear();
+    appliedAtByVideo.clear();
     overriddenVideos.clear();
     rendererFallbackAttempted.clear();
     lastLoggedDiagnostic = "";
@@ -98,7 +101,7 @@ async function syncPolicy(
     return;
   }
 
-  if (appliedSignature) {
+  if (appliedSignature && ctx.currentSignature === appliedSignature) {
     return;
   }
 
@@ -122,9 +125,11 @@ function logPolicyDiagnostic(
     stage: "subtitle-policy",
     action: overridden
       ? "skip-overridden"
-      : appliedSignature
+      : appliedSignature && ctx.currentSignature === appliedSignature
         ? "skip-applied"
-        : "apply",
+        : appliedSignature
+          ? "reapply"
+          : "apply",
     currentSignature: ctx.currentSignature,
     appliedSignature: appliedSignature ?? null,
     overridden,
@@ -193,6 +198,11 @@ function isPolicyOverridden(
   }
 
   if (appliedSignature && currentSignature !== appliedSignature) {
+    const appliedAt = appliedAtByVideo.get(videoId);
+    if (appliedAt && Date.now() - appliedAt < PLAYER_SETTLE_GRACE_MS) {
+      return false;
+    }
+
     overriddenVideos.add(videoId);
     return true;
   }
@@ -316,6 +326,7 @@ async function waitForSelectionApply(
 
 function rememberAppliedSignature(videoId: string, signature: string): void {
   appliedStateByVideo.set(videoId, signature);
+  appliedAtByVideo.set(videoId, appliedAtByVideo.get(videoId) ?? Date.now());
 }
 
 function hasRenderedCaptionText(): boolean {
@@ -344,7 +355,7 @@ async function scheduleRendererFallback(
     return;
   }
 
-  await delay(RENDERER_FALLBACK_GRACE_MS);
+  await delay(PLAYER_SETTLE_GRACE_MS);
 
   if (!session.isCurrent()) {
     return;
