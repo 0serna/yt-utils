@@ -145,6 +145,26 @@ describe("playback-speed feature", () => {
     });
   });
 
+  it("initializes Spanish videos from content metadata when audio language is unknown", async () => {
+    const { readPlayerSnapshot } = await import("@shared/youtube-player");
+    vi.mocked(readPlayerSnapshot).mockResolvedValue({
+      ...snapshot("test-video", null),
+      contentLanguage: "es",
+    });
+
+    const feature = await importFreshFeature();
+    activeFeature = feature.default;
+    feature.default.activate(makeFeatureContext());
+
+    const video = requireValue(
+      document.querySelector("video"),
+      "missing video",
+    );
+    await vi.waitFor(() => expect(video.playbackRate).toBe(1.1), {
+      timeout: 2000,
+    });
+  });
+
   it("does not initialize speed while URL and player video IDs differ", async () => {
     const { readPlayerSnapshot } = await import("@shared/youtube-player");
     vi.mocked(readPlayerSnapshot).mockResolvedValue(

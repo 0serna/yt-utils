@@ -18,6 +18,8 @@ type PlayerResponse = {
   videoDetails?: {
     videoId?: string;
     video_id?: string;
+    title?: string;
+    shortDescription?: string;
   };
 };
 
@@ -133,6 +135,7 @@ function buildPlayerSnapshot(
     videoId: readVideoId(inputs.videoData, inputs.response),
     audioTrack: inputs.audioTrack,
     audioLanguage: inferAudioLanguage(inputs.audioTrack),
+    contentLanguage: inferContentLanguage(inputs.response),
     captionTracks: inputs.captionTracks,
     translationLanguages: inputs.translationLanguages,
     currentCaptionTrack: inputs.currentCaptionTrack,
@@ -273,6 +276,68 @@ function inferAudioLanguage(audioTrack: AudioTrack | null): string | null {
     : inferLanguageFromName(metadata?.name);
 }
 
+const SPANISH_MARKERS = new Set([
+  "asi",
+  "ciencia",
+  "como",
+  "con",
+  "cual",
+  "de",
+  "dias",
+  "el",
+  "en",
+  "exito",
+  "falla",
+  "formas",
+  "historias",
+  "la",
+  "las",
+  "los",
+  "para",
+  "por",
+  "que",
+  "todos",
+  "una",
+]);
+
+const ENGLISH_MARKERS = new Set([
+  "about",
+  "and",
+  "are",
+  "for",
+  "from",
+  "how",
+  "is",
+  "of",
+  "on",
+  "that",
+  "the",
+  "this",
+  "to",
+  "what",
+  "when",
+  "where",
+  "with",
+  "why",
+  "you",
+  "your",
+]);
+
+function inferContentLanguage(response: PlayerResponse | null): string | null {
+  const text = [
+    response?.videoDetails?.title,
+    response?.videoDetails?.shortDescription,
+  ]
+    .filter((value): value is string => Boolean(value?.trim()))
+    .join(" ");
+  const words = normalizeLanguageText(text).match(/[a-z]+/g) ?? [];
+  const spanishScore = words.filter((word) => SPANISH_MARKERS.has(word)).length;
+  const englishScore = words.filter((word) => ENGLISH_MARKERS.has(word)).length;
+
+  // ponytail: metadata word heuristic, use transcript detection if false positives matter.
+  return spanishScore >= 3 && spanishScore > englishScore + 1 ? "es" : null;
+}
+
 function readFirstValue<T>(values: Array<T | null | undefined>): T | null {
   return values.find((value): value is T => value != null) ?? null;
 }
@@ -319,6 +384,13 @@ function normalizeLanguageCode(
   }
 
   return normalized.split(".", 1)[0].replaceAll("_", "-");
+}
+
+function normalizeLanguageText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
 }
 
 function isNonEmptyObject(value: unknown): value is Record<string, unknown> {

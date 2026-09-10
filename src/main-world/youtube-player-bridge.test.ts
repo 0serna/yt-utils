@@ -70,6 +70,8 @@ describe("youtube-player-bridge", () => {
     videoId?: string;
     responseVideoId?: string;
     videoDataVideoId?: string;
+    title?: string;
+    shortDescription?: string;
     captionTracks?: unknown[];
     audioTrack?: unknown;
     subtitlesOn?: boolean;
@@ -88,6 +90,8 @@ describe("youtube-player-bridge", () => {
       },
       videoDetails: {
         videoId: options.responseVideoId ?? options.videoId ?? "test-video-id",
+        title: options.title,
+        shortDescription: options.shortDescription,
       },
     });
     player.getVideoData = () => ({
@@ -576,6 +580,31 @@ describe("youtube-player-bridge", () => {
       const snapshot = requireSnapshot(response.result);
       expect(snapshot).not.toBeNull();
       expect(snapshot.audioLanguage).toBe("en");
+    });
+
+    it("infers Spanish content language from metadata when audio language is unknown", async () => {
+      const fakePlayer = createFakePlayer({
+        videoId: "spanish-content-video",
+        title: "Platzi Live",
+        shortDescription:
+          "Las formas en las que falla tu IA. Por qué la ciencia desconfía de la IA y aun así la usa todos los días.",
+        audioTrack: {
+          id: "und",
+          s1: { id: "und", name: "Default" },
+        },
+        subtitlesOn: false,
+      });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-4d",
+        action: "readSnapshot",
+      });
+
+      const snapshot = requireSnapshot(response.result);
+      expect(snapshot.audioLanguage).toBeNull();
+      expect(snapshot.contentLanguage).toBe("es");
     });
   });
 

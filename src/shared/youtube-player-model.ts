@@ -60,6 +60,7 @@ export type PlayerSnapshot = {
   videoId: string | null;
   audioTrack: AudioTrack | null;
   audioLanguage: string | null;
+  contentLanguage?: string | null;
   captionTracks: CaptionTrack[];
   translationLanguages: TranslationLanguage[];
   currentCaptionTrack: CaptionTrack | null;
@@ -71,6 +72,7 @@ export function summarizePlayerSnapshot(
 ): Record<string, unknown> {
   return {
     audioLanguage: snapshot.audioLanguage,
+    contentLanguage: snapshot.contentLanguage,
     audioTrack: summarizeAudioTrack(snapshot.audioTrack),
     captionTracks: snapshot.captionTracks.map(summarizeCaptionTrack),
     currentCaptionTrack: summarizeCaptionTrack(snapshot.currentCaptionTrack),
