@@ -1,6 +1,7 @@
 import audioLanguageSubtitlePolicyFeature from "./features/audio-language-subtitle-policy/content";
 import autoSwitchToVideosTabFeature from "./features/auto-switch-to-videos-tab/content";
 import engagementPanelScrollContainmentFeature from "./features/engagement-panel-scroll-containment/content";
+import homeKeywordFilterFeature from "./features/home-keyword-filter/content";
 import homeNotInterestedFeature from "./features/home-not-interested/content";
 import homePlayablesRemovalFeature from "./features/home-playables-removal/content";
 import markAsSeenFeature from "./features/mark-as-seen/content";
@@ -24,6 +25,7 @@ registry.register(seenCardDimmingFeature);
 registry.register(subscriptionsMostRelevantRemovalFeature);
 registry.register(subscriptionsShortsRemovalFeature);
 registry.register(homeNotInterestedFeature);
+registry.register(homeKeywordFilterFeature);
 registry.register(homePlayablesRemovalFeature);
 registry.register(autoSwitchToVideosTabFeature);
 registry.register(searchDateFilterFeature);
