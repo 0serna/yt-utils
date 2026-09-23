@@ -24,7 +24,7 @@
 
 ## Workflow
 
-- Use `playwriter` to explore and analyze web pages.
+- Use `browser` to explore and analyze web pages.
 - After changing files under `src/` (or anything else that feeds `extension/`), run `npm run build` before asking the user to reload. Done when the build exits 0; then ask the user to reload the extension manually.
 
 ## Debugging
