@@ -3,3 +3,4 @@ dist/
 extension/
 coverage/
 .fallow/
+.playwright-mcp/
