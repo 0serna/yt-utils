@@ -359,7 +359,7 @@ describe("youtube-player-model", () => {
   });
 
   describe("readAudioTrackMetadata", () => {
-    it.each(["C_", "Iw", "Z1", "s1", "US", "yG", "hs"] as const)(
+    it.each(["wM", "C_", "Iw", "Z1", "s1", "US", "yG", "hs"] as const)(
       "reads the %s metadata alias",
       (key) => {
         expect(
@@ -379,6 +379,68 @@ describe("youtube-player-model", () => {
         });
       },
     );
+
+    it("reads Spanish audio under the wM key with an opaque top-level id", () => {
+      expect(
+        readAudioTrackMetadata({
+          id: "251;opaque-top-level-id",
+          wM: {
+            id: "es-US.4",
+            name: "Spanish (US) original",
+            isDefault: true,
+            isAutoDubbed: false,
+          },
+        }),
+      ).toEqual({
+        id: "es-US.4",
+        name: "Spanish (US) original",
+        isDefault: true,
+        isAutoDubbed: false,
+      });
+    });
+
+    it("prefers wM over older aliases", () => {
+      expect(
+        readAudioTrackMetadata({
+          wM: { id: "es-US.4", name: "Spanish (US) original" },
+          C_: { id: "en-US.4", name: "English (US) original" },
+        }),
+      ).toMatchObject({
+        id: "es-US.4",
+        name: "Spanish (US) original",
+      });
+    });
+
+    it("falls back to an unknown future key with metadata shape", () => {
+      expect(
+        readAudioTrackMetadata({
+          id: "251;opaque-top-level-id",
+          qX: {
+            id: "es-MX.4",
+            name: "Spanish (Mexico)",
+          },
+        } as AudioTrack),
+      ).toMatchObject({
+        id: "es-MX.4",
+        name: "Spanish (Mexico)",
+      });
+    });
+
+    it("ignores S/W slots and caption tracks when scanning for metadata", () => {
+      expect(
+        readAudioTrackMetadata({
+          id: "251;opaque-top-level-id",
+          captionTracks: [{ languageCode: "en", kind: "asr", vssId: "a.en" }],
+          S: { id: "en.4", name: "English" },
+          W: { id: "en.4", name: "English" },
+        } as unknown as AudioTrack),
+      ).toEqual({
+        id: "251;opaque-top-level-id",
+        name: undefined,
+        isDefault: undefined,
+        isAutoDubbed: undefined,
+      });
+    });
 
     it("falls through each field across partially populated aliases", () => {
       expect(

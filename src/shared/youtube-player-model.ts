@@ -32,6 +32,7 @@ export type AudioTrackMetadata = {
 
 export type AudioTrack = {
   id?: string;
+  wM?: AudioTrackMetadata;
   C_?: AudioTrackMetadata;
   Iw?: AudioTrackMetadata;
   Z1?: AudioTrackMetadata;
@@ -43,6 +44,7 @@ export type AudioTrack = {
 };
 
 const AUDIO_TRACK_METADATA_KEYS = [
+  "wM",
   "C_",
   "Iw",
   "Z1",
@@ -237,8 +239,10 @@ function getAudioTrackSignature(track: AudioTrack | null): string {
 }
 
 /**
- * YouTube renames this nested object without notice. Precedence is C_, Iw, Z1,
- * s1, US, yG, then hs. Each field falls through independently. The top-level
+ * YouTube renames this nested object without notice. Precedence is wM, C_,
+ * Iw, Z1, s1, US, yG, then hs. Each field falls through independently. When no
+ * known alias yields id or name, any own value with usable `id` or `name`
+ * is used as a rename-tolerant fallback (excluding caption slots). The top-level
  * id is the final id fallback because it can be an opaque identifier.
  */
 export function readAudioTrackMetadata(
@@ -249,18 +253,78 @@ export function readAudioTrackMetadata(
   }
 
   const aliases = AUDIO_TRACK_METADATA_KEYS.map((key) => track[key]);
+  const fallback = readGenericAudioTrackMetadata(track);
   const metadata: AudioTrackMetadata = {
-    id: readFirstValue([...aliases.map(({ id } = {}) => id), track.id]),
-    name: readFirstValue(aliases.map(({ name } = {}) => name)),
-    isDefault: readFirstValue(aliases.map(({ isDefault } = {}) => isDefault)),
-    isAutoDubbed: readFirstValue(
-      aliases.map(({ isAutoDubbed } = {}) => isAutoDubbed),
-    ),
+    id: readFirstValue([
+      ...aliases.map(({ id } = {}) => id),
+      fallback?.id,
+      track.id,
+    ]),
+    name: readFirstValue([
+      ...aliases.map(({ name } = {}) => name),
+      fallback?.name,
+    ]),
+    isDefault: readFirstValue([
+      ...aliases.map(({ isDefault } = {}) => isDefault),
+      fallback?.isDefault,
+    ]),
+    isAutoDubbed: readFirstValue([
+      ...aliases.map(({ isAutoDubbed } = {}) => isAutoDubbed),
+      fallback?.isAutoDubbed,
+    ]),
   };
 
   return Object.values(metadata).some((value) => value != null)
     ? metadata
     : null;
+}
+
+const GENERIC_AUDIO_METADATA_EXCLUDED_KEYS = new Set([
+  "id",
+  "captionTracks",
+  "captionsInitialState",
+  "xtags",
+  "Z",
+  "A",
+  "B",
+  "K",
+  "S",
+  "W",
+]);
+
+function readGenericAudioTrackMetadata(
+  track: AudioTrack,
+): AudioTrackMetadata | null {
+  for (const [key, value] of Object.entries(track)) {
+    if (
+      GENERIC_AUDIO_METADATA_EXCLUDED_KEYS.has(key) ||
+      (AUDIO_TRACK_METADATA_KEYS as readonly string[]).includes(key)
+    ) {
+      continue;
+    }
+
+    if (isAudioTrackMetadataShape(value)) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function isAudioTrackMetadataShape(
+  value: unknown,
+): value is AudioTrackMetadata {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  const id = candidate.id;
+  const name = candidate.name;
+  return (
+    (typeof id === "string" && id.length > 0) ||
+    (typeof name === "string" && name.length > 0)
+  );
 }
 
 function signaturePart(value: string | null | undefined): string {
