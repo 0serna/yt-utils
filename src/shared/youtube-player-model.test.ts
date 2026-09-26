@@ -105,24 +105,42 @@ describe("youtube-player-model", () => {
       ).toEqual({ mode: "track", track: englishTrack });
     });
 
-    it("returns off for non-English audio even when a direct English track exists", () => {
+    it("returns off for Spanish audio even when a direct English track exists", () => {
       expect(
         determineSubtitleSelection({
           ...defaultSnapshot,
-          audioLanguage: "fr",
+          audioLanguage: "es-US",
           captionTracks: [{ languageCode: "en", vssId: ".en" }],
         }),
       ).toEqual({ mode: "off" });
     });
 
-    it("returns off for non-English audio even when an English ASR track exists", () => {
+    it("selects a direct English track for non-Spanish audio", () => {
+      const englishTrack: CaptionTrack = { languageCode: "en", vssId: ".en" };
+
       expect(
         determineSubtitleSelection({
           ...defaultSnapshot,
           audioLanguage: "fr",
-          captionTracks: [{ languageCode: "en", kind: "asr", vssId: "a.en" }],
+          captionTracks: [englishTrack],
         }),
-      ).toEqual({ mode: "off" });
+      ).toEqual({ mode: "track", track: englishTrack });
+    });
+
+    it("selects an English ASR track for non-Spanish audio", () => {
+      const englishAsrTrack: CaptionTrack = {
+        languageCode: "en",
+        kind: "asr",
+        vssId: "a.en",
+      };
+
+      expect(
+        determineSubtitleSelection({
+          ...defaultSnapshot,
+          audioLanguage: "fr",
+          captionTracks: [englishAsrTrack],
+        }),
+      ).toEqual({ mode: "track", track: englishAsrTrack });
     });
 
     it("selects an English ASR track for unknown audio", () => {
@@ -156,12 +174,41 @@ describe("youtube-player-model", () => {
       ).toEqual({ mode: "track", track: englishAsrTrack });
     });
 
-    it("returns off for unknown audio when the English track is not auto-generated", () => {
+    it("selects a direct English track for unknown audio", () => {
+      const englishTrack: CaptionTrack = { languageCode: "en", vssId: ".en" };
+
       expect(
         determineSubtitleSelection({
           ...defaultSnapshot,
           audioLanguage: null,
-          captionTracks: [{ languageCode: "en", vssId: ".en" }],
+          captionTracks: [englishTrack],
+        }),
+      ).toEqual({ mode: "track", track: englishTrack });
+    });
+
+    it("prefers a direct English track over an English ASR track", () => {
+      const englishTrack: CaptionTrack = { languageCode: "en", vssId: ".en" };
+      const englishAsrTrack: CaptionTrack = {
+        languageCode: "en",
+        kind: "asr",
+        vssId: "a.en",
+      };
+
+      expect(
+        determineSubtitleSelection({
+          ...defaultSnapshot,
+          audioLanguage: null,
+          captionTracks: [englishAsrTrack, englishTrack],
+        }),
+      ).toEqual({ mode: "track", track: englishTrack });
+    });
+
+    it("returns off when no English track exists", () => {
+      expect(
+        determineSubtitleSelection({
+          ...defaultSnapshot,
+          audioLanguage: "fr",
+          captionTracks: [{ languageCode: "es", vssId: ".es" }],
         }),
       ).toEqual({ mode: "off" });
     });

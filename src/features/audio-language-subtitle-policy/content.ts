@@ -3,7 +3,7 @@ import type { PlayerSnapshot, SubtitleSelection } from "@shared/youtube-player";
 import {
   applySubtitleSelection,
   determineSubtitleSelection,
-  isEnglishLanguage,
+  isSpanishLanguage,
   matchesSubtitleSelection,
   readSubtitleSignature,
   waitForSubtitleSelection,
@@ -271,11 +271,13 @@ function shouldRememberMatchingSelection(
     return false;
   }
 
-  // Don't cache English "off" while captions are still loading — tracks may appear on the next poll.
-  return (
-    !isEnglishLanguage(snapshot.audioLanguage) ||
-    snapshot.captionTracks.length > 0
-  );
+  // Don't cache "off" while captions are still loading — tracks may appear on the next poll.
+  // Spanish "off" does not depend on tracks, so it is safe to remember.
+  if (isSpanishLanguage(snapshot.audioLanguage)) {
+    return true;
+  }
+
+  return snapshot.captionTracks.length > 0;
 }
 
 async function applyAndVerifySubtitleSelection(

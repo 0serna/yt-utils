@@ -1,10 +1,6 @@
-# audio-language-subtitle-policy Specification
+# Spec Delta
 
-## Purpose
-
-La política de subtítulos decide a partir del idioma activo del audio del player; debe seguir resolviendo español e inglés aunque YouTube renombre las llaves minificadas de metadata de audio.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Resolución de idioma tolerante a renames de metadata
 
@@ -29,6 +25,8 @@ The system SHALL resolver el idioma activo del audio desde la metadata del audio
 
 - **WHEN** el audio-track contiene pistas de captions o slots `S`/`W` con forma de caption
 - **THEN** el sistema no los usa como metadata de idioma de audio.
+
+## ADDED Requirements
 
 ### Requirement: Selección de subtítulos en inglés salvo audio español
 

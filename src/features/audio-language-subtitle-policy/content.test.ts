@@ -8,6 +8,9 @@ vi.mock("@shared/youtube-player", () => ({
   isEnglishLanguage: vi.fn(
     (value: string | null | undefined) => value?.startsWith("en") ?? false,
   ),
+  isSpanishLanguage: vi.fn(
+    (value: string | null | undefined) => value?.startsWith("es") ?? false,
+  ),
   matchesSubtitleSelection: vi.fn(),
   readPlayerSnapshot: vi.fn(),
   readSubtitleSignature: vi.fn(),
