@@ -17,9 +17,7 @@ const searchDateFilterFeature: Feature = {
     applyLastYearFilter();
   },
 
-  deactivate(): void {
-    // No-op: redirect is a one-time action
-  },
+  deactivate(): void {},
 };
 
 export default searchDateFilterFeature;

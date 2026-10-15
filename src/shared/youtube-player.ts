@@ -94,8 +94,6 @@ async function sendBridgeRequest(
     return result;
   }
 
-  // ponytail: reinstall is tried once per document; repeated dead bridges
-  // per poll only matter if the loader failure outlives this first window.
   if (!(await installBridgeFallbackScript())) {
     return result;
   }

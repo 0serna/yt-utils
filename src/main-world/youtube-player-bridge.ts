@@ -323,11 +323,8 @@ const ENGLISH_MARKERS = new Set([
   "your",
 ]);
 
-// ponytail: metadata word heuristic, use transcript detection if false positives matter.
 function inferContentLanguage(response: PlayerResponse | null): string | null {
   const title = response?.videoDetails?.title;
-  // Spanish polls in the description mix unrelated English text (titles,
-  // links); when the title alone is decisive it must not be vetoed.
   if (isSpanishDecisive(readLanguageWords(title))) {
     return "es";
   }

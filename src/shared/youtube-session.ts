@@ -25,7 +25,6 @@ export type WatchSession = {
   readSnapshot: () => Promise<PlayerSnapshot | null>;
 };
 
-/** Owns one feature's activation lifetime and serializes work per watch session. */
 export function createWatchSessionController() {
   const navigationEvents = [
     "yt-navigate-start",
@@ -73,7 +72,6 @@ export function createWatchSessionController() {
         if (current !== session || !active) return false;
         if (isDesktopWatchPage() && getCurrentWatchVideoId() === videoId)
           return true;
-        // Once observed stale, this session must not revive on an A → B → A visit.
         current = null;
         return false;
       },

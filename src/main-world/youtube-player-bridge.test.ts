@@ -33,7 +33,6 @@ describe("youtube-player-bridge", () => {
   beforeAll(async () => {
     delete (window as unknown as BridgeWindow)[BRIDGE_FLAG];
 
-    // Capture the bridge's message handler
     const origAddEventListener = window.addEventListener.bind(window);
     let captured = false;
     window.addEventListener = ((
@@ -48,10 +47,8 @@ describe("youtube-player-bridge", () => {
       return origAddEventListener(type, listener, options);
     }) as typeof window.addEventListener;
 
-    // Import bridge to register the listener
     await import("./youtube-player-bridge");
 
-    // Restore original addEventListener
     window.addEventListener = origAddEventListener;
   });
 
@@ -143,7 +140,6 @@ describe("youtube-player-bridge", () => {
         reject(new Error("Bridge request timed out"));
       }, 2000);
 
-      // Listen for the response via postMessage
       const responseHandler = (event: MessageEvent<BridgeResponse>) => {
         if (
           event.data?.source === BRIDGE_SOURCE &&
@@ -157,8 +153,7 @@ describe("youtube-player-bridge", () => {
       };
       window.addEventListener("message", responseHandler);
 
-      // Call the bridge handler directly with a synthetic event
-      // (jsdom's postMessage doesn't set event.source === window)
+      // jsdom's postMessage doesn't set event.source === window
       const fullRequest: BridgeRequest = {
         source: BRIDGE_SOURCE,
         kind: "request",

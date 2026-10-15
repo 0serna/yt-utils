@@ -238,13 +238,7 @@ function getAudioTrackSignature(track: AudioTrack | null): string {
   ].join(":");
 }
 
-/**
- * YouTube renames this nested object without notice. Precedence is wM, C_,
- * Iw, Z1, s1, US, yG, then hs. Each field falls through independently. When no
- * known alias yields id or name, any own value with usable `id` or `name`
- * is used as a rename-tolerant fallback (excluding caption slots). The top-level
- * id is the final id fallback because it can be an opaque identifier.
- */
+// YouTube renames this nested object without notice.
 export function readAudioTrackMetadata(
   track: AudioTrack | null,
 ): AudioTrackMetadata | null {

@@ -18,9 +18,7 @@ const autoSwitchToVideosTabFeature: Feature = {
     void trySwitchToVideosTab();
   },
 
-  deactivate(): void {
-    // No-op: no persistent observers or timers
-  },
+  deactivate(): void {},
 };
 
 export default autoSwitchToVideosTabFeature;

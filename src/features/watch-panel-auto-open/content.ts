@@ -746,9 +746,7 @@ async function typeAndSendPrompt(session: WatchSession): Promise<void> {
     }
 
     clickElement(sendButton);
-  } catch {
-    // Intentionally silent: chat input or send button unavailable.
-  }
+  } catch {}
 }
 
 function syncAskScrollContainment(): void {

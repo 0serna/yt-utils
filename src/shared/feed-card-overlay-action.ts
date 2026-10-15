@@ -451,7 +451,6 @@ function ensureRelativePosition(element: HTMLElement): void {
 }
 
 function applyOwnedOverlayStyles(host: HTMLElement): void {
-  // Top-left avoids YouTube hover preview controls (top-right) and duration badge (bottom-right).
   host.style.position = "absolute";
   host.style.top = "8px";
   host.style.left = "8px";

@@ -115,9 +115,9 @@ export function trimLogs(logs: LogEntry[], maxEntries: number): LogEntry[] {
 }
 
 function enqueueWrite(entry: LogEntry): void {
-  chrome.runtime.sendMessage({ type: MESSAGE_LOG_EVENT, entry }).catch(() => {
-    /* storage write failure is intentionally silent */
-  });
+  chrome.runtime
+    .sendMessage({ type: MESSAGE_LOG_EVENT, entry })
+    .catch(() => {});
 }
 
 export async function appendAndTrim(entry: LogEntry): Promise<void> {
