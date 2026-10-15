@@ -632,6 +632,57 @@ describe("youtube-player-bridge", () => {
       expect(snapshot.audioLanguage).toBeNull();
       expect(snapshot.contentLanguage).toBe("es");
     });
+
+    it("infers Spanish content language from the title when the description pollutes the signal", async () => {
+      const fakePlayer = createFakePlayer({
+        videoId: "spanish-title-video",
+        title: "Los Matemáticos en contra de la IA",
+        shortDescription:
+          "► Mi Academia de Ciencias de la Computación: https://link.bettatech.net/academia\n" +
+          "A Severe Misalignment of AI in Mathematics: https://terrytao.wordpress.com/2026/09/11/a-severe-misalignment-of-ai-in-mathematics/\n" +
+          "Design Patterns https://amzn.to/39XuQlq Head First Design Patterns https://amzn.to/2uq6XUq",
+        audioTrack: {
+          id: "und",
+          WI: { id: "und", name: "Default", isDefault: true },
+        },
+        subtitlesOn: false,
+      });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-4e",
+        action: "readSnapshot",
+      });
+
+      const snapshot = requireSnapshot(response.result);
+      expect(snapshot.audioLanguage).toBeNull();
+      expect(snapshot.contentLanguage).toBe("es");
+    });
+
+    it("keeps wait-for-language when neither title nor description is Spanish", async () => {
+      const fakePlayer = createFakePlayer({
+        videoId: "english-content-video",
+        title: "The Day of the Triffids",
+        shortDescription: "That is what we found about this to be true.",
+        audioTrack: {
+          id: "und",
+          WI: { id: "und", name: "Default", isDefault: true },
+        },
+        subtitlesOn: false,
+      });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-4f",
+        action: "readSnapshot",
+      });
+
+      const snapshot = requireSnapshot(response.result);
+      expect(snapshot.audioLanguage).toBeNull();
+      expect(snapshot.contentLanguage).toBeNull();
+    });
   });
 
   describe("applySelection", () => {

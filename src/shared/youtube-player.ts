@@ -26,12 +26,19 @@ export {
 };
 
 const BRIDGE_RESPONSE_TIMEOUT_MS = 2000;
+const BRIDGE_FALLBACK_INSTALL_DELAY_MS = 400;
+const BRIDGE_MODULE_RESOURCE_HINT = "youtube-player-bridge.ts-";
 const DEFAULT_SUBTITLE_SELECTION_WAIT = {
   timeoutMs: 1500,
   intervalMs: 100,
 };
 
+type WebAccessibleManifest = {
+  web_accessible_resources?: Array<{ resources?: unknown[] }>;
+};
+
 let requestCounter = 0;
+let bridgeFallbackAttempted = false;
 
 export async function readPlayerSnapshot(): Promise<PlayerSnapshot | null> {
   const snapshot = await sendBridgeRequest("readSnapshot");
@@ -79,6 +86,76 @@ function readWaitForSubtitleSelectionConfig(options?: {
 }
 
 async function sendBridgeRequest(
+  action: BridgeRequest["action"],
+  selection?: SubtitleSelection,
+): Promise<PlayerSnapshot | boolean | null> {
+  const result = await sendBridgeRequestOnce(action, selection);
+  if (result !== null || action !== "readSnapshot") {
+    return result;
+  }
+
+  // ponytail: reinstall is tried once per document; repeated dead bridges
+  // per poll only matter if the loader failure outlives this first window.
+  if (!(await installBridgeFallbackScript())) {
+    return result;
+  }
+
+  await delay(BRIDGE_FALLBACK_INSTALL_DELAY_MS);
+  return sendBridgeRequestOnce(action, selection);
+}
+
+async function installBridgeFallbackScript(): Promise<boolean> {
+  if (bridgeFallbackAttempted) {
+    return false;
+  }
+
+  bridgeFallbackAttempted = true;
+  try {
+    const response = await fetch(chrome.runtime.getURL("manifest.json"));
+    if (!response.ok) {
+      return false;
+    }
+
+    const manifest = (await response.json()) as WebAccessibleManifest;
+    const resource = findBridgeModuleResource(manifest);
+    if (!resource) {
+      return false;
+    }
+
+    const parent = document.head ?? document.documentElement;
+    if (!parent) {
+      return false;
+    }
+
+    const script = document.createElement("script");
+    script.type = "module";
+    script.src = chrome.runtime.getURL(resource);
+    parent.appendChild(script);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function findBridgeModuleResource(
+  manifest: WebAccessibleManifest | null,
+): string | null {
+  for (const entry of manifest?.web_accessible_resources ?? []) {
+    for (const resource of entry?.resources ?? []) {
+      if (
+        typeof resource === "string" &&
+        resource.includes(BRIDGE_MODULE_RESOURCE_HINT) &&
+        resource.endsWith(".js")
+      ) {
+        return resource;
+      }
+    }
+  }
+
+  return null;
+}
+
+async function sendBridgeRequestOnce(
   action: BridgeRequest["action"],
   selection?: SubtitleSelection,
 ): Promise<PlayerSnapshot | boolean | null> {

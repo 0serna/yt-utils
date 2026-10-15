@@ -323,19 +323,30 @@ const ENGLISH_MARKERS = new Set([
   "your",
 ]);
 
+// ponytail: metadata word heuristic, use transcript detection if false positives matter.
 function inferContentLanguage(response: PlayerResponse | null): string | null {
-  const text = [
-    response?.videoDetails?.title,
-    response?.videoDetails?.shortDescription,
-  ]
+  const title = response?.videoDetails?.title;
+  // Spanish polls in the description mix unrelated English text (titles,
+  // links); when the title alone is decisive it must not be vetoed.
+  if (isSpanishDecisive(readLanguageWords(title))) {
+    return "es";
+  }
+
+  const text = [title, response?.videoDetails?.shortDescription]
     .filter((value): value is string => Boolean(value?.trim()))
     .join(" ");
-  const words = normalizeLanguageText(text).match(/[a-z]+/g) ?? [];
+  return isSpanishDecisive(readLanguageWords(text)) ? "es" : null;
+}
+
+function readLanguageWords(value: string | null | undefined): string[] {
+  const text = value?.trim() ? value : "";
+  return normalizeLanguageText(text).match(/[a-z]+/g) ?? [];
+}
+
+function isSpanishDecisive(words: string[]): boolean {
   const spanishScore = words.filter((word) => SPANISH_MARKERS.has(word)).length;
   const englishScore = words.filter((word) => ENGLISH_MARKERS.has(word)).length;
-
-  // ponytail: metadata word heuristic, use transcript detection if false positives matter.
-  return spanishScore >= 3 && spanishScore > englishScore + 1 ? "es" : null;
+  return spanishScore >= 3 && spanishScore > englishScore + 1;
 }
 
 function readFirstValue<T>(values: Array<T | null | undefined>): T | null {
