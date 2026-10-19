@@ -1,6 +1,6 @@
 # YT Utils
 
-Chrome MV3 extension for desktop YouTube helpers plus an all-pages Google search action on selected text. TypeScript sources build with Vite and `@crxjs/vite-plugin` from `manifest.json` into `extension/`. YouTube features register through `FeatureRegistry` in `src/content.ts`, which activates and deactivates them on SPA navigation.
+Chrome MV3 extension for desktop YouTube helpers plus an all-pages Google search action on selected text. TypeScript sources build with Vite and `@crxjs/vite-plugin` from `manifest.json` into the main checkout's `extension/` directory. Git worktrees share that directory, so Chrome loads it once. YouTube features register through `FeatureRegistry` in `src/content.ts`, which activates and deactivates them on SPA navigation.
 
 ## Inventory
 
@@ -11,7 +11,7 @@ Chrome MV3 extension for desktop YouTube helpers plus an all-pages Google search
 | Shared runtime          | `src/shared/`                                                       | Feature registry, messaging, DOM sync, YouTube DOM/player helpers, structured logs under `yt-utils:logs`                                                        |
 | MAIN-world bridge       | `src/main-world/youtube-player-bridge.ts`                           | Injected into the page world to read and drive the YouTube player API for subtitle/audio features                                                               |
 | Entrypoints             | `src/background.ts`, `src/content.ts`, `src/global-selection.ts`    | Service worker, YouTube content script, all-URLs selection script                                                                                               |
-| Build & quality         | `vite.config.ts`, `vitest.config.ts`, ESLint, Prettier, Husky       | Production build to `extension/`; `npm test` runs Vitest with Istanbul coverage                                                                                 |
+| Build & quality         | `vite.config.ts`, `vitest.config.ts`, ESLint, Prettier, Husky       | Production build to the main checkout's `extension/`; `npm test` runs Vitest with Istanbul coverage                                                             |
 
 Most of the product logic lives in `src/features/` and the YouTube helpers in `src/shared/` (especially `youtube-dom.ts`, `youtube-player.ts`, and the registry/logger). Player-backed features read track metadata through the MAIN-world bridge.
 
@@ -20,7 +20,7 @@ Most of the product logic lives in `src/features/` and the YouTube helpers in `s
 ```text
 .
 ├── manifest.json          # MV3: service worker, YouTube + MAIN scripts, <all_urls> selection
-├── vite.config.ts         # @crxjs build → extension/
+├── vite.config.ts         # @crxjs build → <main checkout>/extension/
 ├── src/
 │   ├── background.ts      # mark-as-seen + Google search handlers, log persistence
 │   ├── content.ts         # FeatureRegistry for YouTube pages
@@ -28,7 +28,7 @@ Most of the product logic lives in `src/features/` and the YouTube helpers in `s
 │   ├── features/          # one folder per feature (content / background / tests)
 │   ├── main-world/        # page-world player bridge
 │   └── shared/            # registry, messaging, DOM/player utilities
-└── extension/             # generated loadable package
+└── extension/             # generated loadable package (main checkout only)
 ```
 
 ## Setup
@@ -38,6 +38,10 @@ npm install
 npm run build
 ```
 
-Load `extension/` in `chrome://extensions` with Developer mode enabled.
+Load `<main checkout>/extension` in `chrome://extensions` with Developer mode enabled. Set `EXTENSION_OUT_DIR` to build to a different directory.
 
 Useful checks: `npm test`, `npm run typecheck`, `npm run check`.
+
+## Worktrees
+
+`npm run build` from any Git worktree writes to the main checkout's `extension/`. Chrome loads that directory once, so the extension ID and storage stay stable across worktrees. Builds are serialized with `flock`.

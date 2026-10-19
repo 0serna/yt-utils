@@ -25,7 +25,7 @@
 ## Workflow
 
 - Usar navegador para explorar y analizar páginas web.
-- After changing files under `src/` (or anything else that feeds `extension/`), run `npm run build` before asking the user to reload. Done when the build exits 0; then ask the user to reload the extension manually.
+- After changing files under `src/` (or anything else that feeds `extension/`), run `npm run build` before asking the user to reload. Builds from any worktree write to the main checkout's `extension/`; Chrome loads that single directory. Done when the build exits 0; then ask the user to reload the extension manually.
 
 ## Debugging
 
