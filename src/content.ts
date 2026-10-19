@@ -7,7 +7,6 @@ import homePlayablesRemovalFeature from "./features/home-playables-removal/conte
 import markAsSeenFeature from "./features/mark-as-seen/content";
 import originalAudioTrackFeature from "./features/original-audio-track/content";
 import playbackSpeedFeature from "./features/playback-speed/content";
-import playbackStartGateFeature from "./features/playback-start-gate/content";
 import searchDateFilterFeature from "./features/search-date-filter/content";
 import seenCardDimmingFeature from "./features/seen-card-dimming/content";
 import subscriptionsFeedControlsFeature from "./features/subscriptions-feed-controls/content";
@@ -17,7 +16,6 @@ import watchPanelAutoOpenFeature from "./features/watch-panel-auto-open/content"
 import { FeatureRegistry } from "./shared/feature-registry";
 
 const registry = new FeatureRegistry();
-registry.register(playbackStartGateFeature);
 registry.register(markAsSeenFeature);
 registry.register(originalAudioTrackFeature);
 registry.register(audioLanguageSubtitlePolicyFeature);
