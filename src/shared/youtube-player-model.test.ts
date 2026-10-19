@@ -351,6 +351,103 @@ describe("youtube-player-model", () => {
       expect(selectOriginalAudioTrack([dubbed, original])).toEqual(original);
     });
 
+    it("prefers the original track from the id content when flags are unreliable", () => {
+      const dubbed = {
+        id: "251;Cg8KBWFjb250EgZkdWJiZWQKCgoEbGFuZxICYXI",
+        name: "Arabic",
+        isDefault: true,
+        isAutoDubbed: false,
+        languageCode: "ar",
+      };
+      const original = {
+        id: "251;ChEKBWFjb250EghvcmlnaW5hbAoKCgRsYW5nEgJlbg",
+        name: "English original",
+        isDefault: false,
+        isAutoDubbed: false,
+        languageCode: "en",
+      };
+
+      expect(selectOriginalAudioTrack([dubbed, original])).toEqual(original);
+    });
+
+    it("uses the id content when the name is missing", () => {
+      const dubbed = {
+        id: "251;Cg8KBWFjb250EgZkdWJiZWQKCgoEbGFuZxICYXI",
+        name: null,
+        isDefault: null,
+        isAutoDubbed: null,
+        languageCode: "ar",
+      };
+      const original = {
+        id: "251;ChEKBWFjb250EghvcmlnaW5hbAoKCgRsYW5nEgJlbg",
+        name: null,
+        isDefault: null,
+        isAutoDubbed: null,
+        languageCode: "en",
+      };
+
+      expect(selectOriginalAudioTrack([dubbed, original])).toEqual(original);
+    });
+
+    it("falls back to an original-like name", () => {
+      const plain = {
+        id: "es.4",
+        name: "Spanish",
+        isDefault: true,
+        isAutoDubbed: null,
+        languageCode: "es",
+      };
+      const original = {
+        id: "en.4",
+        name: "English original",
+        isDefault: false,
+        isAutoDubbed: null,
+        languageCode: "en",
+      };
+
+      expect(selectOriginalAudioTrack([plain, original])).toEqual(original);
+    });
+
+    it("ignores dubbed content in the flag fallback", () => {
+      const dubbed = {
+        id: "251;Cg8KBWFjb250EgZkdWJiZWQKCgoEbGFuZxICYXI",
+        name: "Arabic",
+        isDefault: false,
+        isAutoDubbed: false,
+        languageCode: "ar",
+      };
+      const defaultTrack = {
+        id: "default.4",
+        name: "Default",
+        isDefault: true,
+        isAutoDubbed: null,
+        languageCode: null,
+      };
+
+      expect(selectOriginalAudioTrack([dubbed, defaultTrack])).toEqual(
+        defaultTrack,
+      );
+    });
+
+    it("falls back to flags when the id is invalid", () => {
+      const dubbed = {
+        id: "251;???",
+        name: "Spanish",
+        isDefault: true,
+        isAutoDubbed: true,
+        languageCode: "es",
+      };
+      const original = {
+        id: "251;not-valid-base64!",
+        name: "English",
+        isDefault: false,
+        isAutoDubbed: false,
+        languageCode: "en",
+      };
+
+      expect(selectOriginalAudioTrack([dubbed, original])).toEqual(original);
+    });
+
     it("falls back to the default track when no track declares dubbing", () => {
       const plain = {
         id: "en.4",

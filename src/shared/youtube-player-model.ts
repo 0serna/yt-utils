@@ -294,14 +294,63 @@ export function readAudioTrackIdentity(
   return typeof id === "string" && id.trim().length > 0 ? id : null;
 }
 
+type AudioTrackContent = "original" | "dubbed";
+
 export function selectOriginalAudioTrack(
   tracks: AvailableAudioTrack[],
 ): AvailableAudioTrack | null {
+  const byContent = tracks.find(
+    (track) => readAudioTrackContent(track.id) === "original",
+  );
+  if (byContent) {
+    return byContent;
+  }
+
+  const byName = tracks.find(
+    (track) =>
+      readAudioTrackContent(track.id) !== "dubbed" &&
+      isOriginalAudioTrackName(track.name),
+  );
+  if (byName) {
+    return byName;
+  }
+
+  const candidates = tracks.filter(
+    (track) => readAudioTrackContent(track.id) !== "dubbed",
+  );
+
   return (
-    tracks.find((track) => track.isAutoDubbed === false) ??
-    tracks.find((track) => track.isDefault === true) ??
+    candidates.find((track) => track.isAutoDubbed === false) ??
+    candidates.find((track) => track.isDefault === true) ??
     null
   );
+}
+
+function readAudioTrackContent(
+  id: string | null | undefined,
+): AudioTrackContent | null {
+  const encoded = id?.split(";").pop()?.trim();
+  if (!encoded) {
+    return null;
+  }
+
+  try {
+    const decoded = globalThis.atob(encoded);
+    if (decoded.includes("original")) {
+      return "original";
+    }
+    if (decoded.includes("dubbed")) {
+      return "dubbed";
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function isOriginalAudioTrackName(name: string | null): boolean {
+  return Boolean(name && /original/i.test(name));
 }
 
 const GENERIC_AUDIO_METADATA_EXCLUDED_KEYS = new Set([
