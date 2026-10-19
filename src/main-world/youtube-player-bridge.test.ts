@@ -14,6 +14,8 @@ type FakePlayer = HTMLDivElement & {
   getPlayerResponse: () => unknown;
   getVideoData: () => unknown;
   getAudioTrack: () => unknown;
+  getAvailableAudioTracks: () => unknown[];
+  setAudioTrack: (track: unknown) => void;
   getOption: (namespace: string, key: string) => unknown;
   isSubtitlesOn: () => boolean;
   toggleSubtitles: () => void;
@@ -71,6 +73,8 @@ describe("youtube-player-bridge", () => {
     shortDescription?: string;
     captionTracks?: unknown[];
     audioTrack?: unknown;
+    availableAudioTracks?: unknown[];
+    appliedAudioTracks?: unknown[];
     subtitlesOn?: boolean;
     currentCaptionTrack?: unknown;
     translationLanguages?: unknown[];
@@ -95,6 +99,10 @@ describe("youtube-player-bridge", () => {
       videoId: options.videoDataVideoId ?? options.videoId ?? "test-video-id",
     });
     player.getAudioTrack = () => options.audioTrack || null;
+    player.getAvailableAudioTracks = () => options.availableAudioTracks || [];
+    player.setAudioTrack = (track: unknown) => {
+      options.appliedAudioTracks?.push(track);
+    };
     player.getOption = (namespace: string, key: string) => {
       if (namespace === "captions" && key === "track") {
         return options.currentCaptionTrack || null;
@@ -210,6 +218,58 @@ describe("youtube-player-bridge", () => {
       expect(snapshot.subtitlesOn).toBe(true);
       expect(snapshot.captionTracks).toHaveLength(1);
       expect(snapshot.captionTracks[0].languageCode).toBe("en");
+    });
+
+    it("summarizes available audio tracks without caption tracks", async () => {
+      const fakePlayer = createFakePlayer({
+        videoId: "abc123",
+        availableAudioTracks: [
+          {
+            id: "251;es",
+            hs: {
+              id: "es-US.10",
+              name: "Spanish (US)",
+              isDefault: false,
+              isAutoDubbed: true,
+            },
+            captionTracks: [{ languageCode: "en", vssId: "a.en" }],
+          },
+          {
+            id: "251;en",
+            hs: {
+              id: "en-US.4",
+              name: "English (US) original",
+              isDefault: true,
+              isAutoDubbed: false,
+            },
+          },
+        ],
+      });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-2b",
+        action: "readSnapshot",
+      });
+
+      const snapshot = requireSnapshot(response.result);
+      expect(snapshot.availableAudioTracks).toEqual([
+        {
+          id: "251;es",
+          name: "Spanish (US)",
+          isDefault: false,
+          isAutoDubbed: true,
+          languageCode: "es-us",
+        },
+        {
+          id: "251;en",
+          name: "English (US) original",
+          isDefault: true,
+          isAutoDubbed: false,
+          languageCode: "en-us",
+        },
+      ]);
     });
 
     it("returns snapshot with audio track", async () => {
@@ -677,6 +737,101 @@ describe("youtube-player-bridge", () => {
       const snapshot = requireSnapshot(response.result);
       expect(snapshot.audioLanguage).toBeNull();
       expect(snapshot.contentLanguage).toBeNull();
+    });
+  });
+
+  describe("applyAudioTrack", () => {
+    const originalTrack = {
+      id: "251;en",
+      hs: {
+        id: "en-US.4",
+        name: "English (US) original",
+        isDefault: true,
+        isAutoDubbed: false,
+      },
+    };
+
+    it("returns false when no movie_player exists", async () => {
+      const response = await sendBridgeRequest({
+        id: "test-audio-1",
+        action: "applyAudioTrack",
+        audioTrackId: "251;en",
+      });
+
+      expect(response.result).toBe(false);
+    });
+
+    it("applies the matching track by id", async () => {
+      const applied: unknown[] = [];
+      const fakePlayer = createFakePlayer({
+        videoId: "abc123",
+        availableAudioTracks: [{ id: "251;es" }, originalTrack],
+        appliedAudioTracks: applied,
+      });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-audio-2",
+        action: "applyAudioTrack",
+        audioTrackId: "251;en",
+      });
+
+      expect(response.result).toBe(true);
+      expect(applied).toEqual([originalTrack]);
+    });
+
+    it("returns false for an unknown track id", async () => {
+      const applied: unknown[] = [];
+      const fakePlayer = createFakePlayer({
+        videoId: "abc123",
+        availableAudioTracks: [originalTrack],
+        appliedAudioTracks: applied,
+      });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-audio-3",
+        action: "applyAudioTrack",
+        audioTrackId: "missing",
+      });
+
+      expect(response.result).toBe(false);
+      expect(applied).toEqual([]);
+    });
+
+    it("returns false without an audio track id", async () => {
+      const fakePlayer = createFakePlayer({
+        videoId: "abc123",
+        availableAudioTracks: [originalTrack],
+      });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-audio-4",
+        action: "applyAudioTrack",
+      });
+
+      expect(response.result).toBe(false);
+    });
+
+    it("returns false when the player lacks the audio API", async () => {
+      const fakePlayer = createFakePlayer({ videoId: "abc123" });
+      const player = fakePlayer as FakePlayer;
+      player.getAvailableAudioTracks = () => [originalTrack];
+      player.setAudioTrack = undefined as unknown as (track: unknown) => void;
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-audio-5",
+        action: "applyAudioTrack",
+        audioTrackId: "251;en",
+      });
+
+      expect(response.result).toBe(false);
     });
   });
 

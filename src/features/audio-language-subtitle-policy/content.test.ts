@@ -1,6 +1,15 @@
 import { makeFeatureContext } from "@shared/test-helpers";
+import type { FeatureContext } from "@shared/types";
 import type { PlayerSnapshot } from "@shared/youtube-player";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type Mock,
+  vi,
+} from "vitest";
 
 vi.mock("@shared/youtube-player", () => ({
   applySubtitleSelection: vi.fn(),
@@ -22,6 +31,7 @@ function snapshot(videoId: string): PlayerSnapshot {
     videoId,
     audioTrack: null,
     audioLanguage: null,
+    availableAudioTracks: [],
     captionTracks: [],
     translationLanguages: [],
     currentCaptionTrack: null,
@@ -346,6 +356,166 @@ describe("audio-language-subtitle-policy feature", () => {
       },
       { timeout: 3000 },
     );
+  });
+
+  describe("audio changes and override", () => {
+    const englishTrack = { languageCode: "en", vssId: "a.en" };
+
+    function diagnosticActions(context: FeatureContext): Array<unknown> {
+      return vi
+        .mocked(context.logger.diagnostic)
+        .mock.calls.map(([details]) => (details as { action?: string }).action);
+    }
+
+    async function setupPolicyMocks(options: {
+      snapshot: PlayerSnapshot;
+      selectionSignature: string;
+    }): Promise<{
+      matches: { value: boolean };
+      applySubtitleSelection: Mock;
+    }> {
+      const { readPlayerSnapshot, readSubtitleSignature } = await import(
+        "@shared/youtube-player"
+      );
+      vi.mocked(readPlayerSnapshot).mockResolvedValue(options.snapshot);
+      vi.mocked(readSubtitleSignature).mockReturnValue(
+        options.selectionSignature,
+      );
+
+      const { determineSubtitleSelection, matchesSubtitleSelection } =
+        await import("@shared/youtube-player");
+      vi.mocked(determineSubtitleSelection).mockImplementation((snapshotted) =>
+        snapshotted.audioLanguage?.startsWith("es")
+          ? { mode: "off" }
+          : { mode: "track", track: englishTrack },
+      );
+
+      const matches = { value: true };
+      vi.mocked(matchesSubtitleSelection).mockImplementation(
+        () => matches.value,
+      );
+
+      const { applySubtitleSelection, waitForSubtitleSelection } = await import(
+        "@shared/youtube-player"
+      );
+      vi.mocked(applySubtitleSelection).mockResolvedValue(true);
+      vi.mocked(waitForSubtitleSelection).mockResolvedValue(true);
+
+      return {
+        matches,
+        applySubtitleSelection: vi.mocked(applySubtitleSelection),
+      };
+    }
+
+    it("recomputes subtitles when the audio changes after the grace window", async () => {
+      vi.useFakeTimers();
+      const { readPlayerSnapshot } = await import("@shared/youtube-player");
+      const spanishSnapshot: PlayerSnapshot = {
+        ...snapshot("test-video"),
+        audioLanguage: "es-US",
+      };
+      const englishSnapshot: PlayerSnapshot = {
+        ...snapshot("test-video"),
+        audioLanguage: "en-US",
+        captionTracks: [englishTrack],
+      };
+      const { matches, applySubtitleSelection } = await setupPolicyMocks({
+        snapshot: spanishSnapshot,
+        selectionSignature: "off|caption:none",
+      });
+      const context = makeFeatureContext();
+      const feature = await importFreshFeature();
+      feature.default.activate(context);
+
+      await vi.advanceTimersByTimeAsync(4500);
+      expect(applySubtitleSelection).not.toHaveBeenCalled();
+
+      vi.mocked(readPlayerSnapshot).mockResolvedValue(englishSnapshot);
+      matches.value = false;
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(applySubtitleSelection).toHaveBeenCalledWith({
+        mode: "track",
+        track: englishTrack,
+      });
+      expect(diagnosticActions(context)).not.toContain("skip-overridden");
+    });
+
+    it("marks an override when the user changes subtitles", async () => {
+      vi.useFakeTimers();
+      const { readSubtitleSignature } = await import("@shared/youtube-player");
+      const { matches, applySubtitleSelection } = await setupPolicyMocks({
+        snapshot: { ...snapshot("test-video"), audioLanguage: "es-US" },
+        selectionSignature: "off|caption:none",
+      });
+      const context = makeFeatureContext();
+      const feature = await importFreshFeature();
+      feature.default.activate(context);
+
+      await vi.advanceTimersByTimeAsync(500);
+      vi.mocked(readSubtitleSignature).mockReturnValue(
+        "on|caption:en:asr:a.en",
+      );
+      matches.value = false;
+
+      await vi.advanceTimersByTimeAsync(4000);
+
+      expect(diagnosticActions(context)).toContain("skip-overridden");
+      const callsAtOverride = applySubtitleSelection.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(applySubtitleSelection).toHaveBeenCalledTimes(callsAtOverride);
+    });
+
+    it("rearms the grace window on every apply", async () => {
+      vi.useFakeTimers();
+      const { readSubtitleSignature } = await import("@shared/youtube-player");
+      const signature = { value: "a" };
+      const { matches } = await setupPolicyMocks({
+        snapshot: { ...snapshot("test-video"), audioLanguage: "es-US" },
+        selectionSignature: "a",
+      });
+      vi.mocked(readSubtitleSignature).mockImplementation(
+        () => signature.value,
+      );
+      const context = makeFeatureContext();
+      const feature = await importFreshFeature();
+      feature.default.activate(context);
+
+      await vi.advanceTimersByTimeAsync(2000);
+      signature.value = "b";
+      await vi.advanceTimersByTimeAsync(500);
+      await vi.advanceTimersByTimeAsync(2000);
+      signature.value = "c";
+      await vi.advanceTimersByTimeAsync(500);
+      await vi.advanceTimersByTimeAsync(2000);
+      signature.value = "d";
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(matches.value).toBe(true);
+      expect(diagnosticActions(context)).not.toContain("skip-overridden");
+    });
+
+    it("does not touch subtitles while an audio switch is pending", async () => {
+      vi.useFakeTimers();
+      const { matches, applySubtitleSelection } = await setupPolicyMocks({
+        snapshot: { ...snapshot("test-video"), audioLanguage: "es-US" },
+        selectionSignature: "off|caption:none",
+      });
+      matches.value = false;
+      const { markAudioSwitchPending, clearAudioSwitchPending } = await import(
+        "@shared/audio-switch"
+      );
+      markAudioSwitchPending();
+      const feature = await importFreshFeature();
+      feature.default.activate(makeFeatureContext());
+
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(applySubtitleSelection).not.toHaveBeenCalled();
+
+      clearAudioSwitchPending();
+      await vi.advanceTimersByTimeAsync(500);
+      expect(applySubtitleSelection).toHaveBeenCalledWith({ mode: "off" });
+    });
   });
 
   describe("renderer fallback", () => {

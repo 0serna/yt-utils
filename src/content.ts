@@ -5,6 +5,7 @@ import homeAutoHideTopicsFeature from "./features/home-auto-hide-topics/content"
 import homeNotInterestedFeature from "./features/home-not-interested/content";
 import homePlayablesRemovalFeature from "./features/home-playables-removal/content";
 import markAsSeenFeature from "./features/mark-as-seen/content";
+import originalAudioTrackFeature from "./features/original-audio-track/content";
 import playbackSpeedFeature from "./features/playback-speed/content";
 import searchDateFilterFeature from "./features/search-date-filter/content";
 import seenCardDimmingFeature from "./features/seen-card-dimming/content";
@@ -16,6 +17,7 @@ import { FeatureRegistry } from "./shared/feature-registry";
 
 const registry = new FeatureRegistry();
 registry.register(markAsSeenFeature);
+registry.register(originalAudioTrackFeature);
 registry.register(audioLanguageSubtitlePolicyFeature);
 registry.register(playbackSpeedFeature);
 registry.register(engagementPanelScrollContainmentFeature);
@@ -29,3 +31,4 @@ registry.register(homeAutoHideTopicsFeature);
 registry.register(homePlayablesRemovalFeature);
 registry.register(autoSwitchToVideosTabFeature);
 registry.register(searchDateFilterFeature);
+registry.start();

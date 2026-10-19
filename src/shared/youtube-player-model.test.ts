@@ -7,14 +7,18 @@ import {
   isSpanishLanguage,
   matchesSubtitleSelection,
   type PlayerSnapshot,
+  readAudioTrackIdentity,
   readAudioTrackMetadata,
   readSubtitleSignature,
+  selectOriginalAudioTrack,
+  summarizeAvailableAudioTrack,
 } from "./youtube-player-model";
 
 const defaultSnapshot: PlayerSnapshot = {
   videoId: "test",
   audioTrack: null,
   audioLanguage: null,
+  availableAudioTracks: [],
   captionTracks: [],
   translationLanguages: [],
   currentCaptionTrack: null,
@@ -263,15 +267,13 @@ describe("youtube-player-model", () => {
 
   describe("readSubtitleSignature", () => {
     it("generates signature with no tracks", () => {
-      expect(readSubtitleSignature(defaultSnapshot)).toBe(
-        "off|caption:none|audio:none",
-      );
+      expect(readSubtitleSignature(defaultSnapshot)).toBe("off|caption:none");
     });
 
     it("generates signature with subtitles on", () => {
       expect(
         readSubtitleSignature({ ...defaultSnapshot, subtitlesOn: true }),
-      ).toBe("on|caption:none|audio:none");
+      ).toBe("on|caption:none");
     });
 
     it("generates signature with caption track", () => {
@@ -287,99 +289,25 @@ describe("youtube-player-model", () => {
         subtitlesOn: true,
       };
       expect(readSubtitleSignature(snapshot)).toBe(
-        "on|caption:en:asr:.en:none|audio:none",
+        "on|caption:en:asr:.en:none",
       );
     });
 
-    it("generates signature with audio track", () => {
-      const audioTrack: AudioTrack = {
-        hs: {
-          id: "en",
-          name: "English",
-          isDefault: true,
-          isAutoDubbed: false,
-        },
-      };
-      const snapshot: PlayerSnapshot = {
-        ...defaultSnapshot,
-        audioTrack,
-        audioLanguage: "en",
-      };
-      expect(readSubtitleSignature(snapshot)).toBe(
-        "off|caption:none|audio:en:english:original",
-      );
-    });
-
-    it("generates signature with current YouTube audio metadata shape", () => {
-      const audioTrack: AudioTrack = {
-        C_: {
-          id: "en-US.4",
-          name: "English (US) original",
-          isDefault: true,
-          isAutoDubbed: false,
-        },
-      };
-      const snapshot: PlayerSnapshot = {
-        ...defaultSnapshot,
-        audioTrack,
-        audioLanguage: "en-US",
-      };
-      expect(readSubtitleSignature(snapshot)).toBe(
-        "off|caption:none|audio:en-us:english (us) original:original",
-      );
-    });
-
-    it("generates signature with Z1 YouTube audio metadata shape", () => {
-      const audioTrack: AudioTrack = {
-        id: "251;ChEKBWFjb250EghvcmlnaW5hbAoNCgRsYW5nEgVlcy1VUwoHCgJ2YhIBMQ",
-        Z1: {
-          id: "es-US.4",
-          name: "Spanish (US) original",
-          isDefault: true,
-          isAutoDubbed: false,
-        },
-      };
-      const snapshot: PlayerSnapshot = {
-        ...defaultSnapshot,
-        audioTrack,
-        audioLanguage: "es-US",
-      };
-      expect(readSubtitleSignature(snapshot)).toBe(
-        "off|caption:none|audio:es-us:spanish (us) original:original",
-      );
-    });
-
-    it("generates signature with auto-dubbed audio track", () => {
-      const audioTrack: AudioTrack = {
-        hs: {
-          id: "es",
-          name: "Spanish",
-          isDefault: false,
-          isAutoDubbed: true,
-        },
-      };
-      const snapshot: PlayerSnapshot = {
-        ...defaultSnapshot,
-        audioTrack,
-        audioLanguage: "es",
-      };
-      expect(readSubtitleSignature(snapshot)).toBe(
-        "off|caption:none|audio:es:spanish:auto",
-      );
-    });
-
-    it("uses the shared alias precedence for conflicting metadata", () => {
+    it("ignores the audio track", () => {
       const snapshot: PlayerSnapshot = {
         ...defaultSnapshot,
         audioTrack: {
-          US: { id: "es-MX.4", name: "Spanish (Mexico)" },
-          hs: { id: "en.4", name: "English", isAutoDubbed: true },
+          hs: {
+            id: "es",
+            name: "Spanish",
+            isDefault: false,
+            isAutoDubbed: true,
+          },
         },
+        audioLanguage: "es",
       };
 
-      expect(readSubtitleSignature(snapshot)).toBe(
-        "off|caption:none|audio:es-mx:spanish (mexico):auto",
-      );
+      expect(readSubtitleSignature(snapshot)).toBe("off|caption:none");
     });
 
     it("generates signature with translation language", () => {
@@ -399,9 +327,119 @@ describe("youtube-player-model", () => {
         currentCaptionTrack: captionTrack,
         subtitlesOn: true,
       };
-      expect(readSubtitleSignature(snapshot)).toBe(
-        "on|caption:es:asr:.es:en|audio:none",
+      expect(readSubtitleSignature(snapshot)).toBe("on|caption:es:asr:.es:en");
+    });
+  });
+
+  describe("selectOriginalAudioTrack", () => {
+    it("prefers the non-dubbed track over the default one", () => {
+      const dubbed = {
+        id: "es-US.10",
+        name: "Spanish (US)",
+        isDefault: true,
+        isAutoDubbed: true,
+        languageCode: "es-us",
+      };
+      const original = {
+        id: "en-US.4",
+        name: "English (US) original",
+        isDefault: false,
+        isAutoDubbed: false,
+        languageCode: "en-us",
+      };
+
+      expect(selectOriginalAudioTrack([dubbed, original])).toEqual(original);
+    });
+
+    it("falls back to the default track when no track declares dubbing", () => {
+      const plain = {
+        id: "en.4",
+        name: "English",
+        isDefault: null,
+        isAutoDubbed: null,
+        languageCode: "en",
+      };
+      const defaultTrack = {
+        id: "es.4",
+        name: "Spanish",
+        isDefault: true,
+        isAutoDubbed: null,
+        languageCode: "es",
+      };
+
+      expect(selectOriginalAudioTrack([plain, defaultTrack])).toEqual(
+        defaultTrack,
       );
+    });
+
+    it("returns null when no track is identifiable", () => {
+      expect(
+        selectOriginalAudioTrack([
+          {
+            id: "und",
+            name: null,
+            isDefault: null,
+            isAutoDubbed: null,
+            languageCode: null,
+          },
+        ]),
+      ).toBeNull();
+    });
+  });
+
+  describe("readAudioTrackIdentity", () => {
+    it("prefers the player track id", () => {
+      expect(
+        readAudioTrackIdentity({
+          id: "251;track-id",
+          hs: { id: "en-US.4", name: "English (US) original" },
+        }),
+      ).toBe("251;track-id");
+    });
+
+    it("falls back to the metadata id", () => {
+      expect(
+        readAudioTrackIdentity({
+          hs: { id: "en-US.4", name: "English (US) original" },
+        }),
+      ).toBe("en-US.4");
+    });
+
+    it("returns null without any id", () => {
+      expect(readAudioTrackIdentity({ hs: { name: "English" } })).toBeNull();
+      expect(readAudioTrackIdentity(null)).toBeNull();
+    });
+  });
+
+  describe("summarizeAvailableAudioTrack", () => {
+    it("summarizes metadata and language code", () => {
+      expect(
+        summarizeAvailableAudioTrack({
+          id: "251;track-id",
+          hs: {
+            id: "en-US.4",
+            name: "English (US) original",
+            isDefault: true,
+            isAutoDubbed: false,
+          },
+        }),
+      ).toEqual({
+        id: "251;track-id",
+        name: "English (US) original",
+        isDefault: true,
+        isAutoDubbed: false,
+        languageCode: "en-us",
+      });
+    });
+
+    it("keeps unknown fields null", () => {
+      expect(summarizeAvailableAudioTrack({})).toEqual({
+        id: null,
+        name: null,
+        isDefault: null,
+        isAutoDubbed: null,
+        languageCode: null,
+      });
     });
   });
 

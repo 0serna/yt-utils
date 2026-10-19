@@ -28,6 +28,7 @@ function snapshot(
     videoId,
     audioTrack,
     audioLanguage,
+    availableAudioTracks: [],
     captionTracks,
     translationLanguages: [],
     currentCaptionTrack: null,

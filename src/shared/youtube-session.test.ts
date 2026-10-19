@@ -19,6 +19,7 @@ function snapshot(videoId: string): PlayerSnapshot {
     videoId,
     audioTrack: null,
     audioLanguage: null,
+    availableAudioTracks: [],
     captionTracks: [],
     translationLanguages: [],
     currentCaptionTrack: null,

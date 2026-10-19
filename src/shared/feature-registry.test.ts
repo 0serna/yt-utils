@@ -57,11 +57,52 @@ describe("FeatureRegistry logging", () => {
     vi.restoreAllMocks();
   });
 
+  describe("startup", () => {
+    it("activates each feature once after start", () => {
+      const registry = new FeatureRegistry();
+      const first = makeFeature("first");
+      const second = makeFeature("second");
+      const third = makeFeature("third");
+
+      registry.register(first);
+      registry.register(second);
+      registry.register(third);
+      registry.start();
+
+      expect(first.activate).toHaveBeenCalledOnce();
+      expect(second.activate).toHaveBeenCalledOnce();
+      expect(third.activate).toHaveBeenCalledOnce();
+      expect(first.deactivate).not.toHaveBeenCalled();
+      expect(second.deactivate).not.toHaveBeenCalled();
+      expect(third.deactivate).not.toHaveBeenCalled();
+    });
+
+    it("does not activate features on register alone", () => {
+      const registry = new FeatureRegistry();
+      const feature = makeFeature("late-feature");
+
+      registry.register(feature);
+
+      expect(feature.activate).not.toHaveBeenCalled();
+    });
+
+    it("activates a feature registered after start", () => {
+      const registry = new FeatureRegistry();
+      registry.start();
+
+      const feature = makeFeature("late-feature");
+      registry.register(feature);
+
+      expect(feature.activate).toHaveBeenCalledOnce();
+    });
+  });
+
   describe("lifecycle logging", () => {
     it("creates a logger and passes it through context on activate", () => {
       const registry = new FeatureRegistry();
       const feature = makeFeature("test-feature");
       registry.register(feature);
+      registry.start();
 
       const context = vi.mocked(feature.activate).mock
         .calls[0]?.[0] as FeatureContext;
@@ -80,6 +121,7 @@ describe("FeatureRegistry logging", () => {
         }),
       });
       registry.register(broken);
+      registry.start();
 
       const active = internals(registry).activeFeatures;
       expect(active.has(broken)).toBe(false);
@@ -95,6 +137,7 @@ describe("FeatureRegistry logging", () => {
       const good = makeFeature("good");
       registry.register(broken);
       registry.register(good);
+      registry.start();
 
       expect(good.activate).toHaveBeenCalled();
     });
@@ -117,6 +160,7 @@ describe("FeatureRegistry logging", () => {
       const registry = new FeatureRegistry();
       const feature = makeFeature("watch-feature");
       registry.register(feature);
+      registry.start();
       vi.mocked(feature.activate).mockClear();
       vi.mocked(feature.deactivate).mockClear();
 
@@ -153,6 +197,7 @@ describe("FeatureRegistry logging", () => {
       const registry = new FeatureRegistry();
       const feature = makeFeature("watch-feature");
       registry.register(feature);
+      registry.start();
       vi.mocked(feature.activate).mockClear();
       vi.mocked(feature.deactivate).mockClear();
 

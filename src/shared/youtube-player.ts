@@ -10,10 +10,13 @@ import {
   isEnglishLanguage,
   isSpanishLanguage,
   matchesSubtitleSelection,
+  readAudioTrackIdentity,
   readSubtitleSignature,
+  selectOriginalAudioTrack,
 } from "@shared/youtube-player-model";
 
 export type {
+  AvailableAudioTrack,
   PlayerSnapshot,
   SubtitleSelection,
 } from "@shared/youtube-player-model";
@@ -22,7 +25,9 @@ export {
   isEnglishLanguage,
   isSpanishLanguage,
   matchesSubtitleSelection,
+  readAudioTrackIdentity,
   readSubtitleSignature,
+  selectOriginalAudioTrack,
 };
 
 const BRIDGE_RESPONSE_TIMEOUT_MS = 2000;
@@ -53,6 +58,17 @@ export async function applySubtitleSelection(
   selection: SubtitleSelection,
 ): Promise<boolean> {
   const result = await sendBridgeRequest("applySelection", selection);
+  return result === true;
+}
+
+export async function applyAudioTrackSelection(
+  audioTrackId: string,
+): Promise<boolean> {
+  const result = await sendBridgeRequest(
+    "applyAudioTrack",
+    undefined,
+    audioTrackId,
+  );
   return result === true;
 }
 
@@ -88,8 +104,9 @@ function readWaitForSubtitleSelectionConfig(options?: {
 async function sendBridgeRequest(
   action: BridgeRequest["action"],
   selection?: SubtitleSelection,
+  audioTrackId?: string,
 ): Promise<PlayerSnapshot | boolean | null> {
-  const result = await sendBridgeRequestOnce(action, selection);
+  const result = await sendBridgeRequestOnce(action, selection, audioTrackId);
   if (result !== null || action !== "readSnapshot") {
     return result;
   }
@@ -99,7 +116,7 @@ async function sendBridgeRequest(
   }
 
   await delay(BRIDGE_FALLBACK_INSTALL_DELAY_MS);
-  return sendBridgeRequestOnce(action, selection);
+  return sendBridgeRequestOnce(action, selection, audioTrackId);
 }
 
 async function installBridgeFallbackScript(): Promise<boolean> {
@@ -156,6 +173,7 @@ export function findBridgeModuleResource(
 async function sendBridgeRequestOnce(
   action: BridgeRequest["action"],
   selection?: SubtitleSelection,
+  audioTrackId?: string,
 ): Promise<PlayerSnapshot | boolean | null> {
   const id = `${Date.now()}-${requestCounter++}`;
 
@@ -192,6 +210,7 @@ async function sendBridgeRequestOnce(
       id,
       action,
       selection,
+      audioTrackId,
     };
     window.postMessage(request, window.location.origin);
   });

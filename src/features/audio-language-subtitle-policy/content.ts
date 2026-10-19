@@ -1,3 +1,4 @@
+import { isAudioSwitchPending } from "@shared/audio-switch";
 import type { Feature, FeatureContext } from "@shared/types";
 import type { PlayerSnapshot, SubtitleSelection } from "@shared/youtube-player";
 import {
@@ -83,6 +84,10 @@ async function syncPolicy(
     return;
   }
 
+  if (isAudioSwitchPending()) {
+    return;
+  }
+
   const appliedSignature = appliedStateByVideo.get(ctx.videoId);
   const desiredSelection = determineSubtitleSelection(ctx.snapshot);
   const overridden = isPolicyOverridden(
@@ -101,7 +106,11 @@ async function syncPolicy(
     return;
   }
 
-  if (appliedSignature && ctx.currentSignature === appliedSignature) {
+  if (
+    appliedSignature &&
+    ctx.currentSignature === appliedSignature &&
+    matchesSubtitleSelection(ctx.snapshot, desiredSelection)
+  ) {
     return;
   }
 
@@ -326,7 +335,7 @@ async function waitForSelectionApply(
 
 function rememberAppliedSignature(videoId: string, signature: string): void {
   appliedStateByVideo.set(videoId, signature);
-  appliedAtByVideo.set(videoId, appliedAtByVideo.get(videoId) ?? Date.now());
+  appliedAtByVideo.set(videoId, Date.now());
 }
 
 function hasRenderedCaptionText(): boolean {

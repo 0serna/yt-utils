@@ -15,6 +15,7 @@ export class FeatureRegistry {
   private activeFeatures: Set<Feature> = new Set();
   private featureLoggers: Map<Feature, FeatureLogger> = new Map();
   private lastSessionKey: string = "";
+  private started = false;
 
   constructor() {
     this.listenForNavigation();
@@ -22,6 +23,18 @@ export class FeatureRegistry {
 
   register(feature: Feature): void {
     this.features.push(feature);
+
+    if (this.started) {
+      this.forceSync();
+    }
+  }
+
+  start(): void {
+    if (this.started) {
+      return;
+    }
+
+    this.started = true;
     this.forceSync();
   }
 

@@ -19,6 +19,7 @@ const SNAPSHOT: PlayerSnapshot = {
   audioTrack: null,
   audioLanguage: "es",
   contentLanguage: null,
+  availableAudioTracks: [],
   captionTracks: [],
   translationLanguages: [],
   currentCaptionTrack: null,
@@ -139,6 +140,29 @@ describe("youtube-player bridge fallback", () => {
       expect(applied).toBe(false);
       expect(state.requests).toHaveLength(1);
       expect(document.querySelector('script[type="module"]')).toBeNull();
+    }, 10000);
+
+    it("sends the audio track id when applying an audio track", async () => {
+      state.respond = () => true;
+
+      const { applyAudioTrackSelection } = await import("./youtube-player");
+      const applied = await applyAudioTrackSelection("251;en");
+
+      expect(applied).toBe(true);
+      expect(state.requests).toHaveLength(1);
+      expect(state.requests[0]).toMatchObject({
+        action: "applyAudioTrack",
+        audioTrackId: "251;en",
+      });
+    }, 10000);
+
+    it("returns false when the audio track could not be applied", async () => {
+      state.respond = () => false;
+
+      const { applyAudioTrackSelection } = await import("./youtube-player");
+      const applied = await applyAudioTrackSelection("251;en");
+
+      expect(applied).toBe(false);
     }, 10000);
   });
 

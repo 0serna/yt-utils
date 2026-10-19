@@ -1,5 +1,6 @@
 import type {
   AudioTrack,
+  AvailableAudioTrack,
   BridgeRequest,
   BridgeResponse,
   CaptionTrack,
@@ -7,7 +8,11 @@ import type {
   SubtitleSelection,
   TranslationLanguage,
 } from "@shared/youtube-player-model";
-import { readAudioTrackMetadata } from "@shared/youtube-player-model";
+import {
+  readAudioTrackIdentity,
+  readAudioTrackMetadata,
+  summarizeAvailableAudioTrack,
+} from "@shared/youtube-player-model";
 
 type PlayerResponse = {
   captions?: {
@@ -27,6 +32,8 @@ type YoutubePlayer = HTMLElement & {
   getPlayerResponse?: () => PlayerResponse | null;
   getVideoData?: () => PlayerResponse["videoDetails"] | null;
   getAudioTrack?: () => AudioTrack | null;
+  getAvailableAudioTracks?: () => AudioTrack[] | null;
+  setAudioTrack?: (track: AudioTrack) => void;
   getOption?: (namespace: string, key: string) => unknown;
   isSubtitlesOn?: () => boolean;
   toggleSubtitles?: () => void;
@@ -39,6 +46,7 @@ type SnapshotInputs = {
   captionTracks: CaptionTrack[];
   videoData: PlayerResponse["videoDetails"] | null;
   audioTrack: AudioTrack | null;
+  availableAudioTracks: AvailableAudioTrack[];
   currentCaptionTrack: CaptionTrack | null;
   translationLanguages: TranslationLanguage[];
 };
@@ -65,6 +73,8 @@ const bridgeRequestHandlers: Record<
   readSnapshot: () => readPlayerSnapshot(),
   applySelection: (request) =>
     applySubtitleSelection(request.selection ?? null),
+  applyAudioTrack: (request) =>
+    applyAudioTrackSelection(request.audioTrackId ?? null),
 };
 
 if (!bridgeWindow[BRIDGE_FLAG]) {
@@ -134,6 +144,7 @@ function buildPlayerSnapshot(
   return {
     videoId: readVideoId(inputs.videoData, inputs.response),
     audioTrack: inputs.audioTrack,
+    availableAudioTracks: inputs.availableAudioTracks,
     audioLanguage: inferAudioLanguage(inputs.audioTrack),
     contentLanguage: inferContentLanguage(inputs.response),
     captionTracks: inputs.captionTracks,
@@ -150,6 +161,7 @@ function readSnapshotInputs(source: SnapshotSource): SnapshotInputs {
     response: source.response,
     videoData: readVideoData(source),
     audioTrack: cloneValue(audioTrack),
+    availableAudioTracks: readAvailableAudioTracks(source.player),
     currentCaptionTrack: cloneValue(readCurrentCaptionTrack(source.player)),
     captionTracks: cloneValue(readCaptionTracks(audioTrack, source.response)),
     translationLanguages: cloneValue(readTranslationLanguages(source.player)),
@@ -161,6 +173,36 @@ function applySubtitleSelection(selection: SubtitleSelection | null): boolean {
   return Boolean(
     player && selection && applySelectionToPlayer(player, selection),
   );
+}
+
+function applyAudioTrackSelection(audioTrackId: string | null): boolean {
+  const player = getMoviePlayer();
+  if (!player || !audioTrackId || !player.setAudioTrack) {
+    return false;
+  }
+
+  const track = readAvailableAudioTrackObjects(player).find(
+    (candidate) => readAudioTrackIdentity(candidate) === audioTrackId,
+  );
+  if (!track) {
+    return false;
+  }
+
+  player.setAudioTrack(track);
+  return true;
+}
+
+function readAvailableAudioTracks(
+  player: YoutubePlayer,
+): AvailableAudioTrack[] {
+  return readAvailableAudioTrackObjects(player).map(
+    summarizeAvailableAudioTrack,
+  );
+}
+
+function readAvailableAudioTrackObjects(player: YoutubePlayer): AudioTrack[] {
+  const tracks = player.getAvailableAudioTracks?.();
+  return Array.isArray(tracks) ? tracks : [];
 }
 
 function applySelectionToPlayer(
