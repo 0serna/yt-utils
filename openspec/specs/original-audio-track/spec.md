@@ -1,6 +1,7 @@
 # original-audio-track Specification
 
 ## Purpose
+
 Mantener la pista de audio original activa en cada vídeo, sin depender de extensiones externas ni de clicks en el menú de ajustes del player.
 
 ## Requirements

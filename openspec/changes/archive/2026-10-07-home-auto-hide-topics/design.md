@@ -5,7 +5,6 @@
 See `proposal.md` - Why. The change replaces the native-action driver in `src/features/home-auto-not-interested-topics/content.ts` with local hiding. Detection stays in `topics.ts` and `readCardFilterText`. The shared overlay driver (`src/shared/feed-card-overlay-action.ts`) and the manual `home-not-interested` feature stay untouched; when a card is hidden, the overlay driver already removes its own button because the `...` menu button fails its visibility check.
 
 Constraints:
-
 - The feature registry deactivates all features on SPA navigation and re-activates features whose `matchesPage` returns true.
 - Home cards are `ytd-rich-item-renderer` elements and YouTube may reuse an element for another video.
 - No persistence layer exists for this feature and none is added.
@@ -13,13 +12,11 @@ Constraints:
 ## Goals / Non-Goals
 
 **Goals:**
-
 - Replace the native `No me interesa` flow with local hiding, reusing the current topic registry and observer coverage.
 - Keep hidden state safe against element recycling.
 - Retire the old capability with reviewable spec deltas.
 
 **Non-Goals:**
-
 - No `chrome.storage` persistence, no settings UI, no cross-page behavior.
 - No restore on deactivation (decided: hidden cards stay hidden).
 - No changes to the manual `home-not-interested` feature or to the shared overlay action.

@@ -7,13 +7,11 @@ Ver `proposal.md` para el motivo. Estado actual en `src/shared/youtube-player-mo
 ## Goals / Non-Goals
 
 **Goals:**
-
 - Un solo gate de apagado: audio español via `isSpanishLanguage`.
 - Encendido en ingles con prioridad directa primero, luego ASR.
 - No cachear `off` cuando la ausencia de pista puede deberse a carga tardia.
 
 **Non-Goals:**
-
 - Traduccion automatica al ingles con `translationLanguages`.
 - Uso de `contentLanguage` como señal de español.
 - Cambios en override de usuario, firma de estado, o fallback de renderer.

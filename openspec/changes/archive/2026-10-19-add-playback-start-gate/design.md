@@ -9,7 +9,6 @@ See `proposal.md` for the motivation and the fixed-delay tradeoff.
 ## Goals / Non-Goals
 
 **Goals:**
-
 - Hold the first playback of each Watch Session for 3000 ms.
 - Catch both an already-playing video and a late autoplay.
 - Resume only when the gate caused the pause.
@@ -17,7 +16,6 @@ See `proposal.md` for the motivation and the fixed-delay tradeoff.
 - Skip ads and live streams.
 
 **Non-Goals:**
-
 - Wait for feature completion. The gate releases after 3000 ms even if work remains.
 - Change the `Feature` contract or the registry.
 - Fix the audio-to-speed ordering.

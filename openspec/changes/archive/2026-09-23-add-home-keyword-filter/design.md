@@ -7,13 +7,11 @@ Ver `proposal.md` para motivación. Estado actual: features home usan `ytd-rich-
 ## Goals / Non-Goals
 
 **Goals:**
-
 - Ocultar en Home tarjetas Clash con match de texto visible y restaurar al desactivar.
 - Lista fija extensible a futuros temas sin UI en v1.
 - Reutilizar helpers y patrones existentes de features home.
 
 **Non-Goals:**
-
 - Página de opciones / storage editable.
 - OCR de miniaturas o fetch de watch page.
 - Filtrar suscripciones, búsqueda o relacionados.

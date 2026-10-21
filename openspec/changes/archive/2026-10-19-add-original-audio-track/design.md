@@ -12,13 +12,11 @@
 ## Goals / Non-Goals
 
 **Goals:**
-
 - Una sola lectura del player alimenta ambas features: lista de pistas, pista activa y estado de subtítulos.
 - El audio original se elige por metadata (`isAutoDubbed`), sin textos ni menús traducidos.
 - La política de subtítulos converge después de cada cambio de audio, sin coordinación directa entre features.
 
 **Non-Goals:**
-
 - Volver a forzar el audio original después de una elección manual del usuario.
 - Cambiar la regla de subtítulos (español apaga, resto enciende inglés).
 - Añadir UI, opciones o permisos nuevos.
@@ -29,28 +27,24 @@
 ### Acción de bridge `applyAudioTrack` con id, resuelta en el MAIN world
 
 El content script manda `{ action: "applyAudioTrack", audioTrackId }`. El bridge busca esa pista en `getAvailableAudioTracks()` y llama a `setAudioTrack(track)` con el objeto completo.
-
 - Motivo: `setAudioTrack` necesita el objeto del player, no el id. Resolverlo en el MAIN world evita mandar objetos grandes por `postMessage` y evita usar un objeto viejo.
 - Alternativa descartada: mandar el objeto completo desde el content script (más payload, y el objeto llega clonado sin las referencias internas del player).
 
 ### La lista de pistas entra al `PlayerSnapshot`
 
 `availableAudioTracks` se agrega al snapshot como lista de `{ id, name, isDefault, isAutoDubbed, languageCode }`.
-
 - Motivo: la feature de audio y la política de subtítulos leen lo mismo en el mismo ciclo de sondeo.
 - Alternativa descartada: acción de bridge separada `readAudioTracks` (duplica lecturas y agrega una carrera más con el poll).
 
 ### Feature separada `original-audio-track`
 
 La selección de audio vive en su propia feature registrada en `src/content.ts`, con su propio poll y Watch Session.
-
 - Motivo: cada feature mantiene una responsabilidad. La política de subtítulos sigue siendo la única dueña del subtítulo.
 - Alternativa descartada: meter el audio dentro de `audio-language-subtitle-policy` (mezcla dos decisiones y rompe el nombre de la feature).
 
 ### Coordinación por estado, no por mensajes
 
 `original-audio-track` no avisa a la política de subtítulos. La política detecta el cambio porque la firma de audio cambió y vuelve a decidir en el siguiente sondeo.
-
 - Motivo: dependencia en un solo sentido (audio → subtítulo). Menos piezas y sin acoplamiento entre features.
 - Costo: hasta un ciclo de sondeo (500 ms) de retraso entre el cambio de audio y el subtítulo.
 - Alternativa descartada: evento o mensaje `audio-changed` (agrega orden, suscripción y casos de fallo).
@@ -67,14 +61,12 @@ La selección de audio vive en su propia feature registrada en `src/content.ts`,
 ### Una aplicación de audio por Watch Session
 
 La feature marca la sesión como resuelta cuando la pista activa es la original. Desde ahí no vuelve a llamar a `setAudioTrack`.
-
 - Motivo: replica el comportamiento de la extensión actual y respeta una elección manual posterior.
 - Límite de reintentos: si `setAudioTrack` no cambia la pista, reintenta dentro de la sesión con un tope acotado de intentos y luego se detiene (spec: "Rechazo del player").
 
 ### Ventana de gracia desde la última aplicación
 
 `appliedAtByVideo` se actualiza en cada aplicación, no solo la primera.
-
 - Motivo: un apply tardío (por ejemplo, después de que carguen las pistas) deja la ventana de gracia vencida y produce falsos overrides.
 
 ## Risks / Trade-offs

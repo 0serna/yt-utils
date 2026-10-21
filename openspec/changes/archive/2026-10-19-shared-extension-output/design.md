@@ -5,7 +5,6 @@
 `vite.config.ts` builds with `@crxjs/vite-plugin` into `extension/` relative to the worktree root. `extension/` is gitignored. Chrome derives an unpacked extension's ID from its absolute path, so each worktree path gets an independent entry and storage. CI builds in a normal checkout, where the output is `<checkout>/extension`.
 
 Constraints:
-
 - `npm run build` must keep working from any worktree without extra setup.
 - CI must keep working without configuration.
 - The generated directory must remain loadable as-is.
@@ -16,14 +15,12 @@ See `proposal.md` for motivation.
 ## Goals / Non-Goals
 
 **Goals:**
-
 - One stable loadable directory for all worktrees.
 - Zero per-worktree environment configuration.
 - Stable extension ID and storage across worktree builds.
 - No stale output in the shared directory.
 
 **Non-Goals:**
-
 - Changing extension behavior or the manifest.
 - Migrating storage from old per-worktree extension entries.
 - HMR or a dev-server workflow.
@@ -35,7 +32,6 @@ See `proposal.md` for motivation.
 ### 1. Derive the main checkout from Git
 
 Run `git rev-parse --path-format=absolute --git-common-dir` in `vite.config.ts`. In a worktree it returns `<main>/.git`; the parent is the main checkout. The output is then `<main>/extension`.
-
 - Why: no machine-specific path in the repo.
 - Why: in CI the common dir is `<checkout>/.git`, so the output stays `<checkout>/extension`.
 - Alternative rejected: `__dirname/../..` resolves to the worktrees parent, not the main checkout.
@@ -44,7 +40,6 @@ Run `git rev-parse --path-format=absolute --git-common-dir` in `vite.config.ts`.
 ### 2. Fall back to the local `extension/`
 
 If Git is unavailable or the command fails, use `resolve(__dirname, "extension")`.
-
 - Why: a build must not fail only because the checkout is not a Git worktree (tarball, shallow copy).
 - Cost: three lines in the resolver.
 
@@ -60,7 +55,6 @@ Vite does not empty an outDir outside the project root by default. The explicit 
 ### 5. Serialize builds with `flock`
 
 Wrap the build as `flock /tmp/yt-utils-build.lock vite build`.
-
 - Why: the shared directory creates a write race when two worktrees build at once. The second build waits instead of interleaving files.
 - Trade-off: POSIX-only. macOS needs `flock` installed. Accepted for Linux dev and Ubuntu CI.
 - Alternative rejected: build to a temp directory and swap it in. More code, and Chrome's behavior with a swapped symlink is uncertain.

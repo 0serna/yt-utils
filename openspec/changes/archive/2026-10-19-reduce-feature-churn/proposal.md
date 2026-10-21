@@ -3,7 +3,6 @@
 ## Why
 
 Dos fuentes de trabajo inútil quedaron visibles en la validación del cambio anterior:
-
 1. La política de subtítulos decide con un audio que está a punto de cambiar. En el log del 14:38:13 la política apagó subtítulos con `es-US` y los volvió a encender 550 ms después, cuando `original-audio-track` terminó de aplicar `en-US`. Los subtítulos parpadean al arrancar un vídeo doblado.
 2. `FeatureRegistry.register()` sincroniza en cada registro, así que una carga de página activa y desactiva todas las features una vez por feature registrada. Genera ~150 entradas de log por carga y reinicia el estado por vídeo de cada feature hasta 15 veces.
 

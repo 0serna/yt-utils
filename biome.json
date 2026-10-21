@@ -1,6 +1,7 @@
 {
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "formatter": { "indentStyle": "space" },
+  "markdown": { "parser": { "frontmatter": true } },
   "linter": {
     "rules": {
       "complexity": { "useLiteralKeys": "error" },

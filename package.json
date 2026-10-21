@@ -13,10 +13,10 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,json,jsonc}": "biome check --write --no-errors-on-unmatched"
+    "*": "biome check --write --no-errors-on-unmatched"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.12",
+    "@biomejs/biome": "^2.6.2",
     "@crxjs/vite-plugin": "^2.7.1",
     "@types/chrome": "^0.1.40",
     "@types/node": "^25.6.0",

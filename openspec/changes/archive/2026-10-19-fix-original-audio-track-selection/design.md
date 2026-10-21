@@ -5,7 +5,6 @@
 `summarizeAvailableAudioTrack` builds the list that `selectOriginalAudioTrack` receives. The summarized track keeps `id`, `name`, `isDefault`, and `isAutoDubbed`, but drops the raw track object.
 
 Real YouTube track ids encode the content type. For example:
-
 - `251;Cg8KBWFjb250EgZkdWJiZWQKCgoEbGFuZxICYXI` decodes to a track whose content is `dubbed` and language is `ar`.
 - `251;ChEKBWFjb250EghvcmlnaW5hbAoKCgRsYW5nEgJlbg` decodes to a track whose content is `original` and language is `en`.
 
@@ -16,14 +15,12 @@ See `proposal.md` for the motivation.
 ## Goals / Non-Goals
 
 **Goals:**
-
 - Select the Original Audio Track from the content encoded in its id when that signal exists.
 - Fall back to an original-like name, then to the existing flags.
 - Keep the current feature lifecycle, retry limit, announcement, and failure behavior.
 - Cover the real track shape with regression tests.
 
 **Non-Goals:**
-
 - Change the bridge, the content script, or the audio-switch announcement.
 - Add storage, manifest, or permission changes.
 - Guarantee identification when YouTube removes every signal.
@@ -39,7 +36,6 @@ Alternative: add a `content` field to `AvailableAudioTrack`. Rejected because it
 ### Prefer content, then name, then flags
 
 Selection order:
-
 1. A track whose id content is `original`.
 2. A track whose name contains `original`.
 3. A track with `isAutoDubbed: false`, excluding tracks whose id content is `dubbed`.

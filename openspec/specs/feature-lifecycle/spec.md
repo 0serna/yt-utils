@@ -1,6 +1,7 @@
 # feature-lifecycle Specification
 
 ## Purpose
+
 Definir cuándo una feature se activa y se desactiva, para que el arranque de la extensión no repita trabajo ni ensucie el historial de logs.
 
 ## Requirements

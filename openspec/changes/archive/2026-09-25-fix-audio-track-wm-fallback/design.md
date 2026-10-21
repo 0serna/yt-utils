@@ -7,12 +7,10 @@ Ver `proposal.md` para motivación. Estado actual: `readAudioTrackMetadata` en `
 ## Goals / Non-Goals
 
 **Goals:**
-
 - Resolver `wM` de inmediato y tolerar la próxima llave sin cambiar política de subtítulos.
 - Mantener `und` / opaco como desconocido y no confundir captions con audio.
 
 **Non-Goals:**
-
 - Cambiar qué idiomas activan subtítulos o velocidades.
 - Usar `contentLanguage` heurístico como fuente para subtítulos.
 - Tocar arquitectura bridge/polling.
