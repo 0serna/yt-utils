@@ -21,9 +21,7 @@ chrome.action.onClicked.addListener(async (tab) => {
   const result = await runMarkAsSeenForTab(tabId, tab.url);
 
   if (result.ok) {
-    self.setTimeout(() => {
-      clearActionStatus(tabId).catch(() => {});
-    }, 3000);
+    scheduleStatusClear(tabId);
   }
 });
 
@@ -50,11 +48,20 @@ async function handleInlineTriggerMessage(
 
   try {
     const result = await execAutomationForTab(tabId);
+    if (result.ok) {
+      scheduleStatusClear(tabId);
+    }
     return buildAutomationResult(result);
   } catch (error) {
     const props = normalizeExtensionError(error);
     return makeErrorResult(props.code, props.message, props.details);
   }
+}
+
+function scheduleStatusClear(tabId: number): void {
+  self.setTimeout(() => {
+    clearActionStatus(tabId).catch(() => {});
+  }, 3000);
 }
 
 async function execAutomationForTab(tabId: number): Promise<ExtensionResult> {

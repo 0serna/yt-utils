@@ -86,6 +86,9 @@ describe("home-auto-hide-topics matcher", () => {
 
   it("does not match unrelated content", () => {
     expect(matchesBlockedKeyword("Kubernetes Simply Explained")).toBe(false);
+    expect(matchesBlockedKeyword("Broken phone review")).toBe(false);
+    expect(matchesBlockedKeyword("Kenya travel guide")).toBe(false);
+    expect(matchesBlockedKeyword("Kendrick Lamar interview")).toBe(false);
     expect(matchesBlockedKeyword("")).toBe(false);
   });
 

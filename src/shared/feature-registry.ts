@@ -1,6 +1,6 @@
 import { createFeatureLogger } from "./feature-logger";
-import { sendMessage } from "./messaging";
 import type { Feature, FeatureLogger } from "./types";
+import { isDesktopWatchPage } from "./youtube-dom";
 import { getCurrentWatchSessionKey } from "./youtube-session";
 
 const NAVIGATION_SYNC_DELAYS_MS = [0, 250, 1000, 2500] as const;
@@ -108,7 +108,7 @@ export class FeatureRegistry {
       const logger = this.getFeatureLogger(feature);
 
       try {
-        feature.activate({ sendMessage, logger });
+        feature.activate({ logger });
         logger.activation();
         this.activeFeatures.add(feature);
       } catch (error) {
@@ -123,13 +123,5 @@ function shouldActivateFeature(feature: Feature, url: URL): boolean {
     return feature.matchesPage(url);
   }
 
-  return !!(feature.isWatchPage && isWatchPageUrl(url));
-}
-
-function isWatchPageUrl(url: URL): boolean {
-  return (
-    url.hostname === "www.youtube.com" &&
-    url.pathname === "/watch" &&
-    url.searchParams.has("v")
-  );
+  return !!(feature.isWatchPage && isDesktopWatchPage(url));
 }

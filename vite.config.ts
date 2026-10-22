@@ -1,14 +1,24 @@
 import { execFileSync } from "node:child_process";
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 import { crx } from "@crxjs/vite-plugin";
 import { defineConfig } from "vite";
 import manifest from "./manifest.json";
 
 function resolveOutDir() {
-  if (process.env.EXTENSION_OUT_DIR) {
-    return resolve(process.env.EXTENSION_OUT_DIR);
+  const outDir = process.env.EXTENSION_OUT_DIR
+    ? resolve(process.env.EXTENSION_OUT_DIR)
+    : resolveDefaultOutDir();
+
+  if (basename(outDir) !== "extension") {
+    throw new Error(
+      `Refusing to build: the extension output directory must end with "extension" (got ${outDir}).`,
+    );
   }
 
+  return outDir;
+}
+
+function resolveDefaultOutDir() {
   try {
     const commonDir = execFileSync(
       "git",

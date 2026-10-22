@@ -12,6 +12,7 @@ const CONTAINMENT_VALUE = "contain";
 const MIN_SCROLL_CONTAINER_HEIGHT = 120;
 
 let sessionToken = 0;
+const scrollContainerByPanel = new WeakMap<HTMLElement, HTMLElement>();
 
 const domSyncController = createDomSyncController({
   pollIntervalMs: POLL_INTERVAL_MS,
@@ -52,11 +53,22 @@ function syncContainment(token: number): void {
 }
 
 function applyContainmentToPanel(panel: HTMLElement): void {
-  const scrollContainer = findPrimaryScrollContainer(panel);
+  const cached = scrollContainerByPanel.get(panel);
   if (
-    scrollContainer &&
-    scrollContainer.style.overscrollBehaviorY !== CONTAINMENT_VALUE
+    cached?.isConnected &&
+    cached.style.overscrollBehaviorY === CONTAINMENT_VALUE
   ) {
+    return;
+  }
+
+  const scrollContainer = findPrimaryScrollContainer(panel);
+  if (!scrollContainer) {
+    return;
+  }
+
+  scrollContainerByPanel.set(panel, scrollContainer);
+
+  if (scrollContainer.style.overscrollBehaviorY !== CONTAINMENT_VALUE) {
     scrollContainer.style.overscrollBehaviorY = CONTAINMENT_VALUE;
   }
 }

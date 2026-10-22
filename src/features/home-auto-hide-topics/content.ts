@@ -96,12 +96,18 @@ function restoreCard(card: HTMLElement): void {
   card.removeAttribute(HIDDEN_ATTRIBUTE);
 }
 
+const RICH_ITEM_SELECTOR = "ytd-rich-item-renderer";
+
 function observePage(): void {
   if (observer) {
     return;
   }
 
-  observer = new MutationObserver(() => {
+  observer = new MutationObserver((mutations) => {
+    if (!hasRelevantTopicMutation(mutations)) {
+      return;
+    }
+
     if (!ensureQueued) {
       ensureQueued = true;
       window.requestAnimationFrame(() => {
@@ -115,6 +121,23 @@ function observePage(): void {
     childList: true,
     subtree: true,
   });
+}
+
+function hasRelevantTopicMutation(mutations: MutationRecord[]): boolean {
+  return mutations.some((mutation) =>
+    [...mutation.addedNodes, ...mutation.removedNodes].some(isRichItemNode),
+  );
+}
+
+function isRichItemNode(node: Node): boolean {
+  if (!(node instanceof Element)) {
+    return Boolean(node.parentElement?.closest(RICH_ITEM_SELECTOR));
+  }
+
+  return (
+    node.matches(RICH_ITEM_SELECTOR) ||
+    Boolean(node.querySelector(RICH_ITEM_SELECTOR))
+  );
 }
 
 function stopObserving(): void {

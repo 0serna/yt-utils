@@ -8,6 +8,7 @@ import {
   BRIDGE_SOURCE,
   determineSubtitleSelection,
   isEnglishLanguage,
+  isPlayerSnapshot,
   isSpanishLanguage,
   matchesSubtitleSelection,
   readAudioTrackIdentity,
@@ -31,32 +32,35 @@ export {
 };
 
 const BRIDGE_RESPONSE_TIMEOUT_MS = 2000;
-const BRIDGE_FALLBACK_INSTALL_DELAY_MS = 400;
-const BRIDGE_MODULE_RESOURCE_HINT = "youtube-player-bridge.ts-";
+const SNAPSHOT_CACHE_MS = 400;
 const DEFAULT_SUBTITLE_SELECTION_WAIT = {
   timeoutMs: 1500,
   intervalMs: 100,
 };
 
-type WebAccessibleManifest = {
-  web_accessible_resources?: Array<{ resources?: unknown[] }>;
-};
-
 let requestCounter = 0;
-let bridgeFallbackAttempted = false;
+let snapshotCache: {
+  startedAt: number;
+  promise: Promise<PlayerSnapshot | null>;
+} | null = null;
 
 export async function readPlayerSnapshot(): Promise<PlayerSnapshot | null> {
-  const snapshot = await sendBridgeRequest("readSnapshot");
-  if (!snapshot || typeof snapshot !== "object") {
-    return null;
+  const now = Date.now();
+  if (snapshotCache && now - snapshotCache.startedAt < SNAPSHOT_CACHE_MS) {
+    return snapshotCache.promise;
   }
 
-  return snapshot as PlayerSnapshot;
+  const promise = sendBridgeRequest("readSnapshot").then((snapshot) =>
+    isPlayerSnapshot(snapshot) ? snapshot : null,
+  );
+  snapshotCache = { startedAt: now, promise };
+  return promise;
 }
 
 export async function applySubtitleSelection(
   selection: SubtitleSelection,
 ): Promise<boolean> {
+  snapshotCache = null;
   const result = await sendBridgeRequest("applySelection", selection);
   return result === true;
 }
@@ -64,6 +68,7 @@ export async function applySubtitleSelection(
 export async function applyAudioTrackSelection(
   audioTrackId: string,
 ): Promise<boolean> {
+  snapshotCache = null;
   const result = await sendBridgeRequest(
     "applyAudioTrack",
     undefined,
@@ -106,68 +111,7 @@ async function sendBridgeRequest(
   selection?: SubtitleSelection,
   audioTrackId?: string,
 ): Promise<PlayerSnapshot | boolean | null> {
-  const result = await sendBridgeRequestOnce(action, selection, audioTrackId);
-  if (result !== null || action !== "readSnapshot") {
-    return result;
-  }
-
-  if (!(await installBridgeFallbackScript())) {
-    return result;
-  }
-
-  await delay(BRIDGE_FALLBACK_INSTALL_DELAY_MS);
   return sendBridgeRequestOnce(action, selection, audioTrackId);
-}
-
-async function installBridgeFallbackScript(): Promise<boolean> {
-  if (bridgeFallbackAttempted) {
-    return false;
-  }
-
-  bridgeFallbackAttempted = true;
-  try {
-    const response = await fetch(chrome.runtime.getURL("manifest.json"));
-    if (!response.ok) {
-      return false;
-    }
-
-    const manifest = (await response.json()) as WebAccessibleManifest;
-    const resource = findBridgeModuleResource(manifest);
-    if (!resource) {
-      return false;
-    }
-
-    const parent = document.head ?? document.documentElement;
-    if (!parent) {
-      return false;
-    }
-
-    const script = document.createElement("script");
-    script.type = "module";
-    script.src = chrome.runtime.getURL(resource);
-    parent.appendChild(script);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export function findBridgeModuleResource(
-  manifest: WebAccessibleManifest | null,
-): string | null {
-  for (const entry of manifest?.web_accessible_resources ?? []) {
-    for (const resource of entry?.resources ?? []) {
-      if (
-        typeof resource === "string" &&
-        resource.includes(BRIDGE_MODULE_RESOURCE_HINT) &&
-        resource.endsWith(".js")
-      ) {
-        return resource;
-      }
-    }
-  }
-
-  return null;
 }
 
 async function sendBridgeRequestOnce(
@@ -175,7 +119,7 @@ async function sendBridgeRequestOnce(
   selection?: SubtitleSelection,
   audioTrackId?: string,
 ): Promise<PlayerSnapshot | boolean | null> {
-  const id = `${Date.now()}-${requestCounter++}`;
+  const id = `${crypto.randomUUID?.() ?? requestCounter++}`;
 
   return new Promise((resolve) => {
     let settled = false;

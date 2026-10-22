@@ -51,8 +51,21 @@ function ensureDimming(): void {
 
 function ensureDimmingForCard(card: HTMLElement): void {
   const cardLockup = findCardLockup(card);
+  if (!cardLockup) {
+    return;
+  }
+
   if (shouldDimCard(card, cardLockup)) {
     applyDimming(cardLockup);
+    return;
+  }
+
+  if (
+    card !== cardLockup &&
+    cardLockup.hasAttribute(DIMMED_ATTRIBUTE) &&
+    !isSeenVideo(card)
+  ) {
+    removeDimming(cardLockup);
   }
 }
 
@@ -62,10 +75,7 @@ function findCardLockup(card: HTMLElement): HTMLElement | null {
     : card.querySelector<HTMLElement>("yt-lockup-view-model");
 }
 
-function shouldDimCard(
-  card: HTMLElement,
-  lockup: HTMLElement | null,
-): lockup is HTMLElement {
+function shouldDimCard(card: HTMLElement, lockup: HTMLElement | null): boolean {
   return (
     !isShortsCard(card) &&
     !!lockup &&
@@ -107,12 +117,16 @@ function applyDimming(cardLockup: HTMLElement): void {
   Object.assign(cardLockup.style, { opacity: "0.4" });
 }
 
+function removeDimming(cardLockup: HTMLElement): void {
+  cardLockup.style.opacity = "";
+  cardLockup.removeAttribute(DIMMED_ATTRIBUTE);
+}
+
 function removeAllDimming(): void {
   for (const cardLockup of document.querySelectorAll<HTMLElement>(
     `yt-lockup-view-model[${DIMMED_ATTRIBUTE}]`,
   )) {
-    cardLockup.style.opacity = "";
-    cardLockup.removeAttribute(DIMMED_ATTRIBUTE);
+    removeDimming(cardLockup);
   }
 }
 

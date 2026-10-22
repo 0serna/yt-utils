@@ -1,5 +1,6 @@
 import type { Feature, FeatureContext } from "@shared/types";
 import {
+  findMostRelevantShelves,
   isDesktopSubscriptionsFeedPage,
   removeAllMostRelevantSections,
 } from "@shared/youtube-dom";
@@ -31,6 +32,10 @@ function observePage(): void {
   }
 
   observer = new MutationObserver(() => {
+    if (findMostRelevantShelves().length === 0) {
+      return;
+    }
+
     if (!ensureQueued) {
       ensureQueued = true;
       window.requestAnimationFrame(() => {

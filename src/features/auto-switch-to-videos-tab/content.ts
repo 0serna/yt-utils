@@ -35,7 +35,6 @@ function getChannelBasePath(): string {
     return `/${segments[0]}`;
   }
 
-  // For /c/name, /user/name, /channel/ID
   if (segments.length >= 2) {
     return `/${segments[0]}/${segments[1]}`;
   }
@@ -48,7 +47,9 @@ function getSessionStorageKey(): string {
 }
 
 function isChannelHomePath(): boolean {
-  return window.location.pathname === getChannelBasePath();
+  const path = window.location.pathname;
+  const normalizedPath = path.endsWith("/") ? path.slice(0, -1) : path;
+  return normalizedPath === getChannelBasePath();
 }
 
 async function trySwitchToVideosTab(): Promise<void> {

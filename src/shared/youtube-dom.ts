@@ -25,7 +25,7 @@ const LABELS = {
   hide: [/\bhide\b/i, /\bocultar\b/i],
   notInterested: [/\bnot interested\b/i, /\bno me interesa\b/i],
   moreActions: [/\bmore actions\b/i, /\bm[aá]s acciones\b/i],
-  mostRelevant: [/\bmost relevant\b/i],
+  mostRelevant: [/\bmost relevant\b/i, /\bm[aá]s relevantes\b/i],
 } as const;
 
 export function waitFor<T>(
@@ -94,7 +94,7 @@ export function findButton(
 
   return (
     [...elements].find(
-      (element) => isVisible(element) && matchesAnyLabel(element, matchers),
+      (element) => matchesAnyLabel(element, matchers) && isVisible(element),
     ) ?? null
   );
 }
@@ -107,7 +107,7 @@ function findMenuItem(
 
   return (
     [...elements].find(
-      (element) => isVisible(element) && matchesAnyLabel(element, matchers),
+      (element) => matchesAnyLabel(element, matchers) && isVisible(element),
     ) ?? null
   );
 }
@@ -279,11 +279,13 @@ export function isDesktopHomePage(
   return isDesktopYouTubePage(url) && url.pathname === "/";
 }
 
-export function isDesktopWatchPage(): boolean {
+export function isDesktopWatchPage(
+  url: URL = new URL(window.location.href),
+): boolean {
   return (
-    window.location.hostname === "www.youtube.com" &&
-    window.location.pathname === "/watch" &&
-    new URLSearchParams(window.location.search).has("v")
+    url.hostname === "www.youtube.com" &&
+    url.pathname === "/watch" &&
+    url.searchParams.has("v")
   );
 }
 
