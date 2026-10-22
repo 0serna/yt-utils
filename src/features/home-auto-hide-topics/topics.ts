@@ -33,7 +33,6 @@ const RAW_TOPIC_SEEDS: readonly TopicSeed[] = [
       "electro wizard",
       "mago electrico",
       "troop",
-      "equipment",
     ],
   },
 ] as const;
@@ -58,9 +57,23 @@ export function matchesBlockedKeyword(text: string): boolean {
 
   return TOPICS.some(
     (topic) =>
-      topic.channels.some((channel) => normalized.includes(channel)) ||
-      topic.keywords.some((keyword) => normalized.includes(keyword)),
+      topic.channels.some((channel) => matchesTerm(normalized, channel)) ||
+      topic.keywords.some((keyword) => matchesTerm(normalized, keyword)),
   );
+}
+
+function matchesTerm(text: string, term: string): boolean {
+  if (!/[a-z0-9]/i.test(term)) {
+    return text.includes(term);
+  }
+
+  return new RegExp(`(?:^|[^a-z0-9])${escapeRegExp(term)}(?:$|[^a-z0-9])`).test(
+    text,
+  );
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export function isBlockedCardText(parts: readonly string[]): boolean {

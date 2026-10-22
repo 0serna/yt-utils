@@ -29,6 +29,12 @@ function applyLastYearFilter(): void {
     return;
   }
 
+  const redirectKey = `yt-utils:search-date-filter:${url.searchParams.get("search_query") ?? ""}`;
+  if (sessionStorage.getItem(redirectKey)) {
+    return;
+  }
+
+  sessionStorage.setItem(redirectKey, "true");
   url.searchParams.set("sp", LAST_YEAR_SP);
   window.location.replace(url.toString());
 }

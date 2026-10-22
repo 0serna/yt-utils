@@ -28,7 +28,7 @@ const SYNC_TIMEOUT_MS = 5000;
 const INITIAL_ASK_DELAY_MS = 3000;
 const PANEL_SETTLE_DELAY_MS = 1500;
 const VIDEO_WATCH_INTERVAL_MS = 500;
-const ASK_LABELS = [/\bask\b/i, /\bpreguntar\b/i];
+const ASK_LABELS = [/^(ask|preguntar)$/i];
 const CHAPTERS_LABELS = [/\bchapters\b/i, /\bcapítulos\b/i];
 const NOISY_COMPOSITE_PANEL_LABELS = [/\bin this video\b/i, /\btimeline\b/i];
 const NOISY_TRANSCRIPT_LABEL = /\btranscript\b/i;
@@ -671,10 +671,14 @@ async function promptCurrentVideo(
   }
 
   promptingVideoId = videoId;
-  await typeAndSendPrompt(session);
-  if (session.isCurrent()) {
+  const outcome = await typeAndSendPrompt(session);
+  if (!session.isCurrent()) {
+    return;
+  }
+
+  promptingVideoId = null;
+  if (outcome !== "failed") {
     promptedVideoId = videoId;
-    promptingVideoId = null;
   }
 }
 
@@ -717,7 +721,9 @@ function findSendButton(): HTMLElement | null {
   return askPanel.querySelector<HTMLElement>(SEND_BUTTON_SELECTOR);
 }
 
-async function typeAndSendPrompt(session: WatchSession): Promise<void> {
+async function typeAndSendPrompt(
+  session: WatchSession,
+): Promise<"sent" | "skipped" | "failed"> {
   try {
     const input = await waitFor(
       () => {
@@ -734,7 +740,11 @@ async function typeAndSendPrompt(session: WatchSession): Promise<void> {
 
     const sendButton = findSendButton();
     if (!sendButton || !session.isCurrent()) {
-      return;
+      return "failed";
+    }
+
+    if (readPromptValue(input).length > 0) {
+      return "skipped";
     }
 
     input.focus();
@@ -742,11 +752,19 @@ async function typeAndSendPrompt(session: WatchSession): Promise<void> {
     typePromptText(input);
 
     if (!session.isCurrent()) {
-      return;
+      return "failed";
     }
 
     clickElement(sendButton);
-  } catch {}
+    return "sent";
+  } catch {
+    return "failed";
+  }
+}
+
+function readPromptValue(input: HTMLElement): string {
+  const textInput = getTextInput(input);
+  return (textInput ? textInput.value : (input.textContent ?? "")).trim();
 }
 
 function syncAskScrollContainment(): void {

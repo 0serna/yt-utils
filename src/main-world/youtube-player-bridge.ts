@@ -87,8 +87,15 @@ function handleBridgeMessage(event: MessageEvent<BridgeRequest>): void {
     return;
   }
 
+  let result: BridgeResult = null;
+  try {
+    result = handleBridgeRequest(event.data);
+  } catch {
+    result = null;
+  }
+
   window.postMessage(
-    createBridgeResponse(event.data, handleBridgeRequest(event.data)),
+    createBridgeResponse(event.data, result),
     window.location.origin,
   );
 }
@@ -160,11 +167,11 @@ function readSnapshotInputs(source: SnapshotSource): SnapshotInputs {
   return {
     response: source.response,
     videoData: readVideoData(source),
-    audioTrack: cloneValue(audioTrack),
+    audioTrack,
     availableAudioTracks: readAvailableAudioTracks(source.player),
-    currentCaptionTrack: cloneValue(readCurrentCaptionTrack(source.player)),
-    captionTracks: cloneValue(readCaptionTracks(audioTrack, source.response)),
-    translationLanguages: cloneValue(readTranslationLanguages(source.player)),
+    currentCaptionTrack: readCurrentCaptionTrack(source.player),
+    captionTracks: readCaptionTracks(audioTrack, source.response),
+    translationLanguages: readTranslationLanguages(source.player),
   };
 }
 
@@ -237,11 +244,15 @@ function readCurrentCaptionTrack(player: YoutubePlayer): CaptionTrack | null {
   }
 
   const track = raw as Record<string, unknown>;
-  if (track.vssId === undefined && track.vss_id !== undefined) {
-    track.vssId = track.vss_id;
-  }
-
-  return track as CaptionTrack;
+  return {
+    ...(track as CaptionTrack),
+    vssId:
+      typeof track.vssId === "string"
+        ? track.vssId
+        : typeof track.vss_id === "string"
+          ? track.vss_id
+          : undefined,
+  };
 }
 
 function readTranslationLanguages(
@@ -450,8 +461,4 @@ function isNonEmptyObject(value: unknown): value is Record<string, unknown> {
       !Array.isArray(value) &&
       Object.keys(value).length > 0,
   );
-}
-
-function cloneValue<T>(value: T): T {
-  return value == null ? value : JSON.parse(JSON.stringify(value));
 }

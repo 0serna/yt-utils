@@ -18,6 +18,5 @@ export interface FeatureLoggerMeta {
 }
 
 export interface FeatureContext {
-  sendMessage: (message: unknown) => Promise<unknown>;
   logger: FeatureLogger;
 }

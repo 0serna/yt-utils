@@ -106,8 +106,6 @@ describe("FeatureRegistry logging", () => {
 
       const context = vi.mocked(feature.activate).mock
         .calls[0]?.[0] as FeatureContext;
-      expect(context.sendMessage).toBeDefined();
-      expect(typeof context.sendMessage).toBe("function");
       expect(context.logger).toBeDefined();
       expect(typeof context.logger.activation).toBe("function");
       expect(typeof context.logger.error).toBe("function");

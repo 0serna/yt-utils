@@ -30,7 +30,7 @@ export type FeedCardOverlayActionConfig = {
   buttonLabel: string;
   pendingLabel: string;
   icon: BootstrapIconName;
-  findMenuItem: () => HTMLElement | null;
+  findMenuItem: (scope?: ParentNode) => HTMLElement | null;
   actionUnavailableCode: string;
   actionUnavailableMessage: string;
   placementFailureMessage: string;
@@ -114,6 +114,11 @@ export function createFeedCardOverlayActionFeature(
     }
 
     const cardKey = getCardKey(card);
+    const existingHost = document.getElementById(`${hostIdPrefix}${cardKey}`);
+    if (existingHost?.parentElement === placementRoot) {
+      return;
+    }
+
     placeButtonHost(getOrCreateButtonHost(cardKey), placementRoot);
     syncButtonState(cardKey);
   }
@@ -271,12 +276,15 @@ export function createFeedCardOverlayActionFeature(
 
     clickElement(menuButton);
 
-    const menuItem = await waitFor(() => config.findMenuItem(), {
-      timeout: ACTION_TIMEOUT_MS,
-      errorCode: config.actionUnavailableCode,
-      errorMessage: config.actionUnavailableMessage,
-      signal,
-    });
+    const menuItem = await waitFor(
+      () => config.findMenuItem(card) ?? config.findMenuItem(),
+      {
+        timeout: ACTION_TIMEOUT_MS,
+        errorCode: config.actionUnavailableCode,
+        errorMessage: config.actionUnavailableMessage,
+        signal,
+      },
+    );
 
     throwIfActionCancelled(cardKey, card, signal);
     clickElement(menuItem);

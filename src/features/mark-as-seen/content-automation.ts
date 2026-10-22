@@ -79,7 +79,15 @@ async function seekToNearEnd(video: HTMLVideoElement): Promise<void> {
 }
 
 async function playVideoBriefly(video: HTMLVideoElement): Promise<void> {
-  void video.play();
+  try {
+    await video.play();
+  } catch {
+    throw createExtensionError(
+      "PLAYBACK_FAILED",
+      "The video could not start playing.",
+    );
+  }
+
   await delay(2000);
   video.pause();
   await waitFor(() => video.paused, {
