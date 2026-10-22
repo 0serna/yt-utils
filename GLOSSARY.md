@@ -24,6 +24,10 @@ _Avoid_: hide, dislike, dismiss
 The feature that adds an inline Home card control to activate the native Not Interested action.
 _Avoid_: home-hide, not-interested-button
 
+**Topic**:
+A named set of channels and keywords that identify unwanted Home videos, fixed in versioned code.
+_Avoid_: category, tag, filter list
+
 **home-auto-hide-topics**:
 The feature that hides Home video cards whose visible title, channel name, or handle matches a topic in the code-fixed topic registry, without triggering YouTube's native Not Interested action.
 _Avoid_: home-keyword-filter, home-auto-not-interested-topics, home-topic-filter, clash-filter
