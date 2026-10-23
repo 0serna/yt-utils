@@ -124,8 +124,10 @@ function observePage(): void {
 }
 
 function hasRelevantTopicMutation(mutations: MutationRecord[]): boolean {
-  return mutations.some((mutation) =>
-    [...mutation.addedNodes, ...mutation.removedNodes].some(isRichItemNode),
+  return mutations.some(
+    (mutation) =>
+      isRichItemNode(mutation.target) ||
+      [...mutation.addedNodes, ...mutation.removedNodes].some(isRichItemNode),
   );
 }
 
@@ -134,9 +136,8 @@ function isRichItemNode(node: Node): boolean {
     return Boolean(node.parentElement?.closest(RICH_ITEM_SELECTOR));
   }
 
-  return (
-    node.matches(RICH_ITEM_SELECTOR) ||
-    Boolean(node.querySelector(RICH_ITEM_SELECTOR))
+  return Boolean(
+    node.closest(RICH_ITEM_SELECTOR) || node.querySelector(RICH_ITEM_SELECTOR),
   );
 }
 

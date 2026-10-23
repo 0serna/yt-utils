@@ -6,6 +6,7 @@ describe("search-date-filter feature", () => {
 
   beforeEach(async () => {
     vi.resetModules();
+    sessionStorage.clear();
     replaceSpy = vi.fn();
     vi.stubGlobal("location", {
       ...window.location,
@@ -15,6 +16,7 @@ describe("search-date-filter feature", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   async function importFreshFeature() {
@@ -92,6 +94,43 @@ describe("search-date-filter feature", () => {
       feature.activate(makeFeatureContext());
 
       expect(replaceSpy).not.toHaveBeenCalled();
+    });
+
+    it("allows the same search again after the redirect succeeds", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+      setSearchUrl("same query");
+
+      const { default: feature } = await importFreshFeature();
+      feature.activate(makeFeatureContext());
+      expect(replaceSpy).toHaveBeenCalledTimes(1);
+
+      setSearchUrl("same query", "EgIIBQ%3D%3D");
+      feature.activate(makeFeatureContext());
+      expect(sessionStorage.length).toBe(1);
+
+      vi.advanceTimersByTime(5001);
+      setSearchUrl("same query");
+      feature.activate(makeFeatureContext());
+      expect(replaceSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not redirect twice while the guard window is open", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+      setSearchUrl("loop query");
+
+      const { default: feature } = await importFreshFeature();
+      feature.activate(makeFeatureContext());
+      expect(replaceSpy).toHaveBeenCalledTimes(1);
+
+      setSearchUrl("loop query");
+      feature.activate(makeFeatureContext());
+      expect(replaceSpy).toHaveBeenCalledTimes(1);
+
+      vi.advanceTimersByTime(5001);
+      feature.activate(makeFeatureContext());
+      expect(replaceSpy).toHaveBeenCalledTimes(2);
     });
 
     it("preserves other query parameters during redirect", async () => {

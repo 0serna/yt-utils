@@ -31,6 +31,8 @@ const SPEED_DECREMENT_ID = "yt-utils-speed-decrement";
 const SPEED_VALUE_ID = "yt-utils-speed-value";
 const SPEED_INCREMENT_ID = "yt-utils-speed-increment";
 const MARK_AS_SEEN_HOST_ID = "yt-utils-inline-host";
+const USER_INTERACTION_WINDOW_MS = 1500;
+const SPEED_MENU_SELECTOR = ".ytp-settings-menu";
 
 let localSpeed: number = PLAYBACK_SPEED_DEFAULT;
 let observer: MutationObserver | null = null;
@@ -41,6 +43,8 @@ const watchSessions = createWatchSessionController();
 let initializedVideoId: string | null = null;
 let lastLoggedDiagnostic = "";
 let lastAppliedSpeed: number | null = null;
+let lastUserInteractionAt = 0;
+let speedSource: "extension" | "native" | null = null;
 
 const playbackSpeedFeature: Feature = {
   name: "playback-speed",
@@ -53,6 +57,9 @@ const playbackSpeedFeature: Feature = {
     initializedVideoId = null;
     lastLoggedDiagnostic = "";
     lastAppliedSpeed = null;
+    lastUserInteractionAt = 0;
+    speedSource = null;
+    startTrackingUserInteraction();
     ensureSpeedControl();
     applySpeedToVideo();
     observePage();
@@ -68,6 +75,7 @@ const playbackSpeedFeature: Feature = {
       window.cancelAnimationFrame(ensureFrame);
       ensureFrame = null;
     }
+    stopTrackingUserInteraction();
     removeSpeedControl();
     initializedVideoId = null;
     lastLoggedDiagnostic = "";
@@ -203,21 +211,62 @@ function applySpeedToVideo(): void {
   }
 }
 
-function respectForeignSpeedChange(): void {
+function startTrackingUserInteraction(): void {
+  document.addEventListener("click", onSpeedMenuClick, true);
+  document.addEventListener("keydown", onSpeedShortcut, true);
+}
+
+function stopTrackingUserInteraction(): void {
+  document.removeEventListener("click", onSpeedMenuClick, true);
+  document.removeEventListener("keydown", onSpeedShortcut, true);
+}
+
+function onSpeedMenuClick(event: MouseEvent): void {
+  if (
+    event.target instanceof Element &&
+    event.target.closest(SPEED_MENU_SELECTOR)
+  ) {
+    lastUserInteractionAt = Date.now();
+  }
+}
+
+function onSpeedShortcut(event: KeyboardEvent): void {
+  if (event.shiftKey && (event.code === "Comma" || event.code === "Period")) {
+    lastUserInteractionAt = Date.now();
+  }
+}
+
+function syncForeignSpeedChange(): void {
   const video = document.querySelector<HTMLVideoElement>("video");
-  if (!video || lastAppliedSpeed === null || userInteracted) {
+  if (!video || lastAppliedSpeed === null) {
     return;
   }
 
-  if (Math.abs(video.playbackRate - lastAppliedSpeed) > 0.001) {
-    userInteracted = true;
+  if (Math.abs(video.playbackRate - lastAppliedSpeed) <= 0.001) {
+    return;
   }
+
+  if (Date.now() - lastUserInteractionAt <= USER_INTERACTION_WINDOW_MS) {
+    localSpeed = normalizePlaybackSpeed(video.playbackRate);
+    lastAppliedSpeed = localSpeed;
+    syncControlState();
+    userInteracted = true;
+    speedSource = "native";
+    return;
+  }
+
+  if (speedSource === "native") {
+    return;
+  }
+
+  applySpeedToVideo();
 }
 
 function onDecrement(event: Event): void {
   event.preventDefault();
   event.stopPropagation();
   userInteracted = true;
+  speedSource = "extension";
   localSpeed = normalizePlaybackSpeed(localSpeed - PLAYBACK_SPEED_STEP);
   syncControlState();
   applySpeedToVideo();
@@ -227,6 +276,7 @@ function onIncrement(event: Event): void {
   event.preventDefault();
   event.stopPropagation();
   userInteracted = true;
+  speedSource = "extension";
   localSpeed = normalizePlaybackSpeed(localSpeed + PLAYBACK_SPEED_STEP);
   syncControlState();
   applySpeedToVideo();
@@ -235,10 +285,17 @@ function onIncrement(event: Event): void {
 function onReset(event: Event): void {
   event.preventDefault();
   event.stopPropagation();
-  if (localSpeed === PLAYBACK_SPEED_DEFAULT) {
+
+  const video = document.querySelector<HTMLVideoElement>("video");
+  if (
+    localSpeed === PLAYBACK_SPEED_DEFAULT &&
+    (!video || Math.abs(video.playbackRate - PLAYBACK_SPEED_DEFAULT) <= 0.001)
+  ) {
     return;
   }
+
   userInteracted = true;
+  speedSource = "extension";
   localSpeed = PLAYBACK_SPEED_DEFAULT;
   syncControlState();
   applySpeedToVideo();
@@ -291,7 +348,7 @@ function queueEnsureSpeedControl(): void {
   ensureFrame = window.requestAnimationFrame(() => {
     ensureFrame = null;
     ensureSpeedControl();
-    respectForeignSpeedChange();
+    syncForeignSpeedChange();
   });
 }
 
@@ -299,6 +356,7 @@ async function syncSpeedForCurrentVideo(
   session: WatchSession,
   logger: FeatureContext["logger"],
 ): Promise<void> {
+  syncForeignSpeedChange();
   if (userInteracted) return;
 
   const snapshot = await session.readSnapshot();

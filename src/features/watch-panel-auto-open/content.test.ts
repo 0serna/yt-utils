@@ -51,6 +51,17 @@ function appendChapterItem(panel: HTMLElement): HTMLElement {
   return chapterItem;
 }
 
+function appendAskEntrypoint(name: string): HTMLButtonElement {
+  const host = document.createElement("button-view-model");
+  host.className = "you-chat-entrypoint-button";
+
+  const button = document.createElement("button");
+  button.dataset.entrypoint = name;
+  host.appendChild(button);
+  document.body.appendChild(host);
+  return button;
+}
+
 function appendAskPromptControls(panel: HTMLElement): {
   chatInput: HTMLTextAreaElement;
   sendButton: HTMLButtonElement;
@@ -397,6 +408,52 @@ describe("watch-panel-auto-open feature", () => {
         },
         { timeout: 2000 },
       );
+
+      panel.remove();
+    });
+
+    it("clicks the visible ask entrypoint when a hidden one comes first", async () => {
+      const panel = appendEngagementPanel(
+        "PAyouchat",
+        "ENGAGEMENT_PANEL_VISIBILITY_HIDDEN",
+      );
+      panel.style.display = "none";
+      const hiddenEntrypoint = appendAskEntrypoint("hidden");
+      const visibleEntrypoint = appendAskEntrypoint("visible");
+
+      const { readPlayerSnapshot } = await import("@shared/youtube-player");
+      vi.mocked(readPlayerSnapshot).mockResolvedValue(snapshot("test-video"));
+
+      const { clickElement, findButton, isVisible, waitFor } = await import(
+        "@shared/youtube-dom"
+      );
+      vi.mocked(findButton).mockReturnValue(null);
+      vi.mocked(isVisible).mockImplementation(
+        (element) => element === visibleEntrypoint,
+      );
+      vi.mocked(clickElement).mockImplementation((element) => {
+        if (element === visibleEntrypoint) {
+          panel.style.display = "";
+          panel.setAttribute(
+            "visibility",
+            "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED",
+          );
+        }
+      });
+      vi.mocked(waitFor).mockImplementation((callback) =>
+        Promise.resolve(callback() as HTMLElement),
+      );
+
+      const feature = await setupWatchPage();
+      feature.activate(makeFeatureContext());
+
+      await vi.waitFor(
+        () => {
+          expect(clickElement).toHaveBeenCalledWith(visibleEntrypoint);
+        },
+        { timeout: 2000 },
+      );
+      expect(clickElement).not.toHaveBeenCalledWith(hiddenEntrypoint);
 
       panel.remove();
     });

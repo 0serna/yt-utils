@@ -207,11 +207,12 @@ function findChaptersButton(): HTMLElement | null {
 }
 
 function findAskButton(): HTMLElement | null {
-  const entrypoint = document.querySelector<HTMLElement>(
+  const entrypoints = document.querySelectorAll<HTMLElement>(
     "button-view-model.you-chat-entrypoint-button button, yt-button-view-model button[aria-label='Ask'], yt-button-view-model button[aria-label='Preguntar']",
   );
+  const entrypoint = [...entrypoints].find(isVisible);
 
-  if (entrypoint && isVisible(entrypoint)) {
+  if (entrypoint) {
     return entrypoint;
   }
 
