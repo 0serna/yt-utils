@@ -77,6 +77,17 @@ export async function applyAudioTrackSelection(
   return result === true;
 }
 
+export async function applyQualityLevel(level: string): Promise<boolean> {
+  snapshotCache = null;
+  const result = await sendBridgeRequest(
+    "applyQuality",
+    undefined,
+    undefined,
+    level,
+  );
+  return result === true;
+}
+
 export async function waitForSubtitleSelection(
   getSnapshot: () => Promise<PlayerSnapshot | null>,
   selection: SubtitleSelection,
@@ -110,14 +121,16 @@ async function sendBridgeRequest(
   action: BridgeRequest["action"],
   selection?: SubtitleSelection,
   audioTrackId?: string,
+  qualityLevel?: string,
 ): Promise<PlayerSnapshot | boolean | null> {
-  return sendBridgeRequestOnce(action, selection, audioTrackId);
+  return sendBridgeRequestOnce(action, selection, audioTrackId, qualityLevel);
 }
 
 async function sendBridgeRequestOnce(
   action: BridgeRequest["action"],
   selection?: SubtitleSelection,
   audioTrackId?: string,
+  qualityLevel?: string,
 ): Promise<PlayerSnapshot | boolean | null> {
   const id = `${crypto.randomUUID?.() ?? requestCounter++}`;
 
@@ -155,6 +168,7 @@ async function sendBridgeRequestOnce(
       action,
       selection,
       audioTrackId,
+      qualityLevel,
     };
     window.postMessage(request, window.location.origin);
   });

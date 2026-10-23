@@ -7,6 +7,7 @@ import homePlayablesRemovalFeature from "./features/home-playables-removal/conte
 import markAsSeenFeature from "./features/mark-as-seen/content";
 import originalAudioTrackFeature from "./features/original-audio-track/content";
 import playbackSpeedFeature from "./features/playback-speed/content";
+import quality1080pFeature from "./features/quality-1080p/content";
 import searchDateFilterFeature from "./features/search-date-filter/content";
 import seenCardDimmingFeature from "./features/seen-card-dimming/content";
 import subscriptionsFeedControlsFeature from "./features/subscriptions-feed-controls/content";
@@ -20,6 +21,7 @@ registry.register(markAsSeenFeature);
 registry.register(originalAudioTrackFeature);
 registry.register(audioLanguageSubtitlePolicyFeature);
 registry.register(playbackSpeedFeature);
+registry.register(quality1080pFeature);
 registry.register(engagementPanelScrollContainmentFeature);
 registry.register(watchPanelAutoOpenFeature);
 registry.register(subscriptionsFeedControlsFeature);

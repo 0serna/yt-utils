@@ -19,6 +19,9 @@ type FakePlayer = HTMLDivElement & {
   getOption: (namespace: string, key: string) => unknown;
   isSubtitlesOn: () => boolean;
   toggleSubtitles: () => void;
+  getPlaybackQuality: () => string | null;
+  getAvailableQualityLevels: () => string[];
+  setPlaybackQualityRange: (min: string, max: string) => void;
 };
 
 function requireSnapshot(result: BridgeResponse["result"]): PlayerSnapshot {
@@ -78,6 +81,9 @@ describe("youtube-player-bridge", () => {
     subtitlesOn?: boolean;
     currentCaptionTrack?: unknown;
     translationLanguages?: unknown[];
+    playbackQuality?: string | null;
+    availableQualityLevels?: string[];
+    appliedQualityRanges?: string[][];
   }): HTMLElement {
     const element = document.createElement("div");
     element.id = "movie_player";
@@ -114,6 +120,12 @@ describe("youtube-player-bridge", () => {
     };
     player.isSubtitlesOn = () => options.subtitlesOn || false;
     player.toggleSubtitles = () => {};
+    player.getPlaybackQuality = () => options.playbackQuality ?? null;
+    player.getAvailableQualityLevels = () =>
+      options.availableQualityLevels ?? [];
+    player.setPlaybackQualityRange = (min: string, max: string) => {
+      options.appliedQualityRanges?.push([min, max]);
+    };
 
     return element;
   }
@@ -737,6 +749,92 @@ describe("youtube-player-bridge", () => {
       const snapshot = requireSnapshot(response.result);
       expect(snapshot.audioLanguage).toBeNull();
       expect(snapshot.contentLanguage).toBeNull();
+    });
+
+    it("exposes quality level data", async () => {
+      const fakePlayer = createFakePlayer({
+        videoId: "quality-video",
+        playbackQuality: "hd720",
+        availableQualityLevels: ["hd1080", "hd720", "medium"],
+      });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-4g",
+        action: "readSnapshot",
+      });
+
+      const snapshot = requireSnapshot(response.result);
+      expect(snapshot.qualityLevel).toBe("hd720");
+      expect(snapshot.availableQualityLevels).toEqual([
+        "hd1080",
+        "hd720",
+        "medium",
+      ]);
+    });
+  });
+
+  describe("applyQuality", () => {
+    it("returns false when no movie_player exists", async () => {
+      const response = await sendBridgeRequest({
+        id: "test-quality-1",
+        action: "applyQuality",
+        qualityLevel: "hd1080",
+      });
+
+      expect(response.result).toBe(false);
+    });
+
+    it("pins the requested quality range", async () => {
+      const applied: string[][] = [];
+      const fakePlayer = createFakePlayer({
+        videoId: "abc123",
+        appliedQualityRanges: applied,
+      });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-quality-2",
+        action: "applyQuality",
+        qualityLevel: "hd1080",
+      });
+
+      expect(response.result).toBe(true);
+      expect(applied).toEqual([["hd1080", "hd1080"]]);
+    });
+
+    it("returns false without a quality level", async () => {
+      const fakePlayer = createFakePlayer({ videoId: "abc123" });
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-quality-3",
+        action: "applyQuality",
+      });
+
+      expect(response.result).toBe(false);
+    });
+
+    it("returns false when the player lacks the quality API", async () => {
+      const fakePlayer = createFakePlayer({ videoId: "abc123" });
+      const player = fakePlayer as FakePlayer;
+      player.setPlaybackQualityRange = undefined as unknown as (
+        min: string,
+        max: string,
+      ) => void;
+      document.body.appendChild(fakePlayer);
+      playerElement = fakePlayer;
+
+      const response = await sendBridgeRequest({
+        id: "test-quality-4",
+        action: "applyQuality",
+        qualityLevel: "hd1080",
+      });
+
+      expect(response.result).toBe(false);
     });
   });
 

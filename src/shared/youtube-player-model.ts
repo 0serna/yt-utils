@@ -76,6 +76,8 @@ export type PlayerSnapshot = {
   translationLanguages: TranslationLanguage[];
   currentCaptionTrack: CaptionTrack | null;
   subtitlesOn: boolean;
+  qualityLevel?: string | null;
+  availableQualityLevels?: string[];
 };
 
 export function summarizePlayerSnapshot(
@@ -162,9 +164,14 @@ export type BridgeRequest = {
   source: typeof BRIDGE_SOURCE;
   kind: "request";
   id: string;
-  action: "readSnapshot" | "applySelection" | "applyAudioTrack";
+  action:
+    | "readSnapshot"
+    | "applySelection"
+    | "applyAudioTrack"
+    | "applyQuality";
   selection?: SubtitleSelection;
   audioTrackId?: string;
+  qualityLevel?: string;
 };
 
 export type BridgeResponse = {
