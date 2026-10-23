@@ -21,10 +21,11 @@
 - `npm run check:fix`: apply Biome format, lint, and import fixes.
 - `npm test`: run tests with Vitest (coverage via Istanbul).
 - `npm run typecheck`: run TypeScript type checking.
+- `npm run prepare`: install Husky git hooks (runs automatically on `npm install`).
 
 ## Workflow
 
-- Usar navegador para explorar y analizar páginas web.
+- Use the browser to validate the extension's features, after the user confirms they reloaded the extension.
 - After changing files under `src/` (or anything else that feeds `extension/`), run `npm run build` before asking the user to reload. Builds from any worktree write to the main checkout's `extension/`; Chrome loads that single directory. Done when the build exits 0; then ask the user to reload the extension manually.
 
 ## Debugging
@@ -32,5 +33,6 @@
 - The extension persists structured feature logs in `chrome.storage.local` under `yt-utils:logs`.
 - Feature lifecycle logs (`activation`, `deactivation`) are recorded automatically by `src/shared/feature-registry.ts` for features registered in `src/content.ts`.
 - Feature error logs use `event: "error"`, include `phase` (`activate`, `deactivate`, or `runtime`) and normalized error details, and are mirrored to `console.error`.
-- Log entries include `timestamp`, `feature`, `event`, `url`, optional `videoId`, optional `phase`, and optional `error` details.
+- Diagnostic logs use `event: "diagnostic"` with an optional `details` field.
+- Log entries include `timestamp`, `feature`, `event`, `url`, optional `videoId`, optional `phase`, optional `details`, and optional `error` details.
 - This is not a universal debug logger: `src/global-selection.ts` and background-only flows may use separate console/error handling instead of `yt-utils:logs`.
