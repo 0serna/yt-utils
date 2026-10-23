@@ -228,6 +228,50 @@ describe("home-auto-hide-topics feature", () => {
     feature.deactivate();
   });
 
+  it("hides a card when its content is added after the card mounts", async () => {
+    stubAnimationFrames();
+
+    const { default: feature } = await importFreshFeature();
+    feature.activate(makeFeatureContext());
+
+    const card = document.createElement("ytd-rich-item-renderer");
+    document.body.append(card);
+    await flushObserverPass();
+
+    const title = document.createElement("h3");
+    title.textContent = "Hero Electro Wizard";
+    card.append(title);
+    await flushObserverPass();
+
+    expect(card.style.display).toBe("none");
+    expect(card.getAttribute(HIDDEN_ATTRIBUTE)).toBe("true");
+
+    feature.deactivate();
+  });
+
+  it("restores a card when its blocked title is removed after mount", async () => {
+    stubAnimationFrames();
+
+    const { default: feature } = await importFreshFeature();
+    feature.activate(makeFeatureContext());
+
+    const card = document.createElement("ytd-rich-item-renderer");
+    const title = document.createElement("h3");
+    title.textContent = "Hero Electro Wizard";
+    card.append(title);
+    document.body.append(card);
+    await flushObserverPass();
+    expect(card.style.display).toBe("none");
+
+    title.remove();
+    await flushObserverPass();
+
+    expect(card.style.display).toBe("");
+    expect(card.getAttribute(HIDDEN_ATTRIBUTE)).toBeNull();
+
+    feature.deactivate();
+  });
+
   it("stops observing on deactivate and leaves hidden cards hidden", async () => {
     stubAnimationFrames();
     renderCard("stays", "Hero Electro Wizard", "Ken");

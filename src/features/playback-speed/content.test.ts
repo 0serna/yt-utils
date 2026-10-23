@@ -53,6 +53,15 @@ async function importFreshFeature() {
   return import("./content");
 }
 
+function chooseNativeSpeed(video: HTMLVideoElement, speed: number): void {
+  const menu = document.createElement("div");
+  menu.className = "ytp-settings-menu";
+  document.body.append(menu);
+  menu.click();
+  menu.remove();
+  video.playbackRate = speed;
+}
+
 describe("playback-speed feature", () => {
   let activeFeature:
     | Awaited<ReturnType<typeof importFreshFeature>>["default"]
@@ -387,6 +396,166 @@ describe("playback-speed feature", () => {
       timeout: 2000,
     });
   });
+  it("reapplies the language speed when YouTube resets the rate", async () => {
+    const { readPlayerSnapshot } = await import("@shared/youtube-player");
+    vi.mocked(readPlayerSnapshot).mockResolvedValue(
+      snapshot("test-video", "es"),
+    );
+
+    const feature = await importFreshFeature();
+    activeFeature = feature.default;
+    feature.default.activate(makeFeatureContext());
+
+    const video = requireValue(
+      document.querySelector("video"),
+      "missing video",
+    );
+    await vi.waitFor(() => expect(video.playbackRate).toBe(1.1), {
+      timeout: 2000,
+    });
+
+    video.playbackRate = 1;
+
+    await vi.waitFor(() => expect(video.playbackRate).toBe(1.1), {
+      timeout: 2000,
+    });
+  });
+
+  it("reapplies the language speed after an unrelated click", async () => {
+    const { readPlayerSnapshot } = await import("@shared/youtube-player");
+    vi.mocked(readPlayerSnapshot).mockResolvedValue(
+      snapshot("test-video", "es"),
+    );
+
+    const feature = await importFreshFeature();
+    activeFeature = feature.default;
+    feature.default.activate(makeFeatureContext());
+
+    const video = requireValue(
+      document.querySelector("video"),
+      "missing video",
+    );
+    await vi.waitFor(() => expect(video.playbackRate).toBe(1.1), {
+      timeout: 2000,
+    });
+
+    document.body.click();
+    video.playbackRate = 1;
+
+    await vi.waitFor(() => expect(video.playbackRate).toBe(1.1), {
+      timeout: 2000,
+    });
+  });
+
+  it("keeps a playback rate chosen by the user", async () => {
+    const { readPlayerSnapshot } = await import("@shared/youtube-player");
+    vi.mocked(readPlayerSnapshot).mockResolvedValue(
+      snapshot("test-video", "es"),
+    );
+    const { placeWatchActionHost } = await import("@shared/youtube-dom");
+    vi.mocked(placeWatchActionHost).mockImplementation((host) => {
+      document.body.append(host);
+      return true;
+    });
+
+    const feature = await importFreshFeature();
+    activeFeature = feature.default;
+    feature.default.activate(makeFeatureContext());
+
+    const video = requireValue(
+      document.querySelector("video"),
+      "missing video",
+    );
+    await vi.waitFor(() => expect(video.playbackRate).toBe(1.1), {
+      timeout: 2000,
+    });
+
+    chooseNativeSpeed(video, 1.5);
+
+    await vi.waitFor(
+      () =>
+        expect(
+          document.getElementById("yt-utils-speed-value")?.textContent,
+        ).toBe("1.50x"),
+      { timeout: 2000 },
+    );
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    expect(video.playbackRate).toBe(1.5);
+  });
+
+  it("resets the video rate after a user-chosen speed", async () => {
+    const { readPlayerSnapshot } = await import("@shared/youtube-player");
+    vi.mocked(readPlayerSnapshot).mockResolvedValue(
+      snapshot("test-video", "en"),
+    );
+    const { placeWatchActionHost } = await import("@shared/youtube-dom");
+    vi.mocked(placeWatchActionHost).mockImplementation((host) => {
+      document.body.append(host);
+      return true;
+    });
+
+    const feature = await importFreshFeature();
+    activeFeature = feature.default;
+    feature.default.activate(makeFeatureContext());
+
+    const video = requireValue(
+      document.querySelector("video"),
+      "missing video",
+    );
+    await vi.waitFor(() => expect(video.playbackRate).toBe(1), {
+      timeout: 2000,
+    });
+
+    chooseNativeSpeed(video, 1.5);
+    await vi.waitFor(
+      () =>
+        expect(
+          document.getElementById("yt-utils-speed-value")?.textContent,
+        ).toBe("1.50x"),
+      { timeout: 2000 },
+    );
+
+    document.getElementById("yt-utils-speed-value")?.click();
+    await vi.waitFor(() => expect(video.playbackRate).toBe(1), {
+      timeout: 2000,
+    });
+  });
+
+  it("reapplies an extension-chosen speed when YouTube resets the rate", async () => {
+    const { readPlayerSnapshot } = await import("@shared/youtube-player");
+    vi.mocked(readPlayerSnapshot).mockResolvedValue(
+      snapshot("test-video", "en"),
+    );
+    const { placeWatchActionHost } = await import("@shared/youtube-dom");
+    vi.mocked(placeWatchActionHost).mockImplementation((host) => {
+      document.body.append(host);
+      return true;
+    });
+
+    const feature = await importFreshFeature();
+    activeFeature = feature.default;
+    feature.default.activate(makeFeatureContext());
+
+    const video = requireValue(
+      document.querySelector("video"),
+      "missing video",
+    );
+    await vi.waitFor(() => expect(video.playbackRate).toBe(1), {
+      timeout: 2000,
+    });
+
+    document.getElementById("yt-utils-speed-increment")?.click();
+    await vi.waitFor(() => expect(video.playbackRate).toBe(1.05), {
+      timeout: 2000,
+    });
+
+    video.playbackRate = 1;
+
+    await vi.waitFor(() => expect(video.playbackRate).toBe(1.05), {
+      timeout: 2000,
+    });
+  });
+
   it("ignores a pending language result after same-video reactivation", async () => {
     const { readPlayerSnapshot } = await import("@shared/youtube-player");
     const pending = Promise.withResolvers<PlayerSnapshot | null>();

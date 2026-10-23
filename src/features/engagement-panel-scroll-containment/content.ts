@@ -12,7 +12,11 @@ const CONTAINMENT_VALUE = "contain";
 const MIN_SCROLL_CONTAINER_HEIGHT = 120;
 
 let sessionToken = 0;
-const scrollContainerByPanel = new WeakMap<HTMLElement, HTMLElement>();
+let cacheVersion = 0;
+const scrollContainerByPanel = new WeakMap<
+  HTMLElement,
+  { element: HTMLElement; version: number }
+>();
 
 const domSyncController = createDomSyncController({
   pollIntervalMs: POLL_INTERVAL_MS,
@@ -22,8 +26,17 @@ const domSyncController = createDomSyncController({
     subtree: true,
     attributeFilter: ["visibility", "hidden", "aria-hidden", "class", "style"],
   },
-  hasRelevantMutation: (mutations) =>
-    hasRelevantSurfaceMutation(mutations, isInsideEngagementPanelSurface),
+  hasRelevantMutation: (mutations) => {
+    if (
+      !hasRelevantSurfaceMutation(mutations, isInsideEngagementPanelSurface)
+    ) {
+      return false;
+    }
+    if (mutations.some(isPanelMutation)) {
+      cacheVersion += 1;
+    }
+    return true;
+  },
   sync: syncContainment,
 });
 
@@ -55,8 +68,9 @@ function syncContainment(token: number): void {
 function applyContainmentToPanel(panel: HTMLElement): void {
   const cached = scrollContainerByPanel.get(panel);
   if (
-    cached?.isConnected &&
-    cached.style.overscrollBehaviorY === CONTAINMENT_VALUE
+    cached?.element.isConnected &&
+    cached.version === cacheVersion &&
+    cached.element.style.overscrollBehaviorY === CONTAINMENT_VALUE
   ) {
     return;
   }
@@ -66,7 +80,10 @@ function applyContainmentToPanel(panel: HTMLElement): void {
     return;
   }
 
-  scrollContainerByPanel.set(panel, scrollContainer);
+  scrollContainerByPanel.set(panel, {
+    element: scrollContainer,
+    version: cacheVersion,
+  });
 
   if (scrollContainer.style.overscrollBehaviorY !== CONTAINMENT_VALUE) {
     scrollContainer.style.overscrollBehaviorY = CONTAINMENT_VALUE;
@@ -133,6 +150,13 @@ function scoreScrollCandidate(element: HTMLElement): number {
   const scrollModeBonus = style.overflowY === "scroll" ? 10_000 : 0;
 
   return overflowBonus + scrollModeBonus + areaScore;
+}
+
+function isPanelMutation(mutation: MutationRecord): boolean {
+  return (
+    mutation.target instanceof Element &&
+    Boolean(mutation.target.closest(PANEL_SELECTOR))
+  );
 }
 
 function isInsideEngagementPanelSurface(node: Node): boolean {

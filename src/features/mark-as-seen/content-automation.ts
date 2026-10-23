@@ -79,23 +79,52 @@ async function seekToNearEnd(video: HTMLVideoElement): Promise<void> {
 }
 
 async function playVideoBriefly(video: HTMLVideoElement): Promise<void> {
+  const wasMuted = video.muted;
+
   try {
-    await video.play();
-  } catch {
-    throw createExtensionError(
-      "PLAYBACK_FAILED",
-      "The video could not start playing.",
-    );
+    await playWithMutedFallback(video);
+    await delay(2000);
+  } finally {
+    video.pause();
+    video.muted = wasMuted;
   }
 
-  await delay(2000);
-  video.pause();
   await waitFor(() => video.paused, {
     timeout: 1500,
     interval: 50,
     errorCode: "PAUSE_FAILED",
     errorMessage: "The video could not be paused after seeking.",
   });
+}
+
+async function playWithMutedFallback(video: HTMLVideoElement): Promise<void> {
+  try {
+    await video.play();
+    return;
+  } catch (error) {
+    if (!isAutoplayBlocked(error)) {
+      throw createPlaybackError(error);
+    }
+    video.muted = true;
+  }
+
+  try {
+    await video.play();
+  } catch (error) {
+    throw createPlaybackError(error);
+  }
+}
+
+function isAutoplayBlocked(error: unknown): boolean {
+  return (error as { name?: unknown } | null)?.name === "NotAllowedError";
+}
+
+function createPlaybackError(cause?: unknown): Error {
+  return createExtensionError(
+    "PLAYBACK_FAILED",
+    "The video could not start playing.",
+    cause,
+  );
 }
 
 function makeContentErrorResult(error: unknown): ExtensionResult {

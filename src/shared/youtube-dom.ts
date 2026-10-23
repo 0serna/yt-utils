@@ -422,9 +422,9 @@ function getElementLabel(element: Element): string {
     element.getAttribute("title"),
     element instanceof HTMLElement ? element.innerText : "",
     element instanceof HTMLElement ? element.textContent : "",
-  ];
+  ].map((value) => value?.replace(/\s+/g, " ").trim() ?? "");
 
-  return values.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+  return [...new Set(values)].filter(Boolean).join(" ");
 }
 
 export function clickElement(element: HTMLElement): void {

@@ -1,7 +1,7 @@
 import type { Feature, FeatureContext } from "@shared/types";
 import {
   findShortsShelf,
-  isDesktopSubscriptionsFeedPage,
+  isDesktopFeedPage,
   removeAllShortsSections,
 } from "@shared/youtube-dom";
 
@@ -11,7 +11,7 @@ let ensureQueued = false;
 const subscriptionsShortsRemovalFeature: Feature = {
   name: "subscriptions-shorts-removal",
   matchesPage(url: URL): boolean {
-    return isDesktopSubscriptionsFeedPage(url);
+    return isDesktopFeedPage(url);
   },
 
   activate(_context: FeatureContext): void {
