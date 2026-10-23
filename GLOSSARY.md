@@ -55,3 +55,11 @@ _Avoid_: audio-fixer, force-original-audio, yt-original-audio
 **Subtitle Override**:
 A subtitle state change the subtitle policy did not cause during the current Watch Session, or an audio change that later resolves to a different subtitle decision. An Override stops the policy for that Watch Session.
 _Avoid_: user change, manual mode, lock
+
+**Quality Level**:
+A selectable playback quality of a watch video, exposed by the player as `availableQualityLevels`. One level is active at a time.
+_Avoid_: resolution, quality alone, bitrate
+
+**quality-1080p**:
+The feature that selects the 1080p Quality Level once at the start of each Watch Session and never applies it again during that session.
+_Avoid_: force-1080p, quality-lock, resolution fixer

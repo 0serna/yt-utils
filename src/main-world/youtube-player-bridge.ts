@@ -39,6 +39,9 @@ type YoutubePlayer = HTMLElement & {
   toggleSubtitles?: () => void;
   toggleSubtitlesOn?: () => void;
   setOption?: (namespace: string, key: string, value: unknown) => void;
+  getPlaybackQuality?: () => string | null;
+  getAvailableQualityLevels?: () => string[] | null;
+  setPlaybackQualityRange?: (min: string, max: string) => void;
 };
 
 type SnapshotInputs = {
@@ -75,6 +78,8 @@ const bridgeRequestHandlers: Record<
     applySubtitleSelection(request.selection ?? null),
   applyAudioTrack: (request) =>
     applyAudioTrackSelection(request.audioTrackId ?? null),
+  applyQuality: (request) =>
+    applyQualityLevelSelection(request.qualityLevel ?? null),
 };
 
 if (!bridgeWindow[BRIDGE_FLAG]) {
@@ -158,6 +163,8 @@ function buildPlayerSnapshot(
     translationLanguages: inputs.translationLanguages,
     currentCaptionTrack: inputs.currentCaptionTrack,
     subtitlesOn: Boolean(player.isSubtitlesOn?.()),
+    qualityLevel: readPlaybackQuality(player),
+    availableQualityLevels: readAvailableQualityLevels(player),
   };
 }
 
@@ -197,6 +204,28 @@ function applyAudioTrackSelection(audioTrackId: string | null): boolean {
 
   player.setAudioTrack(track);
   return true;
+}
+
+function applyQualityLevelSelection(level: string | null): boolean {
+  const player = getMoviePlayer();
+  if (!player || !level || !player.setPlaybackQualityRange) {
+    return false;
+  }
+
+  player.setPlaybackQualityRange(level, level);
+  return true;
+}
+
+function readPlaybackQuality(player: YoutubePlayer): string | null {
+  const quality = player.getPlaybackQuality?.();
+  return typeof quality === "string" && quality.length > 0 ? quality : null;
+}
+
+function readAvailableQualityLevels(player: YoutubePlayer): string[] {
+  const levels = player.getAvailableQualityLevels?.();
+  return Array.isArray(levels)
+    ? levels.filter((level): level is string => typeof level === "string")
+    : [];
 }
 
 function readAvailableAudioTracks(
