@@ -998,6 +998,7 @@ describe("watch-panel-auto-open feature", () => {
         },
         { timeout: 2000 },
       );
+      expect(document.activeElement).not.toBe(chatInput);
 
       panel.remove();
     });
