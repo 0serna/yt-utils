@@ -748,8 +748,6 @@ async function typeAndSendPrompt(
       return "skipped";
     }
 
-    input.focus();
-
     typePromptText(input);
 
     if (!session.isCurrent()) {
