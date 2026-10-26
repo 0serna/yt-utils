@@ -390,6 +390,20 @@ function isPlayablesShelf(shelf: HTMLElement): boolean {
   return shelf.querySelector('a[href*="/playables"]') !== null;
 }
 
+export function findMembershipShelves(): HTMLElement[] {
+  return [
+    ...document.querySelectorAll<HTMLElement>("ytd-brand-video-shelf-renderer"),
+  ].filter(isMembershipShelf);
+}
+
+export function removeAllMembershipSections(): void {
+  removeRichSectionsForShelves(findMembershipShelves());
+}
+
+function isMembershipShelf(shelf: HTMLElement): boolean {
+  return shelf.querySelector('a[href^="/channel_memberships"]') !== null;
+}
+
 function findRichShelves(
   isMatch: (shelf: HTMLElement) => boolean,
 ): HTMLElement[] {
