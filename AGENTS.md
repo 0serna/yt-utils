@@ -26,6 +26,7 @@
 ## Workflow
 
 - Use the browser to validate the extension's features, after the user confirms they reloaded the extension.
+- Playwriter cannot open or read `chrome://extensions/`. Never try. The user reloads the extension and checks its errors; ask them instead.
 - After changing files under `src/` (or anything else that feeds `extension/`), run `npm run build` before asking the user to reload. Builds from any worktree write to the main checkout's `extension/`; Chrome loads that single directory. Done when the build exits 0; then ask the user to reload the extension manually.
 
 ## Debugging
