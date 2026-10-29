@@ -21,6 +21,7 @@ export function makeFeatureContext(
       diagnostic: vi.fn(),
       error: vi.fn(),
     },
+    previousUrl: null,
     ...overrides,
   };
 }

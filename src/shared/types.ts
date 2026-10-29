@@ -19,4 +19,5 @@ export interface FeatureLoggerMeta {
 
 export interface FeatureContext {
   logger: FeatureLogger;
+  previousUrl: URL | null;
 }
