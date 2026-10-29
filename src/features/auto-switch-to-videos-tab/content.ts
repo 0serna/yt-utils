@@ -1,7 +1,5 @@
 import type { Feature, FeatureContext } from "@shared/types";
 
-const SESSION_STORAGE_KEY_PREFIX = "yt-utils:auto-switch-to-videos-tab:";
-
 const CHANNEL_PATH_PREFIXES = ["/@", "/c/", "/user/", "/channel/"];
 
 const autoSwitchToVideosTabFeature: Feature = {
@@ -14,8 +12,8 @@ const autoSwitchToVideosTabFeature: Feature = {
     );
   },
 
-  activate(_context: FeatureContext): void {
-    void trySwitchToVideosTab();
+  activate(context: FeatureContext): void {
+    trySwitchToVideosTab(context.previousUrl);
   },
 
   deactivate(): void {},
@@ -23,9 +21,8 @@ const autoSwitchToVideosTabFeature: Feature = {
 
 export default autoSwitchToVideosTabFeature;
 
-function getChannelBasePath(): string {
-  const path = window.location.pathname;
-  const segments = path.split("/").filter(Boolean);
+function getChannelBasePath(pathname: string): string {
+  const segments = pathname.split("/").filter(Boolean);
 
   if (segments.length === 0) {
     return "";
@@ -42,24 +39,30 @@ function getChannelBasePath(): string {
   return `/${segments[0]}`;
 }
 
-function getSessionStorageKey(): string {
-  return `${SESSION_STORAGE_KEY_PREFIX}${getChannelBasePath()}`;
+function isChannelHomePath(pathname: string): boolean {
+  const normalizedPath = pathname.endsWith("/")
+    ? pathname.slice(0, -1)
+    : pathname;
+  const basePath = getChannelBasePath(pathname);
+  return (
+    normalizedPath === basePath || normalizedPath === `${basePath}/featured`
+  );
 }
 
-function isChannelHomePath(): boolean {
-  const path = window.location.pathname;
-  const normalizedPath = path.endsWith("/") ? path.slice(0, -1) : path;
-  return normalizedPath === getChannelBasePath();
+function isSameChannel(previousUrl: URL | null, basePath: string): boolean {
+  return (
+    previousUrl?.hostname === "www.youtube.com" &&
+    getChannelBasePath(previousUrl.pathname) === basePath
+  );
 }
 
-async function trySwitchToVideosTab(): Promise<void> {
-  const sessionKey = getSessionStorageKey();
-  if (sessionStorage.getItem(sessionKey) || !isChannelHomePath()) {
+function trySwitchToVideosTab(previousUrl: URL | null): void {
+  const pathname = window.location.pathname;
+  const basePath = getChannelBasePath(pathname);
+
+  if (!isChannelHomePath(pathname) || isSameChannel(previousUrl, basePath)) {
     return;
   }
 
-  window.location.assign(
-    `${window.location.origin}${getChannelBasePath()}/videos`,
-  );
-  sessionStorage.setItem(sessionKey, "1");
+  window.location.assign(`${window.location.origin}${basePath}/videos`);
 }

@@ -24,13 +24,11 @@ describe("auto-switch-to-videos-tab feature", () => {
 
   beforeEach(() => {
     vi.resetModules();
-    sessionStorage.clear();
     assignSpy = vi.fn();
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    sessionStorage.clear();
   });
 
   async function importFreshFeature() {
@@ -52,18 +50,35 @@ describe("auto-switch-to-videos-tab feature", () => {
   });
 
   describe("activate", () => {
-    it("navigates channel home to the videos tab", async () => {
+    it("navigates channel home to the videos tab on first visit", async () => {
       setLocation(CHANNEL_URL, assignSpy);
 
       const { default: feature } = await importFreshFeature();
       feature.activate(makeFeatureContext());
 
       expect(assignSpy).toHaveBeenCalledWith(`${CHANNEL_URL}/videos`);
-      expect(
-        sessionStorage.getItem(
-          "yt-utils:auto-switch-to-videos-tab:/@Ingl%C3%A9sconelG%C3%BCero",
-        ),
-      ).toBe("1");
+    });
+
+    it("navigates to the videos tab when entering from another page", async () => {
+      setLocation(CHANNEL_URL, assignSpy);
+
+      const { default: feature } = await importFreshFeature();
+      feature.activate(
+        makeFeatureContext({
+          previousUrl: new URL("https://www.youtube.com/watch?v=abc"),
+        }),
+      );
+
+      expect(assignSpy).toHaveBeenCalledWith(`${CHANNEL_URL}/videos`);
+    });
+
+    it("navigates from the featured home alias to the videos tab", async () => {
+      setLocation(`${CHANNEL_URL}/featured`, assignSpy);
+
+      const { default: feature } = await importFreshFeature();
+      feature.activate(makeFeatureContext());
+
+      expect(assignSpy).toHaveBeenCalledWith(`${CHANNEL_URL}/videos`);
     });
 
     it("does not navigate when already on a channel subtab", async () => {
@@ -75,17 +90,30 @@ describe("auto-switch-to-videos-tab feature", () => {
       expect(assignSpy).not.toHaveBeenCalled();
     });
 
-    it("does not navigate a channel already processed this session", async () => {
+    it("does not navigate when returning from a subtab of the same channel", async () => {
       setLocation(CHANNEL_URL, assignSpy);
-      sessionStorage.setItem(
-        "yt-utils:auto-switch-to-videos-tab:/@Ingl%C3%A9sconelG%C3%BCero",
-        "1",
-      );
 
       const { default: feature } = await importFreshFeature();
-      feature.activate(makeFeatureContext());
+      feature.activate(
+        makeFeatureContext({
+          previousUrl: new URL(`${CHANNEL_URL}/videos`),
+        }),
+      );
 
       expect(assignSpy).not.toHaveBeenCalled();
+    });
+
+    it("navigates when entering a different channel", async () => {
+      setLocation(CHANNEL_URL, assignSpy);
+
+      const { default: feature } = await importFreshFeature();
+      feature.activate(
+        makeFeatureContext({
+          previousUrl: new URL("https://www.youtube.com/@other/videos"),
+        }),
+      );
+
+      expect(assignSpy).toHaveBeenCalledWith(`${CHANNEL_URL}/videos`);
     });
   });
 });

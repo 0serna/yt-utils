@@ -111,6 +111,30 @@ describe("FeatureRegistry logging", () => {
       expect(typeof context.logger.error).toBe("function");
     });
 
+    it("passes the previous URL through context on navigation", () => {
+      const registry = new FeatureRegistry();
+      const feature = makeFeature("test-feature");
+      registry.register(feature);
+      registry.start();
+      vi.mocked(feature.activate).mockClear();
+
+      Object.defineProperty(window, "location", {
+        value: {
+          href: "https://www.youtube.com/watch?v=next456",
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      internals(registry).syncFeatures();
+
+      const context = vi.mocked(feature.activate).mock
+        .calls[0]?.[0] as FeatureContext;
+      expect(context.previousUrl?.href).toBe(
+        "https://www.youtube.com/watch?v=abc123",
+      );
+    });
+
     it("does not add feature to active set on activation failure", () => {
       const registry = new FeatureRegistry();
       const broken = makeFeature("broken", {

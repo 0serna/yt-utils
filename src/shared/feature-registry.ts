@@ -15,6 +15,7 @@ export class FeatureRegistry {
   private activeFeatures: Set<Feature> = new Set();
   private featureLoggers: Map<Feature, FeatureLogger> = new Map();
   private lastSessionKey: string = "";
+  private lastUrl: URL | null = null;
   private started = false;
 
   constructor() {
@@ -57,6 +58,7 @@ export class FeatureRegistry {
 
   private forceSync(): void {
     this.lastSessionKey = "";
+    this.lastUrl = null;
     this.syncFeatures();
   }
 
@@ -68,9 +70,11 @@ export class FeatureRegistry {
       return;
     }
 
+    const previousUrl = this.lastUrl;
     this.lastSessionKey = sessionKey;
+    this.lastUrl = url;
     this.deactivateAll();
-    this.activateFeaturesForUrl(url);
+    this.activateFeaturesForUrl(url, previousUrl);
   }
 
   private getFeatureLogger(feature: Feature): FeatureLogger {
@@ -99,7 +103,7 @@ export class FeatureRegistry {
     this.activeFeatures.clear();
   }
 
-  private activateFeaturesForUrl(url: URL): void {
+  private activateFeaturesForUrl(url: URL, previousUrl: URL | null): void {
     for (const feature of this.features) {
       if (!shouldActivateFeature(feature, url)) {
         continue;
@@ -108,7 +112,7 @@ export class FeatureRegistry {
       const logger = this.getFeatureLogger(feature);
 
       try {
-        feature.activate({ logger });
+        feature.activate({ logger, previousUrl });
         logger.activation();
         this.activeFeatures.add(feature);
       } catch (error) {
