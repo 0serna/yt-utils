@@ -46,7 +46,7 @@ const CHAT_INPUT_SELECTOR =
   'textarea.chatInputViewModelChatInput, textarea[placeholder="Ask a question..."], textarea[placeholder="Haz una pregunta..."]';
 const SEND_BUTTON_SELECTOR = 'button[aria-label="Send"]';
 const SUMMARIZE_PROMPT =
-  "Summarize this video chronologically with timestamped bullets, then the key takeaways.";
+  "Summarize the video in a paragraph of at most 70 words, then list the topics in chronological order as bullets in this format: - <timestamp>: <short topic description>.";
 const ASK_SCROLL_OVERSCROLL_BEHAVIOR = "contain";
 
 const watchSessions = createWatchSessionController();
