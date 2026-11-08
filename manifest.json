@@ -4,7 +4,6 @@
   "version": "0.1.0",
   "description": "A Chrome extension with YouTube helpers and inline search utilities.",
   "permissions": ["storage", "tabs"],
-  "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "src/background.ts",
     "type": "module"
@@ -19,11 +18,6 @@
     {
       "matches": ["https://www.youtube.com/*"],
       "js": ["src/content.ts"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["<all_urls>"],
-      "js": ["src/global-selection.ts"],
       "run_at": "document_idle"
     }
   ],
