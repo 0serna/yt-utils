@@ -7,8 +7,7 @@
 │   ├── main-world/         # MAIN-world YouTube player bridge scripts
 │   ├── shared/             # shared helpers, messaging, and types
 │   ├── background.ts       # extension service worker entrypoint
-│   ├── content.ts          # YouTube content-script entrypoint
-│   └── global-selection.ts # all-pages text selection content script
+│   └── content.ts          # YouTube content-script entrypoint
 └── .github/
     └── workflows/          # GitHub Actions CI
 ```
@@ -36,4 +35,4 @@
 - Feature error logs use `event: "error"`, include `phase` (`activate`, `deactivate`, or `runtime`) and normalized error details, and are mirrored to `console.error`.
 - Diagnostic logs use `event: "diagnostic"` with an optional `details` field.
 - Log entries include `timestamp`, `feature`, `event`, `url`, optional `videoId`, optional `phase`, optional `details`, and optional `error` details.
-- This is not a universal debug logger: `src/global-selection.ts` and background-only flows may use separate console/error handling instead of `yt-utils:logs`.
+- This is not a universal debug logger: background-only flows may use separate console/error handling instead of `yt-utils:logs`.

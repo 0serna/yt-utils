@@ -1,5 +1,4 @@
 export const MESSAGE_INLINE_TRIGGER = "yt-utils:inline-trigger" as const;
-export const MESSAGE_GOOGLE_SEARCH = "yt-utils:google-search" as const;
 export const MESSAGE_MARK_AS_SEEN_AUTOMATION =
   "yt-utils:mark-as-seen-automation" as const;
 export const MESSAGE_LOG_EVENT = "yt-utils:log-event" as const;
